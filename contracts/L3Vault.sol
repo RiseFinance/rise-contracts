@@ -2,12 +2,13 @@
 
 pragma solidity ^0.8.0;
 
+import "hardhat/console.sol";
 import "./interfaces/IPriceFeed.sol";
 
 contract L3Vault {
     struct UserVault {
-        uint256 balance;
         bytes32 versionHash;
+        uint256 balance;
     }
 
     struct Order {
@@ -31,8 +32,8 @@ contract L3Vault {
         uint256 size;
         uint256 collateralSize;
         uint256 averagePrice;
-        int256 realizedPnl;
         uint256 lastUpdatedTime;
+        int256 realizedPnl;
     }
 
     // mapping to MerkleTree
@@ -70,9 +71,9 @@ contract L3Vault {
         return priceFeed.getPrice(assetId);
     }
 
-    function getPoolAmount(uint256 assetId) public view returns (uint256) {
-        return tokenPoolAmounts[assetId];
-    }
+    // function getPoolAmount(uint256 assetId) public view returns (uint256) {
+    //     return tokenPoolAmounts[assetId];
+    // }
 
     function getReserveAmount(uint256 assetId) public view returns (uint256) {
         return tokenReserveAmounts[assetId];
@@ -96,7 +97,7 @@ contract L3Vault {
         uint256 _size,
         uint256 _collateralSize,
         bool _isLong
-    ) external returns (bool) {
+    ) external returns (bytes32) {
         // create Order
         // update Position
         bytes32 key = getPositionKey(
@@ -107,8 +108,11 @@ contract L3Vault {
         );
 
         Position storage position = positions[key];
+
         require(position.size == 0, "L3Vault: position already exists");
-        uint256 markPrice = getMarkPrice(_indexAssetId);
+        // uint256 markPrice = getMarkPrice(_indexAssetId);
+
+        uint256 markPrice = 1962;
 
         // update position fields
         position.size = _size;
@@ -120,12 +124,28 @@ contract L3Vault {
         // update GlobalPositionState
         // update UserVault
         UserVault storage userVault = traderBalances[_account][_indexAssetId];
-        userVault.balance -= _collateralSize;
+
+        // test-only
+        userVault.balance += 2 * _collateralSize;
+
+        require(
+            userVault.balance >= _collateralSize,
+            "L3Vault: insufficient balance"
+        );
+
+        userVault.balance -= _collateralSize; // TODO: 여기 로직
 
         // update tokenReserveAmounts
         tokenReserveAmounts[_indexAssetId] += _size;
+
         // update traderOrders
-        return true;
+        return key;
     }
+
     // close Position
+
+    // test-only
+    function getPosition(bytes32 key) external view returns (Position memory) {
+        return positions[key];
+    }
 }
