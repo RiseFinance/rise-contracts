@@ -8,6 +8,14 @@ import "./interfaces/IPriceFeed.sol";
 contract L3Vault {
     uint256 public constant ETH_ID = 1;
 
+    enum OrderType {
+        Open,
+        Increase,
+        Decrease,
+        Close,
+        Liquidate
+    }
+
     struct UserVault {
         bytes32 versionHash;
         uint256 balance;
@@ -19,7 +27,7 @@ contract L3Vault {
     struct Order {
         bool isLong;
         bool isMarketOrder;
-        uint8 orderType; // open=0, increase=1, decrease=2, close=3, liquidate=4
+        OrderType orderType; // open=0, increase=1, decrease=2, close=3, liquidate=4
         uint256 sizeDeltaAbs;
         uint256 markPrice;
         uint256 indexAssetId;
@@ -40,8 +48,13 @@ contract L3Vault {
         uint256 realizedPnlInIndexTokenCount;
     }
 
-    struct GlobalPositionState {
-        bool isLong;
+    struct GlobalLongPositionState {
+        uint256 totalSize;
+        uint256 totalCollateral;
+        uint256 averagePrice;
+    }
+
+    struct GlobalShortPositionState {
         uint256 totalSize;
         uint256 totalCollateral;
         uint256 averagePrice;
@@ -50,6 +63,8 @@ contract L3Vault {
     event DepositEth(address indexed user, uint256 amount);
 
     event WithdrawEth(address indexed user, uint256 amount);
+
+    event OrderPlaced(address indexed user, uint256 orderId);
 
     event OpenPosition(
         bytes32 positionKey,
@@ -83,11 +98,11 @@ contract L3Vault {
     mapping(uint256 => uint256) public tokenPoolAmounts; // assetId => tokenCount
     mapping(uint256 => uint256) public tokenReserveAmounts; // assetId => tokenCount
 
-    // mapping(uint256 => GlobalPositionState) public globalLongStates;
-    // mapping(uint256 => GlobalPositionState) public globalShortStates;
+    // mapping(uint256 => GlobalLongPositionState) public globalLongStates;
+    // mapping(uint256 => GlobalShortPositionState) public globalShortStates;
 
-    GlobalPositionState public globalLongState;
-    GlobalPositionState public globalShortState;
+    GlobalLongPositionState public globalLongState;
+    GlobalShortPositionState public globalShortState;
 
     mapping(bytes32 => Position) public positions; // positionHash => Position
 
@@ -123,9 +138,9 @@ contract L3Vault {
     //     return tokenPoolAmounts[assetId];
     // }
 
-    function getReserveAmount(uint256 assetId) public view returns (uint256) {
-        return tokenReserveAmounts[assetId];
-    }
+    // function getReserveAmount(uint256 assetId) public view returns (uint256) {
+    //     return tokenReserveAmounts[assetId];
+    // }
 
     function addLiquidity(uint256 assetId, uint256 amount) external {
         // liquidity 기록을 변수에 할지, LP 토큰을 발행할지 결정
@@ -167,13 +182,15 @@ contract L3Vault {
     }
 
     // open Position (market order)
+    // open, close => collateral 변경 / increase, decrease => collateral 변경 X
     function openPosition(
         address _account,
         uint256 _collateralAssetId,
         uint256 _indexAssetId,
         uint256 _size,
         uint256 _collateralSize,
-        bool _isLong
+        bool _isLong,
+        bool _isMarketOrder
     ) external returns (bytes32) {
         // Create Order & Update Position
         require(_size > 0, "L3Vault: size should be positive");
@@ -186,6 +203,25 @@ contract L3Vault {
             "L3Vault: insufficient token pool amount"
         );
 
+        uint256 markPrice = getMarkPrice(_indexAssetId);
+
+        UserVault storage userVault = traderBalances[_account][_indexAssetId];
+
+        // record Order
+        traderOrders[_account][userVault.orderCount] = Order(
+            _isLong,
+            _isMarketOrder,
+            OrderType.Open,
+            _size,
+            markPrice,
+            _indexAssetId,
+            _collateralAssetId
+        );
+
+        emit OrderPlaced(_account, userVault.orderCount);
+
+        userVault.orderCount += 1;
+
         bytes32 key = _getPositionKey(
             _account,
             _collateralAssetId,
@@ -196,7 +232,6 @@ contract L3Vault {
         Position storage position = positions[key];
 
         require(position.size == 0, "L3Vault: position already exists");
-        uint256 markPrice = getMarkPrice(_indexAssetId);
 
         // update position fields
         position.size = _size;
@@ -205,9 +240,7 @@ contract L3Vault {
         // position.realizedPnlInUsd = 0; // already initialized as 0
         position.lastUpdatedTime = block.timestamp;
 
-        // update GlobalPositionState
-        // update UserVault
-        UserVault storage userVault = traderBalances[_account][_indexAssetId];
+        // TODO: update GlobalPositionState
 
         require(
             userVault.balance >= _collateralSize,
@@ -234,27 +267,46 @@ contract L3Vault {
             markPrice
         );
 
-        // update traderOrders
         return key;
     }
 
     // close Position
-
+    // TODO: decrease position 추가
     function closePosition(
         address _account,
         uint256 _collateralAssetId,
         uint256 _indexAssetId,
-        bool _isLong
+        bool _isLong,
+        bool _isMarketOrder
     ) external returns (bool) {
+        uint256 markPrice = getMarkPrice(_indexAssetId);
+
         bytes32 key = _getPositionKey(
             _account,
             _collateralAssetId,
             _indexAssetId,
             _isLong
         );
+
         Position storage position = positions[key];
 
-        uint256 markPrice = getMarkPrice(_indexAssetId);
+        UserVault storage userVault = traderBalances[_account][_indexAssetId];
+
+        // record Order
+        traderOrders[_account][userVault.orderCount] = Order(
+            _isLong,
+            _isMarketOrder,
+            OrderType.Close,
+            position.size,
+            markPrice,
+            _indexAssetId,
+            _collateralAssetId
+        );
+
+        emit OrderPlaced(_account, userVault.orderCount);
+
+        userVault.orderCount += 1;
+
         position.avgClosePrice = markPrice; // TODO: update, not set
         // uint256 collateralSize = position.collateralSize;
         // pnlAbs is in USD value (decimals = 8)
@@ -269,7 +321,6 @@ contract L3Vault {
         // 청산 여부 검사 후 liquidation function call하고 종료
 
         // PnL 정산 (trader)
-        UserVault storage userVault = traderBalances[_account][_indexAssetId];
         // console.log(
         //     ">>> [Contract Log] position.collateralSize: ",
         //     position.collateralSize / 10 ** 18,
@@ -288,10 +339,19 @@ contract L3Vault {
         console.log(">>> [Contract Log] isProfit: ", isPositive);
         // USD to ETH
 
+        /** Due to stack too deep error, eliminated local variable
         uint256 traderRefund = isPositive
             ? (position.collateralSize + _usdToToken(pnlUsdAbs, markPrice, 18))
             : (position.collateralSize - _usdToToken(pnlUsdAbs, markPrice, 18));
         userVault.balance += traderRefund; // balanceDelta (= in ETH)
+        */
+        userVault.balance = isPositive
+            ? userVault.balance +
+                (position.collateralSize +
+                    _usdToToken(pnlUsdAbs, markPrice, 18))
+            : userVault.balance +
+                (position.collateralSize -
+                    _usdToToken(pnlUsdAbs, markPrice, 18));
 
         // console.log(">>> [Contract Log] traderRefund: ", traderRefund / 10 ** 18, " ETH");
 

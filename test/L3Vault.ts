@@ -3,6 +3,8 @@ import { anyValue } from "@nomicfoundation/hardhat-chai-matchers/withArgs";
 import { expect } from "chai";
 import { ethers } from "hardhat";
 
+// TODO: Order 기록 관련 테스트
+
 describe("L3Vault", function () {
   async function deployL3VaultFixture() {
     const [deployer, lp, trader] = await ethers.getSigners();
@@ -86,6 +88,7 @@ describe("L3Vault", function () {
       const _size = ethers.utils.parseEther("225"); // 225 ETH
       const _collateralSize = ethers.utils.parseEther("45"); // 45 ETH, x5 leverage
       const _isLong = true;
+      const _isMarketOrder = true;
 
       const _positionKey = await l3Vault
         .connect(trader)
@@ -95,7 +98,8 @@ describe("L3Vault", function () {
           _indexAssetId,
           _size,
           _collateralSize,
-          _isLong
+          _isLong,
+          _isMarketOrder
         );
 
       expect(
@@ -107,7 +111,8 @@ describe("L3Vault", function () {
             _indexAssetId,
             _size,
             _collateralSize,
-            _isLong
+            _isLong,
+            _isMarketOrder
           )
       ).not.to.be.reverted;
 
@@ -115,7 +120,7 @@ describe("L3Vault", function () {
       const position = await l3Vault.getPosition(_positionKey);
       expect(position.size).to.equal(_size);
       expect(position.collateralSize).to.equal(_collateralSize);
-      expect(position.averagePrice).to.equal(_price);
+      expect(position.avgOpenPrice).to.equal(_price);
       console.log("\n\n---------- After opening the position ----------");
       console.log(
         ">>> trader ETH balance: ",
@@ -146,7 +151,13 @@ describe("L3Vault", function () {
       expect(
         await l3Vault
           .connect(trader)
-          .closePosition(_account, _collateralAssetId, _indexAssetId, _isLong)
+          .closePosition(
+            _account,
+            _collateralAssetId,
+            _indexAssetId,
+            _isLong,
+            _isMarketOrder
+          ) // => open position할 때의 값을 재활용
       ).not.to.be.reverted;
 
       console.log("\n\n---------- After closing the position ----------");
