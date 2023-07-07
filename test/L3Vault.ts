@@ -35,18 +35,16 @@ describe("L3Vault", function () {
 
   describe("Open Position Integration Test", function () {
     // flow: add liquidity => deposit ETH => set price (PriceFeed) => open position
-    it("Should be able to open a long position", async function () {
+    it("Should be able to open then close a long position", async function () {
       const { l3Vault, priceFeed, deployer, lp, trader, ETH_ID } =
         await loadFixture(deployL3VaultFixture);
 
       // 1. add liquidity (lp)
-      console.log(">>> 1. add liquidity");
       const _amount = ethers.utils.parseEther("1000");
       await l3Vault.connect(lp).addLiquidity(ETH_ID, _amount);
       expect(await l3Vault.tokenPoolAmounts(ETH_ID)).to.equal(_amount);
 
       // 2. deposit 90 ETH (trader)
-      console.log(">>> 2. deposit 90 ETH");
       const _value = ethers.utils.parseEther("90");
       await l3Vault.connect(trader).depositEth({ value: _value });
       const _traderAddress = await trader.getAddress();
@@ -54,14 +52,34 @@ describe("L3Vault", function () {
         (await l3Vault.traderBalances(_traderAddress, ETH_ID)).balance
       ).to.equal(_value);
 
+      // inspect state variables before opening the position
+      // traderBalances, tokenPoolAmounts, tokenReserveAmounts, positions
+
+      console.log("\n\n---------- Before opening the position ----------");
+      console.log(
+        ">>> trader ETH balance: ",
+        ethers.utils.formatEther(
+          (await l3Vault.traderBalances(_traderAddress, ETH_ID)).balance
+        ),
+        " ETH"
+      );
+      console.log(
+        ">>> ETH pool amounts: ",
+        ethers.utils.formatEther(await l3Vault.tokenPoolAmounts(ETH_ID)),
+        "ETH"
+      );
+      console.log(
+        ">>> ETH reserve amounts: ",
+        ethers.utils.formatEther(await l3Vault.tokenReserveAmounts(ETH_ID)),
+        "ETH"
+      );
+
       // 3. set price (PriceFeed) (deployer)
-      console.log(">>> 3. set price");
       const _price = ethers.utils.parseUnits("1923.56", 8);
       await priceFeed.setPrice(ETH_ID, _price);
       expect(await priceFeed.getPrice(ETH_ID)).to.equal(_price);
 
       // 4. open position (trader)
-      console.log(">>> 4. open position");
       const _account = await trader.getAddress();
       const _collateralAssetId = ETH_ID; // ETH
       const _indexAssetId = ETH_ID; // ETH
@@ -94,13 +112,62 @@ describe("L3Vault", function () {
       ).not.to.be.reverted;
 
       // 5. check position
-      console.log(">>> 5. check position");
       const position = await l3Vault.getPosition(_positionKey);
       expect(position.size).to.equal(_size);
       expect(position.collateralSize).to.equal(_collateralSize);
       expect(position.averagePrice).to.equal(_price);
+      console.log("\n\n---------- After opening the position ----------");
+      console.log(
+        ">>> trader ETH balance: ",
+        ethers.utils.formatEther(
+          (await l3Vault.traderBalances(_traderAddress, ETH_ID)).balance
+        ),
+        " ETH"
+      );
+      console.log(
+        ">>> ETH pool amounts: ",
+        ethers.utils.formatEther(await l3Vault.tokenPoolAmounts(ETH_ID)),
+        "ETH"
+      );
+      console.log(
+        ">>> ETH reserve amounts: ",
+        ethers.utils.formatEther(await l3Vault.tokenReserveAmounts(ETH_ID)),
+        "ETH"
+      );
 
-      console.log("position", position);
+      // 6. close position
+      // update mark price
+      //   const _priceDeltaRatioInPercent = -5; // 5% decrease
+      //   const _newPrice = _price.mul(100 + _priceDeltaRatioInPercent).div(100);
+      const _newPrice = ethers.utils.parseUnits("1909.19", 8);
+      await priceFeed.setPrice(ETH_ID, _newPrice);
+      expect(await priceFeed.getPrice(ETH_ID)).to.equal(_newPrice);
+
+      expect(
+        await l3Vault
+          .connect(trader)
+          .closePosition(_account, _collateralAssetId, _indexAssetId, _isLong)
+      ).not.to.be.reverted;
+
+      console.log("\n\n---------- After closing the position ----------");
+      console.log(
+        ">>> trader ETH balance: ",
+        ethers.utils.formatEther(
+          (await l3Vault.traderBalances(_traderAddress, ETH_ID)).balance
+        ),
+        " ETH"
+      );
+      console.log(
+        ">>> ETH pool amounts: ",
+        ethers.utils.formatEther(await l3Vault.tokenPoolAmounts(ETH_ID)),
+        "ETH"
+      );
+      console.log(
+        ">>> ETH reserve amounts: ",
+        ethers.utils.formatEther(await l3Vault.tokenReserveAmounts(ETH_ID)),
+        "ETH"
+      );
+      //   console.log(">>> position: ", await l3Vault.getPosition(_positionKey));
     });
   });
 });
