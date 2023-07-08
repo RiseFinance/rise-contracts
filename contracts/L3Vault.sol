@@ -48,13 +48,7 @@ contract L3Vault {
         uint256 realizedPnlInIndexTokenCount;
     }
 
-    struct GlobalLongPositionState {
-        uint256 totalSize;
-        uint256 totalCollateral;
-        uint256 averagePrice;
-    }
-
-    struct GlobalShortPositionState {
+    struct GlobalPositionState {
         uint256 totalSize;
         uint256 totalCollateral;
         uint256 averagePrice;
@@ -71,8 +65,17 @@ contract L3Vault {
         uint256 assetId,
         uint256 amount
     );
-
     event OrderPlaced(address indexed user, uint256 orderId);
+
+    // event OrderCanceled(address indexed user, uint256 orderId);
+
+    // to add a version hash or something?
+    event UpdateGlobalPositionState(
+        bool _isLong,
+        uint256 newTotalSize,
+        uint256 newTotalCollateral,
+        uint256 newAvgPrice
+    );
 
     event OpenPosition(
         bytes32 positionKey,
@@ -109,8 +112,7 @@ contract L3Vault {
     // mapping(uint256 => GlobalLongPositionState) public globalLongStates;
     // mapping(uint256 => GlobalShortPositionState) public globalShortStates;
 
-    GlobalLongPositionState public globalLongState;
-    GlobalShortPositionState public globalShortState;
+    mapping(bool => GlobalPositionState) public globalPositionState; // isLong => GlobalPositionState
 
     mapping(bytes32 => Position) public positions; // positionHash => Position
 
@@ -258,8 +260,6 @@ contract L3Vault {
         // position.realizedPnlInUsd = 0; // already initialized as 0
         position.lastUpdatedTime = block.timestamp;
 
-        // TODO: update GlobalPositionState
-
         require(
             userVault.balance >= _collateralSize,
             "L3Vault: insufficient balance"
@@ -283,6 +283,21 @@ contract L3Vault {
             _collateralSize,
             _isLong,
             markPrice
+        );
+
+        updateGlobalPositionState(
+            _isLong,
+            true,
+            _size,
+            _collateralSize,
+            markPrice
+        );
+
+        emit UpdateGlobalPositionState(
+            _isLong,
+            globalPositionState[_isLong].totalSize,
+            globalPositionState[_isLong].totalCollateral,
+            globalPositionState[_isLong].averagePrice
         );
 
         return key;
@@ -392,6 +407,14 @@ contract L3Vault {
         );
         tokenReserveAmounts[_indexAssetId] -= position.size;
 
+        updateGlobalPositionState(
+            _isLong,
+            false,
+            position.size,
+            position.collateralSize,
+            markPrice
+        );
+
         // delete position
         delete positions[key];
 
@@ -409,6 +432,55 @@ contract L3Vault {
         );
 
         return true;
+    }
+
+    function updateGlobalPositionState(
+        bool _isLong,
+        bool _isIncrease,
+        uint256 _sizeDelta,
+        uint256 _collateralDelta,
+        uint256 _markPrice
+    ) internal {
+        globalPositionState[_isLong].averagePrice = _getNewGlobalAvgPrice(
+            _isIncrease,
+            globalPositionState[_isLong].totalSize,
+            globalPositionState[_isLong].averagePrice,
+            _sizeDelta,
+            _markPrice
+        );
+
+        if (_isIncrease) {
+            globalPositionState[_isLong].totalSize += _sizeDelta;
+            globalPositionState[_isLong].totalCollateral += _collateralDelta;
+        } else {
+            globalPositionState[_isLong].totalSize -= _sizeDelta;
+            globalPositionState[_isLong].totalCollateral -= _collateralDelta;
+        }
+    }
+
+    /**
+     * (new avg price) * (new size) = (old avg price) * (old size) + (mark price) * (size delta)
+     * */
+    function _getNewGlobalAvgPrice(
+        bool _isIncrease,
+        uint256 _oldSize,
+        uint256 _oldAvgPrice,
+        uint256 _sizeDelta,
+        uint256 _markPrice
+    ) internal pure returns (uint256) {
+        if (_isIncrease) {
+            uint256 newSize = _oldSize + _sizeDelta;
+            uint256 newAvgPrice = newSize == 0
+                ? 0
+                : (_oldAvgPrice * _oldSize + _markPrice * _sizeDelta) / newSize;
+            return newAvgPrice;
+        } else {
+            uint256 newSize = _oldSize - _sizeDelta;
+            uint256 newAvgPrice = newSize == 0
+                ? 0
+                : (_oldAvgPrice * _oldSize - _markPrice * _sizeDelta) / newSize;
+            return newAvgPrice;
+        }
     }
 
     function _usdToToken(

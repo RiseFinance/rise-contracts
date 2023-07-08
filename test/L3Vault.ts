@@ -3,8 +3,6 @@ import { anyValue } from "@nomicfoundation/hardhat-chai-matchers/withArgs";
 import { expect } from "chai";
 import { ethers } from "hardhat";
 
-// TODO: Order 기록 관련 테스트
-
 describe("L3Vault", function () {
   async function deployL3VaultFixture() {
     const [deployer, lp, trader] = await ethers.getSigners();
@@ -30,7 +28,9 @@ describe("L3Vault", function () {
       const _amount = ethers.utils.parseEther("100");
 
       expect(await l3Vault.tokenPoolAmounts(_assetId)).to.equal(0);
-      await l3Vault.connect(lp).addLiquidity(_assetId, _amount);
+      await l3Vault
+        .connect(lp)
+        .addLiquidity(_assetId, _amount, { value: _amount });
       expect(await l3Vault.tokenPoolAmounts(_assetId)).to.equal(_amount);
     });
   });
@@ -38,12 +38,15 @@ describe("L3Vault", function () {
   describe("Integration Test", function () {
     // flow: add liquidity => deposit ETH => set price (PriceFeed) => open position
     it("Should be able to open then close a long position", async function () {
+      const isLong = true;
       const { l3Vault, priceFeed, deployer, lp, trader, ETH_ID } =
         await loadFixture(deployL3VaultFixture);
 
       // 1. add liquidity (lp)
       const _amount = ethers.utils.parseEther("1000");
-      await l3Vault.connect(lp).addLiquidity(ETH_ID, _amount);
+      await l3Vault
+        .connect(lp)
+        .addLiquidity(ETH_ID, _amount, { value: _amount });
       expect(await l3Vault.tokenPoolAmounts(ETH_ID)).to.equal(_amount);
       console.log(
         ">>> LP added liquidity: ",
@@ -85,6 +88,21 @@ describe("L3Vault", function () {
         ethers.utils.formatEther(await l3Vault.tokenReserveAmounts(ETH_ID)),
         "ETH"
       );
+
+      // check globalLongState
+      const glsBeforeOpenOrder = await l3Vault.globalPositionState(isLong);
+      console.log(
+        "\n>>> globalLongState: totalSize =",
+        ethers.utils.formatEther(glsBeforeOpenOrder.totalSize),
+        "ETH",
+        "totalCollateral =",
+        ethers.utils.formatEther(glsBeforeOpenOrder.totalCollateral),
+        "ETH",
+        "averagePrice =",
+        ethers.utils.formatUnits(glsBeforeOpenOrder.averagePrice, 8),
+        "USD/ETH\n"
+      );
+
       console.log(
         ">>> trader's order count: [",
         (
@@ -156,6 +174,21 @@ describe("L3Vault", function () {
         ethers.utils.formatEther(await l3Vault.tokenReserveAmounts(ETH_ID)),
         "ETH"
       );
+
+      // check globalLongState
+      const glsAfterOpenOrder = await l3Vault.globalPositionState(isLong);
+      console.log(
+        "\n>>> globalLongState: totalSize =",
+        ethers.utils.formatEther(glsAfterOpenOrder.totalSize),
+        "ETH",
+        "totalCollateral =",
+        ethers.utils.formatEther(glsAfterOpenOrder.totalCollateral),
+        "ETH",
+        "averagePrice =",
+        ethers.utils.formatUnits(glsAfterOpenOrder.averagePrice, 8),
+        "USD/ETH\n"
+      );
+
       const orderCountAfterOpeningPosition = (
         await l3Vault.traderBalances(_traderAddress, ETH_ID)
       ).orderCount.toString();
@@ -215,17 +248,31 @@ describe("L3Vault", function () {
         ethers.utils.formatEther(
           (await l3Vault.traderBalances(_traderAddress, ETH_ID)).balance
         ),
-        " ETH"
+        "ETH"
       );
       console.log(
-        ">>> ETH pool amounts: ",
+        ">>>ETH pool amounts: ",
         ethers.utils.formatEther(await l3Vault.tokenPoolAmounts(ETH_ID)),
         "ETH"
       );
       console.log(
-        ">>> ETH reserve amounts: ",
+        ">>>ETH reserve amounts: ",
         ethers.utils.formatEther(await l3Vault.tokenReserveAmounts(ETH_ID)),
         "ETH"
+      );
+
+      // check globalLongState
+      const glsAfterCloseOrder = await l3Vault.globalPositionState(isLong);
+      console.log(
+        "\n>>> globalLongState: totalSize =",
+        ethers.utils.formatEther(glsAfterCloseOrder.totalSize),
+        "ETH",
+        "totalCollateral =",
+        ethers.utils.formatEther(glsAfterCloseOrder.totalCollateral),
+        "ETH",
+        "averagePrice =",
+        ethers.utils.formatUnits(glsAfterCloseOrder.averagePrice, 8),
+        "USD/ETH\n"
       );
 
       const orderCountAfterClosingPosition = (
