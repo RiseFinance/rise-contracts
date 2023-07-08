@@ -64,6 +64,14 @@ contract L3Vault {
 
     event WithdrawEth(address indexed user, uint256 amount);
 
+    event AddLiquidity(address indexed user, uint256 assetId, uint256 amount);
+
+    event RemoveLiquidity(
+        address indexed user,
+        uint256 assetId,
+        uint256 amount
+    );
+
     event OrderPlaced(address indexed user, uint256 orderId);
 
     event OpenPosition(
@@ -142,14 +150,24 @@ contract L3Vault {
     //     return tokenReserveAmounts[assetId];
     // }
 
-    function addLiquidity(uint256 assetId, uint256 amount) external {
+    function addLiquidity(uint256 assetId, uint256 amount) external payable {
+        require(msg.value >= amount, "L3Vault: insufficient amount");
         // liquidity 기록을 변수에 할지, LP 토큰을 발행할지 결정
+        // lp에게 토큰 받아서 예치하기
         // 발행한다면 모든 settlement chain에? (e.g. Arbitrum, zkSync, etc.)
         tokenPoolAmounts[assetId] += amount;
+        if (msg.value > amount) {
+            payable(msg.sender).transfer(msg.value - amount);
+        } // refund
+
+        emit AddLiquidity(msg.sender, assetId, amount);
     }
 
     function removeLiquidity(uint256 assetId, uint256 amount) external {
         tokenPoolAmounts[assetId] -= amount;
+        payable(msg.sender).transfer(amount);
+
+        emit RemoveLiquidity(msg.sender, assetId, amount);
     }
 
     function depositEth() external payable {
