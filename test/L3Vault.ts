@@ -35,7 +35,7 @@ describe("L3Vault", function () {
     });
   });
 
-  describe("Open Position Integration Test", function () {
+  describe("Integration Test", function () {
     // flow: add liquidity => deposit ETH => set price (PriceFeed) => open position
     it("Should be able to open then close a long position", async function () {
       const { l3Vault, priceFeed, deployer, lp, trader, ETH_ID } =
@@ -45,6 +45,11 @@ describe("L3Vault", function () {
       const _amount = ethers.utils.parseEther("1000");
       await l3Vault.connect(lp).addLiquidity(ETH_ID, _amount);
       expect(await l3Vault.tokenPoolAmounts(ETH_ID)).to.equal(_amount);
+      console.log(
+        ">>> LP added liquidity: ",
+        ethers.utils.formatEther(_amount),
+        " ETH"
+      );
 
       // 2. deposit 90 ETH (trader)
       const _value = ethers.utils.parseEther("90");
@@ -53,6 +58,11 @@ describe("L3Vault", function () {
       expect(
         (await l3Vault.traderBalances(_traderAddress, ETH_ID)).balance
       ).to.equal(_value);
+      console.log(
+        ">>> Trader deposited: ",
+        ethers.utils.formatEther(_value),
+        " ETH"
+      );
 
       // inspect state variables before opening the position
       // traderBalances, tokenPoolAmounts, tokenReserveAmounts, positions
@@ -74,6 +84,13 @@ describe("L3Vault", function () {
         ">>> ETH reserve amounts: ",
         ethers.utils.formatEther(await l3Vault.tokenReserveAmounts(ETH_ID)),
         "ETH"
+      );
+      console.log(
+        ">>> trader's order count: [",
+        (
+          await l3Vault.traderBalances(_traderAddress, ETH_ID)
+        ).orderCount.toString(),
+        "]"
       );
 
       // 3. set price (PriceFeed) (deployer)
@@ -139,6 +156,38 @@ describe("L3Vault", function () {
         ethers.utils.formatEther(await l3Vault.tokenReserveAmounts(ETH_ID)),
         "ETH"
       );
+      const orderCountAfterOpeningPosition = (
+        await l3Vault.traderBalances(_traderAddress, ETH_ID)
+      ).orderCount.toString();
+      console.log(
+        ">>> trader's order count: [",
+        orderCountAfterOpeningPosition,
+        "]"
+      );
+
+      const openPositionOrder = await l3Vault.traderOrders(
+        _traderAddress,
+        +orderCountAfterOpeningPosition - 1
+      );
+      console.log("\n>>> Order #1: Open position order placed");
+      console.log(">>> isLong: ", openPositionOrder.isLong);
+      console.log(">>> isMarketOrder: ", openPositionOrder.isMarketOrder);
+      console.log(
+        ">>> sizeDeltaAbs: ",
+        ethers.utils.formatEther(openPositionOrder.sizeDeltaAbs),
+        " ETH"
+      );
+      console.log(
+        ">>> markPrice: ",
+        ethers.utils.formatUnits(openPositionOrder.markPrice, 8),
+        " USD/ETH"
+      );
+      console.log(">>> indexAssetId: ", openPositionOrder.indexAssetId);
+      console.log(
+        ">>> collateralAssetId: ",
+        openPositionOrder.collateralAssetId
+      );
+      console.log("\n");
 
       // 6. close position
       // update mark price
@@ -178,7 +227,86 @@ describe("L3Vault", function () {
         ethers.utils.formatEther(await l3Vault.tokenReserveAmounts(ETH_ID)),
         "ETH"
       );
+
+      const orderCountAfterClosingPosition = (
+        await l3Vault.traderBalances(_traderAddress, ETH_ID)
+      ).orderCount.toString();
+      console.log(
+        ">>> trader's order count: [",
+        +orderCountAfterClosingPosition - 1,
+        "]"
+      );
+
+      const closePositionOrder = await l3Vault.traderOrders(
+        _traderAddress,
+        +orderCountAfterClosingPosition - 1
+      );
+      console.log("\n>>> Order #2: Close position order placed");
+      console.log(">>> isLong: ", closePositionOrder.isLong);
+      console.log(">>> isMarketOrder: ", closePositionOrder.isMarketOrder);
+      console.log(
+        ">>> sizeDeltaAbs: ",
+        ethers.utils.formatEther(closePositionOrder.sizeDeltaAbs),
+        " ETH"
+      );
+      console.log(
+        ">>> markPrice: ",
+        ethers.utils.formatUnits(closePositionOrder.markPrice, 8),
+        " USD/ETH"
+      );
+      console.log(">>> indexAssetId: ", closePositionOrder.indexAssetId);
+      console.log(
+        ">>> collateralAssetId: ",
+        closePositionOrder.collateralAssetId
+      );
+      console.log("\n");
       //   console.log(">>> position: ", await l3Vault.getPosition(_positionKey));
+
+      // 7. withdraw ETH
+
+      const _withdrawAmount = (
+        await l3Vault.traderBalances(_traderAddress, ETH_ID)
+      ).balance; // withdraw all
+
+      await l3Vault.connect(trader).withdrawEth(_withdrawAmount);
+      console.log(">>> withdraw complete.");
+
+      console.log(
+        ">>> trader ETH balance: ",
+        ethers.utils.formatEther(
+          (await l3Vault.traderBalances(_traderAddress, ETH_ID)).balance
+        ),
+        " ETH"
+      );
+      console.log(
+        ">>> ETH pool amounts: ",
+        ethers.utils.formatEther(await l3Vault.tokenPoolAmounts(ETH_ID)),
+        "ETH"
+      );
+      console.log(
+        ">>> ETH reserve amounts: ",
+        ethers.utils.formatEther(await l3Vault.tokenReserveAmounts(ETH_ID)),
+        "ETH"
+      );
+
+      // 8. remove liquidity
+      // TODO: lp가 얼마만큼의 liquidity를 뺄 수 있는지 트래킹할 수 있는 방법이 필요함
+
+      const _removeLiquidityAmount = await l3Vault.tokenPoolAmounts(ETH_ID); // all
+      await l3Vault.connect(lp).removeLiquidity(ETH_ID, _removeLiquidityAmount);
+      console.log(">>> liquidity removed");
+
+      console.log("\n\n---------- After removing liquidity ----------");
+      console.log(
+        ">>> ETH pool amounts: ",
+        ethers.utils.formatEther(await l3Vault.tokenPoolAmounts(ETH_ID)),
+        "ETH"
+      );
+      console.log(
+        ">>> ETH reserve amounts: ",
+        ethers.utils.formatEther(await l3Vault.tokenReserveAmounts(ETH_ID)),
+        "ETH"
+      );
     });
   });
 });
