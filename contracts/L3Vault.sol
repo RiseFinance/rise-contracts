@@ -5,6 +5,7 @@ pragma solidity ^0.8.0;
 import "hardhat/console.sol";
 import "./interfaces/IPriceFeed.sol";
 import "./interfaces/IERC20.sol";
+import "./interfaces/ArbSys.sol";
 
 contract L3Vault {
     uint256 public constant ETH_ID = 1;
@@ -248,6 +249,33 @@ contract L3Vault {
         payable(msg.sender).transfer(amount);
 
         emit WithdrawEth(msg.sender, amount);
+    }
+
+    /**
+     * @dev
+     * from: trader / to: L3 ArbSys // TODO: check: `from` address to be L3Vault or the trader? => withdraw는 직접 서명 받아도 될듯?
+     * 로직: traderBalances에서 값을 차감하고, L3Vault가 직접 ArbSys의 withdrawEth를 호출한다. (ETH도 ArbSys로 보냄)
+     * L2에서 트레이더의 계정에 ETH를 +해주어야 한다.
+     */
+    function withdrawEthToL2(uint256 amount) external {
+        UserVault storage userEthVault = traderBalances[msg.sender][ETH_ID];
+        require(
+            userEthVault.balance >= amount,
+            "L3Vault: insufficient balance"
+        );
+        userEthVault.balance -= amount;
+        bytes32 prevVersionHash = userEthVault.versionHash;
+        userEthVault.versionHash = keccak256(
+            abi.encodePacked(prevVersionHash, amount)
+        );
+        // TODO: ArbSys에 ETH를 보내는 from이 L3Vault로 지정 가능하면, 이대로 진행
+        // 불가능할 경우, L3Vault에서 트레이더로 보내주고 바로 ArbSys에 보내도록 수정
+        // send ETH to the trader from L3Vault
+        // (bool sent, bytes memory data) = msg.sender.call{value: amount}("");
+        // require(sent, "Failed to send Ether");
+        ArbSys(100).withdrawEth(msg.sender, amount); // precompile address 0x0000000000000000000000000000000000000064
+
+        emit WithdrawEthToL2(msg.sender, amount);
     }
 
     // open Position (market order)
