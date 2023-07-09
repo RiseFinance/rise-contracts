@@ -55,9 +55,11 @@ contract L3Vault {
         uint256 averagePrice;
     }
 
-    event DepositEth(address indexed user, uint256 amount);
+    event DepositEth(address indexed user, uint256 amount); // To be deprecated
+    event DepositEthFromL2(address indexed user, uint256 amount);
 
-    event WithdrawEth(address indexed user, uint256 amount);
+    event WithdrawEth(address indexed user, uint256 amount); // To be deprecated
+    event WithdrawEthToL2(address indexed user, uint256 amount);
 
     event AddLiquidity(address indexed user, uint256 assetId, uint256 amount);
 
@@ -193,6 +195,7 @@ contract L3Vault {
     }
 
     // L3 계정에서 직접 ETH를 입금할 때 필요한 로직
+    // to be deprecated
     function depositEth() external payable {
         require(msg.value > 0, "L3Vault: deposit amount should be positive");
         UserVault storage userEthVault = traderBalances[msg.sender][ETH_ID];
@@ -205,15 +208,30 @@ contract L3Vault {
         emit DepositEth(msg.sender, msg.value);
     }
 
-    // deposit ETH from L2
-    // Nitro에서 call하는 함수. Inbox의 요청을 실행할 때 호출
-    // 로직
-    // 0. 이 함수는 ArbOS에서 L2->L3 ETH deposit의 auto redemption 과정의 일부로써, L3의 트레이더 계정에 직접 ETH를 보내는 대신 L3Vault에 ETH를 보내고 traderBalances를 업데이트해주는 과정
-    // 1. 이번 함수 call에서 _transferIn이 원래 의도한 보내려는 value와 일치하는지 검사하고 (GMX _transferIn 구현 참고)
-    // 2. traderBalances에 ETH를 추가해준다.
-    // 3. ETH를 L3Vault에 보낸다.
-    // 4. 이벤트를 발생시킨다.
-    // 5. 이번 함수 call에서 _transferIn이 원래 의도한 보내려는 value보다 더 많은 value를 받았다면, 그 차액을 다시 L2로 보낸다. => 이런 로직 필요 없음. 무조건 정확하게 System control
+    /**
+     * @dev
+     * from: Nitro / to: L3Vault
+     * Nitro에서 call하는 함수. Inbox의 요청을 실행할 때 호출
+     * 이 함수는 ArbOS에서 L2->L3 ETH deposit의 auto redemption 과정의 일부로써,
+     * L3의 트레이더 계정에 직접 ETH를 보내는 대신 L3Vault에 ETH를 보내고 traderBalances를 업데이트
+     */
+    function depositEthFromL2(address depositor) external payable {
+        require(msg.value > 0, "L3Vault: deposit amount should be positive");
+        // check: msg.value와 별도로 L2에서 보내려고 했던 value를 argument로 받고 추가로 검증할지?
+        uint256 depositIn = _depositInAmountEth();
+        require(
+            depositIn == msg.value,
+            "L3Vault: depositIn amount must be equal to msg.value"
+        );
+        UserVault storage userEthVault = traderBalances[depositor][ETH_ID];
+        userEthVault.balance += depositIn;
+        bytes32 prevVersionHash = userEthVault.versionHash;
+        userEthVault.versionHash = keccak256(
+            abi.encodePacked(prevVersionHash, msg.value)
+        );
+
+        emit DepositEthFromL2(depositor, depositIn);
+    }
 
     function withdrawEth(uint256 amount) external {
         UserVault storage userEthVault = traderBalances[msg.sender][ETH_ID];
