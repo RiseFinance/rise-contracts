@@ -251,12 +251,12 @@ describe("L3Vault", function () {
         "ETH"
       );
       console.log(
-        ">>>ETH pool amounts: ",
+        ">>> ETH pool amounts: ",
         ethers.utils.formatEther(await l3Vault.tokenPoolAmounts(ETH_ID)),
         "ETH"
       );
       console.log(
-        ">>>ETH reserve amounts: ",
+        ">>> ETH reserve amounts: ",
         ethers.utils.formatEther(await l3Vault.tokenReserveAmounts(ETH_ID)),
         "ETH"
       );

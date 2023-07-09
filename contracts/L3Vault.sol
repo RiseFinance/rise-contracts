@@ -4,6 +4,7 @@ pragma solidity ^0.8.0;
 
 import "hardhat/console.sol";
 import "./interfaces/IPriceFeed.sol";
+import "./interfaces/IERC20.sol";
 
 contract L3Vault {
     uint256 public constant ETH_ID = 1;
@@ -103,6 +104,7 @@ contract L3Vault {
 
     // mapping to MerkleTree
     IPriceFeed public priceFeed;
+    mapping(uint256 => uint256) public balancesTracker; // only used in _depositInAmount
     mapping(address => mapping(uint256 => UserVault)) public traderBalances; // userKey => assetId => UserVault
     mapping(address => mapping(uint256 => Order)) public traderOrders; // userKey => orderId => Order
 
@@ -172,6 +174,25 @@ contract L3Vault {
         emit RemoveLiquidity(msg.sender, assetId, amount);
     }
 
+    // for ERC-20
+    function _depositInAmount(address _token) private returns (uint256) {
+        uint256 prevBalance = balancesTracker[_token];
+        uint256 currentBalance = IERC20(_token).balanceOf(address(this)); // L3Vault balance
+        balancesTracker[_token] = currentBalance;
+
+        return currentBalance.sub(prevBalance); // L3Vault balance delta
+    }
+
+    // for ETH
+    function _depositInAmountEth() private returns (uint256) {
+        uint256 prevBalance = balancesTracker[address(0)]; // allocate ETH to address(0)
+        uint256 currentBalance = address(this).balance; // L3Vault balance
+        balancesTracker[address(0)] = currentBalance;
+
+        return currentBalance.sub(prevBalance); // L3Vault balance delta
+    }
+
+    // L3 계정에서 직접 ETH를 입금할 때 필요한 로직
     function depositEth() external payable {
         require(msg.value > 0, "L3Vault: deposit amount should be positive");
         UserVault storage userEthVault = traderBalances[msg.sender][ETH_ID];
@@ -183,6 +204,16 @@ contract L3Vault {
 
         emit DepositEth(msg.sender, msg.value);
     }
+
+    // deposit ETH from L2
+    // Nitro에서 call하는 함수. Inbox의 요청을 실행할 때 호출
+    // 로직
+    // 0. 이 함수는 ArbOS에서 L2->L3 ETH deposit의 auto redemption 과정의 일부로써, L3의 트레이더 계정에 직접 ETH를 보내는 대신 L3Vault에 ETH를 보내고 traderBalances를 업데이트해주는 과정
+    // 1. 이번 함수 call에서 _transferIn이 원래 의도한 보내려는 value와 일치하는지 검사하고 (GMX _transferIn 구현 참고)
+    // 2. traderBalances에 ETH를 추가해준다.
+    // 3. ETH를 L3Vault에 보낸다.
+    // 4. 이벤트를 발생시킨다.
+    // 5. 이번 함수 call에서 _transferIn이 원래 의도한 보내려는 value보다 더 많은 value를 받았다면, 그 차액을 다시 L2로 보낸다. => 이런 로직 필요 없음. 무조건 정확하게 System control
 
     function withdrawEth(uint256 amount) external {
         UserVault storage userEthVault = traderBalances[msg.sender][ETH_ID];

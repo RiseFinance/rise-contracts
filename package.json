@@ -1,12 +1,11 @@
 {
   "name": "l3core",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "description": "L3 core contracts for the Rise Finance protocol.",
+  "author": "Rise Finance, Inc.",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "author": "",
   "license": "ISC",
   "devDependencies": {
     "@nomicfoundation/hardhat-toolbox": "^2.0.2",
