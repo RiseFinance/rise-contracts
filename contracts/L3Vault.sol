@@ -2,7 +2,7 @@
 
 pragma solidity ^0.8.0;
 
-import "hardhat/console.sol";
+import "hardhat/console.sol"; // test-only
 import "./interfaces/IPriceFeed.sol";
 import "./interfaces/IERC20.sol";
 import "./interfaces/ArbSys.sol";
@@ -107,7 +107,7 @@ contract L3Vault {
 
     // mapping to MerkleTree
     IPriceFeed public priceFeed;
-    mapping(uint256 => uint256) public balancesTracker; // only used in _depositInAmount
+    mapping(uint256 => uint256) public balancesTracker; // assetId => balance; only used in _depositInAmount
     mapping(address => mapping(uint256 => UserVault)) public traderBalances; // userKey => assetId => UserVault
     mapping(address => mapping(uint256 => Order)) public traderOrders; // userKey => orderId => Order
 
@@ -178,21 +178,23 @@ contract L3Vault {
     }
 
     // for ERC-20
+    /**
     function _depositInAmount(address _token) private returns (uint256) {
         uint256 prevBalance = balancesTracker[_token];
         uint256 currentBalance = IERC20(_token).balanceOf(address(this)); // L3Vault balance
         balancesTracker[_token] = currentBalance;
 
         return currentBalance.sub(prevBalance); // L3Vault balance delta
-    }
+    } */
 
     // for ETH
     function _depositInAmountEth() private returns (uint256) {
-        uint256 prevBalance = balancesTracker[address(0)]; // allocate ETH to address(0)
+        uint256 prevBalance = balancesTracker[ETH_ID]; // allocate ETH to address(0)
         uint256 currentBalance = address(this).balance; // L3Vault balance
-        balancesTracker[address(0)] = currentBalance;
+        balancesTracker[ETH_ID] = currentBalance;
 
-        return currentBalance.sub(prevBalance); // L3Vault balance delta
+        // return currentBalance.sub(prevBalance); // L3Vault balance delta // TODO: SafeMath
+        return currentBalance - prevBalance; // L3Vault balance delta
     }
 
     // L3 계정에서 직접 ETH를 입금할 때 필요한 로직
@@ -205,7 +207,6 @@ contract L3Vault {
         userEthVault.versionHash = keccak256(
             abi.encodePacked(prevVersionHash, msg.value)
         );
-
         emit DepositEth(msg.sender, msg.value);
     }
 
@@ -256,6 +257,7 @@ contract L3Vault {
      * from: trader / to: L3 ArbSys // TODO: check: `from` address to be L3Vault or the trader? => withdraw는 직접 서명 받아도 될듯?
      * 로직: traderBalances에서 값을 차감하고, L3Vault가 직접 ArbSys의 withdrawEth를 호출한다. (ETH도 ArbSys로 보냄)
      * L2에서 트레이더의 계정에 ETH를 +해주어야 한다.
+     * 이 함수를 이용하면, Outbox 로직 관련 Nitro 코드 수정이 필요 없다.
      */
     function withdrawEthToL2(uint256 amount) external {
         UserVault storage userEthVault = traderBalances[msg.sender][ETH_ID];
@@ -273,7 +275,8 @@ contract L3Vault {
         // send ETH to the trader from L3Vault
         // (bool sent, bytes memory data) = msg.sender.call{value: amount}("");
         // require(sent, "Failed to send Ether");
-        ArbSys(100).withdrawEth(msg.sender, amount); // precompile address 0x0000000000000000000000000000000000000064
+        ArbSys(address(100)).withdrawEth{value: amount}(msg.sender); // precompile address 0x0000000000000000000000000000000000000064
+        // check: argument를 msg.sender => tx.origin으로 변경? (위에 ETH 보내는 로직도 같이 변경해야 함)
 
         emit WithdrawEthToL2(msg.sender, amount);
     }
