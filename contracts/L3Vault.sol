@@ -39,7 +39,7 @@ contract L3Vault {
 
     // traderAddress, isLong, indexAssetId, collateralAssetId는 key로 사용
     struct Position {
-        bool hasProfit;
+        // bool hasProfit; // not needed
         // bool isOpen; // not needed
         uint256 size;
         uint256 collateralSize;
@@ -47,7 +47,6 @@ contract L3Vault {
         uint256 avgClosePrice;
         uint256 lastUpdatedTime;
         uint256 realizedPnlInUsd;
-        uint256 realizedPnlInIndexTokenCount;
     }
 
     struct GlobalPositionState {
