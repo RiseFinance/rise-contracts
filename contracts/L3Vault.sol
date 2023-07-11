@@ -11,6 +11,7 @@ contract L3Vault {
     uint256 public constant ETH_ID = 1;
 
     enum OrderType {
+        // TODO: change
         Open,
         Increase,
         Decrease,
@@ -19,22 +20,32 @@ contract L3Vault {
     }
 
     struct UserVault {
-        bytes32 versionHash;
+        bytes32 versionHash; // TODO: 필요할 경우 다시 추가
         uint256 balance;
         uint256 orderCount; // TODO: 조회 시간 delay가 너무 길 경우 제거
     }
 
-    // TODO: Order history 추가
-    // TODO: Position의 <open - close>를 하나의 쌍으로 관리할 것인지, 별도의 Buy / Sell order로 관리할 것인지 결정
-    struct Order {
-        bool isLong;
-        bool isMarketOrder;
-        // bytes32 globalOrderId; // TODO: set while matching
-        OrderType orderType; // open=0, increase=1, decrease=2, close=3, liquidate=4
-        uint256 sizeDeltaAbs;
-        uint256 markPrice;
+    struct OrderRequest {
+        // OrderRequest not generated in Market orders
         uint256 indexAssetId;
         uint256 collateralAssetId;
+        bool isLong;
+        bool isIncrease;
+        uint256 sizeDeltaAbs;
+    }
+
+    struct Order {
+        uint256 indexAssetId;
+        uint256 collateralAssetId;
+        bool isLong;
+        bool isIncrease;
+        bool isMarketOrder;
+        // bytes32 globalOrderId; // TODO: set while matching
+        // OrderType orderType; // open=0, increase=1, decrease=2, close=3, liquidate=4 // TODO: check: is neccessary?
+        // TODO: open/close와 increase/decrease를 구분할 필요가 있는지 점검
+        uint256 sizeDeltaAbs;
+        uint256 markPrice;
+
         // value change 등 추가
     }
 
@@ -105,19 +116,22 @@ contract L3Vault {
         bool isPositive
     );
 
-    // mapping to MerkleTree
     IPriceManager public priceManager;
+
+    // TODO: change mapping to MerkleTree
 
     mapping(uint256 => uint256) public balancesTracker; // assetId => balance; only used in _depositInAmount
     mapping(address => mapping(uint256 => UserVault)) public traderBalances; // userKey => assetId => UserVault
-    mapping(address => mapping(uint256 => Order)) public traderOrders; // userKey => orderId => Order (matched orders)
-    mapping(address => mapping(uint256 => Order)) public traderPendingOrders; // userKey => orderId => Order (pending orders)
-    mapping(uint256 => mapping(uint256 => Order[])) public limitOrderBook; // indexAssetId => price => Order[] (Queue)
+    mapping(address => mapping(uint256 => Order)) public filledOrders; // userKey => filledOrderId => Order (filled orders by trader)
+    mapping(address => mapping(uint256 => OrderRequest)) public pendingOrders; // userKey => pendingId => Order (pending orders by trader)
+    mapping(uint256 => mapping(uint256 => OrderRequest[])) public buyOrderBook; // indexAssetId => price => Order[] (Global Queue)
+    mapping(uint256 => mapping(uint256 => OrderRequest[])) public sellOrderBook; // indexAssetId => price => Order[] (Global Queue)
     // Priority: Price -> Timestamp -> Size // TODO: how to handle timestamp? (동시성 제어 필요)
 
     mapping(uint256 => uint256) public tokenPoolAmounts; // assetId => tokenCount
     mapping(uint256 => uint256) public tokenReserveAmounts; // assetId => tokenCount
-
+    mapping(uint256 => uint256) public maxLongCapacity; // assetId => tokenCount
+    mapping(uint256 => uint256) public maxShortCapacity; // assetId => tokenCount // TODO: check - is it for stablecoins?
     // mapping(uint256 => GlobalLongPositionState) public globalLongStates;
     // mapping(uint256 => GlobalShortPositionState) public globalShortStates;
 
@@ -133,17 +147,17 @@ contract L3Vault {
     // => The second order should be 'Increase Position', being integrated with the first order.
     function _getPositionKey(
         address _account,
-        uint256 _collateralAssetId,
+        bool _isLong,
         uint256 _indexAssetId,
-        bool _isLong
+        uint256 _collateralAssetId
     ) public pure returns (bytes32) {
         return
             keccak256(
                 abi.encodePacked(
                     _account,
-                    _collateralAssetId,
+                    _isLong,
                     _indexAssetId,
-                    _isLong
+                    _collateralAssetId
                 )
             );
     }
@@ -285,7 +299,7 @@ contract L3Vault {
     }
 
     // open, close => collateral 변경 / increase, decrease => collateral 변경 X
-    function openPosition(
+    function increasePosition(
         address _account,
         uint256 _collateralAssetId,
         uint256 _indexAssetId,
@@ -309,25 +323,25 @@ contract L3Vault {
         UserVault storage userVault = traderBalances[_account][_indexAssetId];
 
         // record Order
-        traderOrders[_account][userVault.orderCount] = Order(
-            _isLong,
-            true, // isMarketOrder
-            OrderType.Open,
-            _size,
-            markPrice,
+        filledOrders[_account][userVault.orderCount] = Order(
             _indexAssetId,
-            _collateralAssetId
+            _collateralAssetId,
+            _isLong,
+            true, // isIncrease
+            true, // isMarketOrder
+            // OrderType.Open,
+            _size,
+            markPrice
         );
+        userVault.orderCount += 1;
 
         emit OrderPlaced(_account, userVault.orderCount);
 
-        userVault.orderCount += 1;
-
         bytes32 key = _getPositionKey(
             _account,
-            _collateralAssetId,
+            _isLong,
             _indexAssetId,
-            _isLong
+            _collateralAssetId
         );
 
         Position storage position = positions[key];
@@ -384,7 +398,7 @@ contract L3Vault {
         return key;
     }
 
-    function closePosition(
+    function decreasePosition(
         address _account,
         uint256 _collateralAssetId,
         uint256 _indexAssetId,
@@ -392,9 +406,9 @@ contract L3Vault {
     ) external returns (bool) {
         bytes32 key = _getPositionKey(
             _account,
-            _collateralAssetId,
+            _isLong,
             _indexAssetId,
-            _isLong
+            _collateralAssetId
         );
 
         Position storage position = positions[key];
@@ -408,14 +422,15 @@ contract L3Vault {
         ); // _assetID, _size, _isBuy
 
         // record Order
-        traderOrders[_account][userVault.orderCount] = Order(
-            _isLong,
-            true, // isMarketOrder
-            OrderType.Close,
-            position.size,
-            markPrice,
+        filledOrders[_account][userVault.orderCount] = Order(
             _indexAssetId,
-            _collateralAssetId
+            _collateralAssetId,
+            _isLong,
+            false, // isIncrease
+            true, // isMarketOrder
+            // OrderType.Close,
+            position.size,
+            markPrice
         );
 
         emit OrderPlaced(_account, userVault.orderCount);
