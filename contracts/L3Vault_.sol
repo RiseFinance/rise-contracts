@@ -24,6 +24,7 @@ contract L3Vault {
         bool _isIncrease;
         uint256 _size; // in token amounts
         uint256 _collateralSize; // in token amounts
+        uint256 _limitPrice; // empty for market orders
     }
 
     struct OrderRequest {
@@ -32,6 +33,7 @@ contract L3Vault {
         bool isLong;
         bool isIncrease;
         uint256 sizeDeltaAbs;
+        uint256 limitPrice;
     }
 
     struct FilledOrder {
@@ -60,9 +62,10 @@ contract L3Vault {
 
     mapping(address => mapping(uint256 => uint256)) public traderBalances; // userAddress => assetId => Balance
     mapping(address => uint256) public traderFilledOrderCounts; // userAddress => orderCount
+    mapping(address => uint256) public traderOrderRequestCounts; // userAddress => orderRequestCount (limit order)
 
     mapping(address => mapping(uint256 => FilledOrder)) public filledOrders; // userAddress => traderOrderCount => Order (filled orders by trader)
-    mapping(address => mapping(uint256 => OrderRequest)) public pendingOrders; // userAddress => pendingId => Order (pending orders by trader)
+    mapping(address => mapping(uint256 => OrderRequest)) public pendingOrders; // userAddress => traderOrderRequestCounts => Order (pending orders by trader)
 
     mapping(uint256 => mapping(uint256 => OrderRequest[])) public buyOrderBook; // indexAssetId => price => Order[] (Global Queue)
     mapping(uint256 => mapping(uint256 => OrderRequest[])) public sellOrderBook; // indexAssetId => price => Order[] (Global Queue)
@@ -310,6 +313,32 @@ contract L3Vault {
 
     // ----------------------------------------------- Order Functions ------------------------------------------------
 
+    function placeLimitOrder(OrderContext calldata c) external {
+        _validateOrder(c);
+
+        OrderRequest memory orderRequest = OrderRequest(
+            c._indexAssetId,
+            c._collateralAssetId,
+            c._isLong,
+            c._isIncrease,
+            c._size,
+            c._limitPrice
+        );
+
+        pendingOrders[msg.sender][
+            traderOrderRequestCounts[msg.sender]
+        ] = orderRequest;
+        traderOrderRequestCounts[msg.sender]++;
+
+        bool _isBuy = c._isLong == c._isIncrease;
+
+        if (_isBuy) {
+            buyOrderBook[c._indexAssetId][c._limitPrice].push(orderRequest); // TODO: check - limit price should have validations for tick sizes
+        } else {
+            sellOrderBook[c._indexAssetId][c._limitPrice].push(orderRequest);
+        }
+    }
+
     function placeMarketOrder(
         OrderContext calldata c
     ) external returns (bytes32) {
@@ -329,7 +358,7 @@ contract L3Vault {
         if (c._isIncrease) {
             increasePosition(c, key, markPrice);
         } else {
-            // decreasePosition(c, key, markPrice);
+            decreasePosition(c, key, markPrice);
         }
 
         return key;
