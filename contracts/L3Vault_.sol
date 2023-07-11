@@ -8,7 +8,7 @@ import "./interfaces/IERC20.sol";
 import "./interfaces/ArbSys.sol";
 
 contract L3Vault {
-    // -------------------------------------------------- States --------------------------------------------------
+    // ---------------------------------------------------- States ----------------------------------------------------
     IPriceManager public priceManager;
 
     uint256 public constant usdDecimals = 8;
@@ -79,13 +79,13 @@ contract L3Vault {
     // TODO: open <> close 사이의 position을 하나로 연결하여 기록
     mapping(bytes32 => Position) public positions; // positionHash => Position
 
-    // -------------------------------------------------- Constructor --------------------------------------------------
+    // ------------------------------------------------- Constructor --------------------------------------------------
 
     constructor(address _priceManager) {
         priceManager = IPriceManager(_priceManager);
     }
 
-    // -------------------------------------------------- Util Functions --------------------------------------------------
+    // ------------------------------------------------ Util Functions ------------------------------------------------
 
     function _getPositionKey(
         address _account,
@@ -203,7 +203,7 @@ contract L3Vault {
         return (pnlAbs, hasProfit);
     }
 
-    // -------------------------------------------------- Primary Functions --------------------------------------------------
+    // ---------------------------------------------- Primary Functions -----------------------------------------------
 
     // function _increasePoolAmounts(uint256 assetId, uint256 _amount) internal {
     //     tokenPoolAmounts[assetId] += _amount;
@@ -239,7 +239,7 @@ contract L3Vault {
         tokenReserveAmounts[assetId] -= _amount;
     }
 
-    // -------------------------------------------------- Validation Functions --------------------------------------------------
+    // --------------------------------------------- Validation Functions ---------------------------------------------
 
     function _isAssetIdValid(uint256 _assetId) internal pure returns (bool) {
         // TODO: deal with delisting assets
@@ -308,7 +308,7 @@ contract L3Vault {
         );
     }
 
-    // -------------------------------------------------- Order Functions --------------------------------------------------
+    // ----------------------------------------------- Order Functions ------------------------------------------------
 
     function placeMarketOrder(
         OrderContext memory c
@@ -471,7 +471,20 @@ contract L3Vault {
         );
     }
 
-    // -------------------------------------------------- Liquidity Pool Functions --------------------------------------------------
-    // -------------------------------------------------- Deposit & Withdraw Functions --------------------------------------------------
-    // -------------------------------------------------- Events --------------------------------------------------
+    // ----------------------------------------- Deposit & Withdraw Functions -----------------------------------------
+    // ------------------------------------------- Liquidity Pool Functions -------------------------------------------
+    function addLiquidity(uint256 assetId, uint256 amount) external payable {
+        require(msg.value >= amount, "L3Vault: insufficient amount");
+        // TODO: check - how to mint the LP token?
+        tokenPoolAmounts[assetId] += amount;
+        if (msg.value > amount) {
+            payable(msg.sender).transfer(msg.value - amount);
+        } // refund
+    }
+
+    function removeLiquidity(uint256 assetId, uint256 amount) external {
+        tokenPoolAmounts[assetId] -= amount;
+        payable(msg.sender).transfer(amount);
+    }
+    // ---------------------------------------------------- Events ----------------------------------------------------
 }

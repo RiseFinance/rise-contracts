@@ -233,6 +233,7 @@ contract L3Vault {
      * Nitro에서 call하는 함수. Inbox의 요청을 실행할 때 호출
      * 이 함수는 ArbOS에서 L2->L3 ETH deposit의 auto redemption 과정의 일부로써,
      * L3의 트레이더 계정에 직접 ETH를 보내는 대신 L3Vault에 ETH를 보내고 traderBalances를 업데이트
+     * TODO: onlyNitro
      */
     function depositEthFromL2(address depositor) external payable {
         require(msg.value > 0, "L3Vault: deposit amount should be positive");
