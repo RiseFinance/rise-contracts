@@ -12,6 +12,7 @@ contract L3Vault {
     IPriceManager public priceManager;
 
     uint256 public constant usdDecimals = 8;
+    uint256 public constant USD_ID = 0;
     uint256 public constant ETH_ID = 1;
     uint256 private constant assetIdCounter = 1; // temporary
     mapping(uint256 => uint256) public tokenDecimals; // TODO: listing restriction needed
@@ -47,8 +48,7 @@ contract L3Vault {
     struct Position {
         uint256 size;
         uint256 collateralSizeInUsd;
-        uint256 avgOpenPrice;
-        uint256 avgClosePrice;
+        uint256 avgOpenPrice; // TODO: check - should be coupled w/ positions link logic
         uint256 lastUpdatedTime;
     }
 
@@ -161,6 +161,7 @@ contract L3Vault {
                 : (_oldAvgPrice * _oldSize + _markPrice * _sizeDelta) / newSize;
             return newAvgPrice;
         } else {
+            // TODO: check - this logic needed?
             uint256 newSize = _oldSize - _sizeDelta;
             uint256 newAvgPrice = newSize == 0
                 ? 0
@@ -264,16 +265,46 @@ contract L3Vault {
         require(c._collateralSize >= 0, "L3Vault: Invalid collateral size");
     }
 
-    function _validateExecution(OrderContext memory c) internal view {
+    function _validateIncreaseExecution(OrderContext memory c) internal view {
         require(
             tokenPoolAmounts[c._indexAssetId] >=
                 tokenReserveAmounts[c._indexAssetId] + c._size,
             "L3Vault: Not enough token pool amount"
         );
+        if (c._isLong) {
+            require(
+                maxLongCapacity[c._indexAssetId] >=
+                    globalPositionState[true][c._indexAssetId].totalSize +
+                        c._size,
+                "L3Vault: Exceeds max long capacity"
+            );
+        } else {
+            require(
+                maxShortCapacity[c._indexAssetId] >=
+                    globalPositionState[false][c._indexAssetId].totalSize +
+                        c._size,
+                "L3Vault: Exceeds max short capacity"
+            );
+        }
+    }
+
+    function _validateDecreaseExecution(
+        OrderContext memory c,
+        bytes32 _key,
+        uint256 _markPrice
+    ) internal view {
         require(
-            maxLongCapacity[c._indexAssetId] >=
-                globalPositionState[true][c._indexAssetId].totalSize + c._size,
-            "L3Vault: Exceeds max long capacity"
+            positions[_key].size >= c._size,
+            "L3Vault: Not enough position size"
+        );
+        require(
+            positions[_key].collateralSizeInUsd >=
+                _tokenToUsd(
+                    c._collateralSize,
+                    _markPrice,
+                    tokenDecimals[c._collateralAssetId]
+                ),
+            "L3Vault: Not enough collateral size"
         );
     }
 
@@ -282,24 +313,39 @@ contract L3Vault {
     function placeMarketOrder(
         OrderContext memory c
     ) external returns (bytes32) {
-        _validateOrder(c); // TODO: check - no param needed?
+        _validateOrder(c);
 
-        return increasePosition(c);
-    }
-
-    function increasePosition(
-        OrderContext memory c
-    ) internal returns (bytes32) {
-        // validation
-        _validateExecution(c);
-
-        // update state
-        traderBalances[msg.sender][c._collateralAssetId] -= c._collateralSize;
-        tokenReserveAmounts[c._indexAssetId] += c._size;
+        bytes32 key = _getPositionKey(
+            msg.sender,
+            c._isLong,
+            c._indexAssetId,
+            c._collateralAssetId
+        );
 
         // get markprice
         bool _isBuy = c._isLong == c._isIncrease;
-        uint256 markPrice = _getMarkPrice(c._indexAssetId, c._size, _isBuy);
+        uint256 markPrice = _getMarkPrice(c._indexAssetId, c._size, _isBuy); // TODO: check - to put after validations?
+
+        if (c._isIncrease) {
+            increasePosition(c, key, markPrice);
+        } else {
+            // decreasePosition(c, key, markPrice);
+        }
+
+        return key;
+    }
+
+    function increasePosition(
+        OrderContext memory c,
+        bytes32 _key,
+        uint256 _markPrice
+    ) internal {
+        // validation
+        _validateIncreaseExecution(c);
+
+        // update state variables
+        traderBalances[msg.sender][c._collateralAssetId] -= c._collateralSize;
+        tokenReserveAmounts[c._indexAssetId] += c._size;
 
         // fill the order
         filledOrders[msg.sender][
@@ -312,29 +358,23 @@ contract L3Vault {
             c._size,
             c._collateralSize,
             true,
-            markPrice
+            _markPrice
         );
         traderFilledOrderCounts[msg.sender] += 1;
 
         // update position
-        bytes32 key = _getPositionKey(
-            msg.sender,
-            c._isLong,
-            c._indexAssetId,
-            c._collateralAssetId
-        );
-        Position storage position = positions[key];
+        Position storage position = positions[_key];
         position.avgOpenPrice = _getNewAvgPrice(
             true,
             position.size,
             position.avgOpenPrice,
             c._size,
-            markPrice
+            _markPrice
         );
         position.size += c._size;
         position.collateralSizeInUsd += _tokenToUsd(
             c._collateralSize,
-            markPrice,
+            _markPrice,
             tokenDecimals[c._collateralAssetId]
         );
         position.lastUpdatedTime = block.timestamp;
@@ -346,14 +386,92 @@ contract L3Vault {
             c._indexAssetId,
             c._size,
             c._collateralSize,
-            markPrice
+            _markPrice
+        );
+    }
+
+    function decreasePosition(
+        OrderContext memory c,
+        bytes32 _key,
+        uint256 _markPrice
+    ) internal {
+        // validation
+        _validateDecreaseExecution(c, _key, _markPrice);
+
+        // update state variables
+        Position storage position = positions[_key];
+        (uint256 pnlUsdAbs, bool isPositive) = _calculatePnL(
+            position.size,
+            position.avgOpenPrice,
+            _markPrice,
+            c._isLong
         );
 
-        return key;
+        uint256 traderBalance = traderBalances[msg.sender][
+            c._collateralAssetId
+        ];
+
+        traderBalance += c._collateralSize; // c._collateralSize calculated before this point by the amount of decrease
+        traderBalance = isPositive
+            ? traderBalance + pnlUsdAbs // FIXME: USD or token?
+            : traderBalance - pnlUsdAbs;
+        // TODO: check - PnL includes collateral?
+
+        // TODO: settlement in USD or tokens?
+        tokenPoolAmounts[USD_ID] = isPositive
+            ? tokenPoolAmounts[USD_ID] - pnlUsdAbs // add validation here for not going below 0 or allow & swap tokens => USD by system call
+            : tokenPoolAmounts[USD_ID] + pnlUsdAbs;
+
+        tokenReserveAmounts[c._indexAssetId] -= c._size;
+
+        // fill the order
+        filledOrders[msg.sender][
+            traderFilledOrderCounts[msg.sender]
+        ] = FilledOrder(
+            c._indexAssetId,
+            c._collateralAssetId,
+            c._isLong,
+            c._isIncrease,
+            c._size,
+            c._collateralSize,
+            true,
+            _markPrice
+        );
+        traderFilledOrderCounts[msg.sender] += 1;
+
+        // update position
+        // if close position
+        if (c._size == position.size) {
+            delete positions[_key];
+        } else {
+            // position.avgOpenPrice = _getNewAvgPrice(
+            //     false,
+            //     position.size,
+            //     position.avgOpenPrice,
+            //     c._size,
+            //     _markPrice
+            // );
+            position.size -= c._size;
+            position.collateralSizeInUsd -= _tokenToUsd(
+                c._collateralSize,
+                _markPrice,
+                tokenDecimals[c._collateralAssetId]
+            );
+            position.lastUpdatedTime = block.timestamp;
+        }
+
+        // update global position state
+        _updateGlobalPositionState(
+            c._isLong,
+            c._isIncrease,
+            c._indexAssetId,
+            c._size,
+            c._collateralSize,
+            _markPrice
+        );
     }
 
     // -------------------------------------------------- Liquidity Pool Functions --------------------------------------------------
     // -------------------------------------------------- Deposit & Withdraw Functions --------------------------------------------------
-
     // -------------------------------------------------- Events --------------------------------------------------
 }
