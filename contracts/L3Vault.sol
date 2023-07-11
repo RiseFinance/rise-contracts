@@ -53,7 +53,7 @@ contract L3Vault {
     struct GlobalPositionState {
         uint256 totalSize;
         uint256 totalCollateral;
-        uint256 averagePrice;
+        uint256 avgPrice;
     }
 
     event DepositEth(address indexed user, uint256 amount); // To be deprecated
@@ -385,7 +385,7 @@ contract L3Vault {
             _isLong,
             globalPositionState[_isLong].totalSize,
             globalPositionState[_isLong].totalCollateral,
-            globalPositionState[_isLong].averagePrice
+            globalPositionState[_isLong].avgPrice
         );
 
         return key;
@@ -533,10 +533,10 @@ contract L3Vault {
         uint256 _collateralDelta,
         uint256 _markPrice
     ) internal {
-        globalPositionState[_isLong].averagePrice = _getNewGlobalAvgPrice(
+        globalPositionState[_isLong].avgPrice = _getNewGlobalAvgPrice(
             _isIncrease,
             globalPositionState[_isLong].totalSize,
-            globalPositionState[_isLong].averagePrice,
+            globalPositionState[_isLong].avgPrice,
             _sizeDelta,
             _markPrice
         );
