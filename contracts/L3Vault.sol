@@ -3,7 +3,7 @@
 pragma solidity ^0.8.0;
 
 import "hardhat/console.sol"; // test-only
-import "./interfaces/IPriceFeed.sol";
+import "./interfaces/IPriceManager.sol";
 import "./interfaces/IERC20.sol";
 import "./interfaces/ArbSys.sol";
 
@@ -106,7 +106,8 @@ contract L3Vault {
     );
 
     // mapping to MerkleTree
-    IPriceFeed public priceFeed;
+    IPriceManager public priceManager;
+
     mapping(uint256 => uint256) public balancesTracker; // assetId => balance; only used in _depositInAmount
     mapping(address => mapping(uint256 => UserVault)) public traderBalances; // userKey => assetId => UserVault
     mapping(address => mapping(uint256 => Order)) public traderOrders; // userKey => orderId => Order
@@ -121,8 +122,8 @@ contract L3Vault {
 
     mapping(bytes32 => Position) public positions; // positionHash => Position
 
-    constructor(address _priceFeed) {
-        priceFeed = IPriceFeed(_priceFeed);
+    constructor(address _priceManager) {
+        priceManager = IPriceManager(_priceManager);
     }
 
     // What if the trader requests two different orders with the same index Asset?
@@ -144,9 +145,16 @@ contract L3Vault {
             );
     }
 
-    function getMarkPrice(uint256 assetId) internal view returns (uint256) {
+    function getMarkPrice(
+        uint256 _assetId,
+        uint256 _size,
+        bool _isLong
+    ) internal returns (uint256) {
         // to implement in customized ArbOS
-        return priceFeed.getPrice(assetId);
+        /**
+         * @dev Jae Yoon
+         */
+        return priceManager.getAverageExecutionPrice(_assetId, _size, _isLong);
     }
 
     // function getPoolAmount(uint256 assetId) public view returns (uint256) {
@@ -303,7 +311,7 @@ contract L3Vault {
             "L3Vault: insufficient token pool amount"
         );
 
-        uint256 markPrice = getMarkPrice(_indexAssetId);
+        uint256 markPrice = getMarkPrice(_indexAssetId, _size, _isLong);
 
         UserVault storage userVault = traderBalances[_account][_indexAssetId];
 
@@ -392,8 +400,6 @@ contract L3Vault {
         bool _isLong,
         bool _isMarketOrder
     ) external returns (bool) {
-        uint256 markPrice = getMarkPrice(_indexAssetId);
-
         bytes32 key = _getPositionKey(
             _account,
             _collateralAssetId,
@@ -404,6 +410,12 @@ contract L3Vault {
         Position storage position = positions[key];
 
         UserVault storage userVault = traderBalances[_account][_indexAssetId];
+
+        uint256 markPrice = getMarkPrice(
+            _indexAssetId,
+            position.size,
+            !_isLong
+        ); // _assetID, _size, _isBuy
 
         // record Order
         traderOrders[_account][userVault.orderCount] = Order(
