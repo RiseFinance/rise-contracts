@@ -246,7 +246,7 @@ contract L3Vault {
         return _assetId < assetIdCounter;
     }
 
-    function _validateOrder(OrderContext memory c) internal view {
+    function _validateOrder(OrderContext calldata c) internal view {
         require(msg.sender != address(0), "L3Vault: Invalid sender address");
         require(
             msg.sender == tx.origin,
@@ -265,7 +265,7 @@ contract L3Vault {
         require(c._collateralSize >= 0, "L3Vault: Invalid collateral size");
     }
 
-    function _validateIncreaseExecution(OrderContext memory c) internal view {
+    function _validateIncreaseExecution(OrderContext calldata c) internal view {
         require(
             tokenPoolAmounts[c._indexAssetId] >=
                 tokenReserveAmounts[c._indexAssetId] + c._size,
@@ -289,7 +289,7 @@ contract L3Vault {
     }
 
     function _validateDecreaseExecution(
-        OrderContext memory c,
+        OrderContext calldata c,
         bytes32 _key,
         uint256 _markPrice
     ) internal view {
@@ -311,7 +311,7 @@ contract L3Vault {
     // ----------------------------------------------- Order Functions ------------------------------------------------
 
     function placeMarketOrder(
-        OrderContext memory c
+        OrderContext calldata c
     ) external returns (bytes32) {
         _validateOrder(c);
 
@@ -336,7 +336,7 @@ contract L3Vault {
     }
 
     function increasePosition(
-        OrderContext memory c,
+        OrderContext calldata c,
         bytes32 _key,
         uint256 _markPrice
     ) internal {
@@ -391,7 +391,7 @@ contract L3Vault {
     }
 
     function decreasePosition(
-        OrderContext memory c,
+        OrderContext calldata c,
         bytes32 _key,
         uint256 _markPrice
     ) internal {
