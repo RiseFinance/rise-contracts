@@ -157,14 +157,6 @@ contract L3Vault {
         return priceManager.getAverageExecutionPrice(_assetId, _size, _isLong);
     }
 
-    // function getPoolAmount(uint256 assetId) public view returns (uint256) {
-    //     return tokenPoolAmounts[assetId];
-    // }
-
-    // function getReserveAmount(uint256 assetId) public view returns (uint256) {
-    //     return tokenReserveAmounts[assetId];
-    // }
-
     function addLiquidity(uint256 assetId, uint256 amount) external payable {
         require(msg.value >= amount, "L3Vault: insufficient amount");
         // liquidity 기록을 변수에 할지, LP 토큰을 발행할지 결정
