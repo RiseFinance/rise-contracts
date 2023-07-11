@@ -29,6 +29,7 @@ contract L3Vault {
     struct Order {
         bool isLong;
         bool isMarketOrder;
+        // bytes32 globalOrderId; // TODO: set while matching
         OrderType orderType; // open=0, increase=1, decrease=2, close=3, liquidate=4
         uint256 sizeDeltaAbs;
         uint256 markPrice;
@@ -109,7 +110,10 @@ contract L3Vault {
 
     mapping(uint256 => uint256) public balancesTracker; // assetId => balance; only used in _depositInAmount
     mapping(address => mapping(uint256 => UserVault)) public traderBalances; // userKey => assetId => UserVault
-    mapping(address => mapping(uint256 => Order)) public traderOrders; // userKey => orderId => Order
+    mapping(address => mapping(uint256 => Order)) public traderOrders; // userKey => orderId => Order (matched orders)
+    mapping(address => mapping(uint256 => Order)) public traderPendingOrders; // userKey => orderId => Order (pending orders)
+    mapping(uint256 => mapping(uint256 => Order[])) public limitOrderBook; // indexAssetId => price => Order[] (Queue)
+    // Priority: Price -> Timestamp -> Size // TODO: how to handle timestamp? (동시성 제어 필요)
 
     mapping(uint256 => uint256) public tokenPoolAmounts; // assetId => tokenCount
     mapping(uint256 => uint256) public tokenReserveAmounts; // assetId => tokenCount
@@ -280,7 +284,6 @@ contract L3Vault {
         emit WithdrawEthToL2(msg.sender, amount);
     }
 
-    // open Position (market order)
     // open, close => collateral 변경 / increase, decrease => collateral 변경 X
     function openPosition(
         address _account,
@@ -288,8 +291,7 @@ contract L3Vault {
         uint256 _indexAssetId,
         uint256 _size,
         uint256 _collateralSize,
-        bool _isLong,
-        bool _isMarketOrder
+        bool _isLong
     ) external returns (bytes32) {
         // Create Order & Update Position
         require(_size > 0, "L3Vault: size should be positive");
@@ -309,7 +311,7 @@ contract L3Vault {
         // record Order
         traderOrders[_account][userVault.orderCount] = Order(
             _isLong,
-            _isMarketOrder,
+            true, // isMarketOrder
             OrderType.Open,
             _size,
             markPrice,
@@ -382,14 +384,11 @@ contract L3Vault {
         return key;
     }
 
-    // close Position
-    // TODO: decrease position 추가
     function closePosition(
         address _account,
         uint256 _collateralAssetId,
         uint256 _indexAssetId,
-        bool _isLong,
-        bool _isMarketOrder
+        bool _isLong
     ) external returns (bool) {
         bytes32 key = _getPositionKey(
             _account,
@@ -411,7 +410,7 @@ contract L3Vault {
         // record Order
         traderOrders[_account][userVault.orderCount] = Order(
             _isLong,
-            _isMarketOrder,
+            true, // isMarketOrder
             OrderType.Close,
             position.size,
             markPrice,
