@@ -28,7 +28,7 @@ contract L3Vault {
     }
 
     struct OrderRequest {
-        uint256 indexAssetId;
+        uint256 indexAssetId; // redundant?
         uint256 collateralAssetId;
         bool isLong;
         bool isIncrease;
@@ -86,6 +86,13 @@ contract L3Vault {
 
     constructor(address _priceManager) {
         priceManager = IPriceManager(_priceManager);
+    }
+
+    // -------------------------------------------------- Modifiers ---------------------------------------------------
+
+    modifier onlyKeeper() {
+        require(true, "only keeper"); // TODO: modify
+        _;
     }
 
     // ------------------------------------------------ Util Functions ------------------------------------------------
@@ -338,6 +345,8 @@ contract L3Vault {
             sellOrderBook[c._indexAssetId][c._limitPrice].push(orderRequest);
         }
     }
+
+    function executeLimitOrders(uint256 _indexAssetId) external onlyKeeper {}
 
     function placeMarketOrder(
         OrderContext calldata c
