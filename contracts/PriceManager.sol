@@ -79,33 +79,21 @@ contract PriceManager is IPriceManager {
 
     function getAverageExecutionPrice(
         uint _assetId,
-        uint size,
-        bool isBuy
+        uint _size,
+        bool _isBuy
     ) external override returns (uint256) {
         int price = getMarkPrice(_assetId);
-        // TODO: int 형변환 분기처리
-        int priceBufferChange = int(size) / PRICE_BUFFER_CHANGE_CONSTANT;
-        int averageExecutedPrice;
-        if (isBuy) {
-            updatePriceBuffer(_assetId, priceBufferChange);
-            averageExecutedPrice =
-                price +
-                (price * priceBufferChange) /
-                2 /
-                PRICE_BUFFER_PRECISION;
-        } else {
-            require(
-                priceBufferChange < PRICE_BUFFER_PRECISION,
-                "price underflow"
-            );
-            updatePriceBuffer(_assetId, -priceBufferChange);
-            averageExecutedPrice =
-                price -
-                (price * priceBufferChange) /
-                2 /
-                PRICE_BUFFER_PRECISION;
-        }
-        console.log(uint(averageExecutedPrice));
+        // require first bit of _size is 0
+        require(_size < 2 ** 255, "size overflow");
+        require(price > 0, "price not set");
+        int intSize = _isBuy ? int(_size) : -int(_size);
+        int priceBufferChange = intSize / PRICE_BUFFER_CHANGE_CONSTANT;
+        updatePriceBuffer(_assetId, priceBufferChange);
+        int averageExecutedPrice = price +
+            (price * priceBufferChange) /
+            2 /
+            PRICE_BUFFER_PRECISION;
+        require(averageExecutedPrice > 0, "price underflow");
         emit Execution(_assetId, averageExecutedPrice);
         return uint256(averageExecutedPrice);
     }
