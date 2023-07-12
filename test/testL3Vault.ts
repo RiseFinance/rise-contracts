@@ -6,18 +6,18 @@ import { ethers } from "hardhat";
 describe("L3Vault", function () {
   async function deployL3VaultFixture() {
     const [deployer, lp, trader] = await ethers.getSigners();
-    const PriceFeed = await ethers.getContractFactory("PriceFeed");
-    const priceFeed = await PriceFeed.deploy();
+    const PriceManager = await ethers.getContractFactory("PriceManager");
+    const priceManager = await PriceManager.deploy(deployer.address);
     const L3Vault = await ethers.getContractFactory("L3Vault");
-    const l3Vault = await L3Vault.deploy(priceFeed.address);
+    const l3Vault = await L3Vault.deploy(priceManager.address);
     const ETH_ID = 1;
-    return { l3Vault, priceFeed, deployer, lp, trader, ETH_ID };
+    return { l3Vault, priceManager, deployer, lp, trader, ETH_ID };
   }
 
   describe("Deployment", function () {
-    it("Should be deployed with PriceFeed contract address", async function () {
-      const { l3Vault, priceFeed } = await loadFixture(deployL3VaultFixture);
-      expect(await l3Vault.priceFeed()).to.equal(priceFeed.address);
+    it("Should be deployed with PriceManager contract address", async function () {
+      const { l3Vault, priceManager } = await loadFixture(deployL3VaultFixture);
+      expect(await l3Vault.priceManager()).to.equal(priceManager.address);
     });
   });
 
@@ -36,10 +36,10 @@ describe("L3Vault", function () {
   });
 
   describe("Integration Test", function () {
-    // flow: add liquidity => deposit ETH => set price (PriceFeed) => open position
+    // flow: add liquidity => deposit ETH => set price (PriceManager) => open position
     it("Should be able to open then close a long position", async function () {
       const isLong = true;
-      const { l3Vault, priceFeed, deployer, lp, trader, ETH_ID } =
+      const { l3Vault, priceManager, deployer, lp, trader, ETH_ID } =
         await loadFixture(deployL3VaultFixture);
 
       // 1. add liquidity (lp)
@@ -111,10 +111,11 @@ describe("L3Vault", function () {
         "]"
       );
 
-      // 3. set price (PriceFeed) (deployer)
+      // 3. set price (PriceManager) (deployer)
       const _price = ethers.utils.parseUnits("1923.56", 8);
-      await priceFeed.setPrice(ETH_ID, _price);
-      expect(await priceFeed.getPrice(ETH_ID)).to.equal(_price);
+      await priceManager.setPrice([ETH_ID], [_price]);
+      expect(await priceManager.getMarkPrice(ETH_ID)).to.equal(_price);
+      // expect(await priceManager.getIndexPrice(ETH_ID)).to.equal(_price);
 
       // 4. open position (trader)
       const _account = await trader.getAddress();
@@ -227,8 +228,8 @@ describe("L3Vault", function () {
       //   const _priceDeltaRatioInPercent = -5; // 5% decrease
       //   const _newPrice = _price.mul(100 + _priceDeltaRatioInPercent).div(100);
       const _newPrice = ethers.utils.parseUnits("1909.19", 8);
-      await priceFeed.setPrice(ETH_ID, _newPrice);
-      expect(await priceFeed.getPrice(ETH_ID)).to.equal(_newPrice);
+      await priceManager.setPrice([ETH_ID], [_newPrice]);
+      expect(await priceManager.getIndexPrice(ETH_ID)).to.equal(_newPrice);
 
       expect(
         await l3Vault
