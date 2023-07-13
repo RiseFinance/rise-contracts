@@ -2,6 +2,7 @@
 
 pragma solidity ^0.8.0;
 import "./interfaces/IPriceManager.sol";
+import "./L3Vault.sol";
 
 import "hardhat/console.sol";
 
@@ -14,6 +15,8 @@ contract PriceManager is IPriceManager {
         ((10 ** 6) * SIZE_PRECISION) / (PRICE_BUFFER_PRECISION / 100);
     // 1% price buffer per 10^6 USD
 
+    L3Vault public l3Vault;
+
     mapping(address => bool) public isKeeper;
     mapping(uint => int) public indexPrice;
     mapping(uint => uint) public priceBufferUpdatedTime;
@@ -21,8 +24,9 @@ contract PriceManager is IPriceManager {
 
     event Execution(uint assetId, int price);
 
-    constructor(address _keeperAddress) {
+    constructor(address _keeperAddress, address _l3VaultAddress) {
         isKeeper[_keeperAddress] = true;
+        l3Vault = L3Vault(_l3VaultAddress);
     }
 
     modifier onlyKeeper() {
@@ -43,16 +47,21 @@ contract PriceManager is IPriceManager {
             int currentPriceBufferInUsd = (_price[i] * currentPriceBuffer) /
                 PRICE_BUFFER_PRECISION;
 
+            // int prevMarkPrice = indexPrice[_assetId[i]] +
+            //     currentPriceBufferInUsd;
             int currentMarkPrice = _price[i] + currentPriceBufferInUsd;
-            int prevMarkPrice = indexPrice[_assetId[i]] +
-                currentPriceBufferInUsd;
 
-            // 가능한 limit order 체결
-            if (_price[i] < indexPrice[_assetId[i]]) {
-                // check buy orderbook (가격 하락)
-            } else {
-                // check sell orderbook (가격 상승)
-            }
+            uint256 markPriceWithLimitOrderPriceImpact;
+
+            bool checkBuyOrderBook = _price[i] < indexPrice[_assetId[i]];
+
+            markPriceWithLimitOrderPriceImpact = l3Vault.executeLimitOrders(
+                checkBuyOrderBook, // isBuy
+                _assetId[i],
+                uint256(currentMarkPrice)
+            );
+
+            // TODO: set price with markPriceWithLimitOrderPriceImpact
 
             indexPrice[_assetId[i]] = _price[i];
         }

@@ -534,13 +534,14 @@ contract L3Vault {
         bool _isBuy,
         uint256 _indexAssetId,
         uint256 _currentMarkPrice
-    ) external onlyKeeper {
+    ) external onlyKeeper returns (uint256) {
         // TODO: 주문 체결 후 호가 창 빌 때마다 maxBidPrice, minAskPrice 업데이트
         // price tick 단위로 오더북을 순회하며 체결할 수 있는 오더를 우선순위대로 체결시키고
         // 종료된 후의 PriceBufferDelta값을 리턴하여
         // PriceManager 컨트랙트에서 업데이트할 수 있도록 한다.
+        uint256 _interimMarkPrice = _currentMarkPrice; // initialize
+
         if (_isBuy) {
-            uint256 _interimMarkPrice = _currentMarkPrice; // initialize
             uint256 _limitPriceIterator = maxBidPrice[_indexAssetId]; // intialize
 
             // TODO: maxBidPrice에 이상치가 있을 경우 처리
@@ -672,6 +673,7 @@ contract L3Vault {
                 // Note: if `isPartial = true` in this while loop,  _sizeCap will be 0 after the for loop
             }
         }
+        return _interimMarkPrice;
     }
 
     /**
