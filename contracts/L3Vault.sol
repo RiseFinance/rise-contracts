@@ -10,13 +10,12 @@ import "./interfaces/ArbSys.sol";
 contract L3Vault {
     // ---------------------------------------------------- States ----------------------------------------------------
     IPriceManager public priceManager;
+
     int public constant PRICE_BUFFER_PRECISION = 10 ** 6;
     int public constant SIZE_PRECISION = 10 ** 3;
-    int public constant DECAY_CONSTANT = (PRICE_BUFFER_PRECISION / 100) / 300;
-    // 1% decay per 5 miniutes
+    int public constant DECAY_CONSTANT = (PRICE_BUFFER_PRECISION / 100) / 300; // 1% decay per 5 miniutes
     int public constant PRICE_BUFFER_CHANGE_CONSTANT =
-        ((10 ** 6) * SIZE_PRECISION) / (PRICE_BUFFER_PRECISION / 100);
-    // 1% price buffer per 10^6 USD
+        ((10 ** 6) * SIZE_PRECISION) / (PRICE_BUFFER_PRECISION / 100); // 1% price buffer per 10^6 USD
 
     uint256 public constant usdDecimals = 8;
     uint256 public constant USD_ID = 0;
@@ -29,8 +28,8 @@ contract L3Vault {
         uint256 _collateralAssetId;
         bool _isLong;
         bool _isIncrease;
-        uint256 _size; // in token amounts
-        uint256 _collateralSize; // in token amounts
+        uint256 _sizeAbsInUsd;
+        uint256 _collateralAbsInUsd;
         uint256 _limitPrice; // empty for market orders
     }
 
@@ -40,8 +39,8 @@ contract L3Vault {
         uint256 collateralAssetId;
         bool isLong;
         bool isIncrease;
-        uint256 sizeAbs;
-        uint256 collateralSizeAbs;
+        uint256 sizeAbsInUsd;
+        uint256 collateralAbsInUsd;
         uint256 limitPrice;
     }
 
@@ -50,22 +49,22 @@ contract L3Vault {
         uint256 collateralAssetId;
         bool isLong;
         bool isIncrease;
-        uint256 sizeDeltaAbs;
-        uint256 collateralSizeDeltaAbs;
+        uint256 sizeAbsInUsd;
+        uint256 collateralAbsInUsd;
         bool isMarketOrder;
         uint256 executionPrice;
     }
 
     struct Position {
-        uint256 size;
-        uint256 collateralSizeInUsd;
+        uint256 sizeInUsd;
+        uint256 collateralInUsd;
         uint256 avgOpenPrice; // TODO: check - should be coupled w/ positions link logic
         uint256 lastUpdatedTime; // Currently not used for any validation
     }
 
     struct GlobalPositionState {
-        uint256 totalSize;
-        uint256 totalCollateral;
+        uint256 totalSizeInUsd;
+        uint256 totalCollateralInUsd;
         uint256 avgPrice;
     }
 
@@ -226,20 +225,22 @@ contract L3Vault {
     ) internal {
         globalPositionState[_isLong][_indexAssetId].avgPrice = _getNextAvgPrice(
             _isIncrease,
-            globalPositionState[_isLong][_indexAssetId].totalSize,
+            globalPositionState[_isLong][_indexAssetId].totalSizeInUsd,
             globalPositionState[_isLong][_indexAssetId].avgPrice,
             _sizeDelta,
             _markPrice
         );
 
         if (_isIncrease) {
-            globalPositionState[_isLong][_indexAssetId].totalSize += _sizeDelta;
             globalPositionState[_isLong][_indexAssetId]
-                .totalCollateral += _collateralDelta;
+                .totalSizeInUsd += _sizeDelta;
+            globalPositionState[_isLong][_indexAssetId]
+                .totalCollateralInUsd += _collateralDelta;
         } else {
-            globalPositionState[_isLong][_indexAssetId].totalSize -= _sizeDelta;
             globalPositionState[_isLong][_indexAssetId]
-                .totalCollateral -= _collateralDelta;
+                .totalSizeInUsd -= _sizeDelta;
+            globalPositionState[_isLong][_indexAssetId]
+                .totalCollateralInUsd -= _collateralDelta;
         }
     }
 
@@ -349,19 +350,19 @@ contract L3Vault {
         if (_sizeDeltaAbs > 0) {
             _position.avgOpenPrice = _getNextAvgPrice(
                 _isSizeIncrease,
-                _position.size,
+                _position.sizeInUsd,
                 _position.avgOpenPrice,
                 _sizeDeltaAbs,
                 _markPrice
             );
         }
-        _position.size = _isSizeIncrease
-            ? _position.size + _sizeDeltaAbs
-            : _position.size - _sizeDeltaAbs;
+        _position.sizeInUsd = _isSizeIncrease
+            ? _position.sizeInUsd + _sizeDeltaAbs
+            : _position.sizeInUsd - _sizeDeltaAbs;
 
-        _position.collateralSizeInUsd = _isCollateralIncrease
-            ? _position.collateralSizeInUsd + _collateralSizeDeltaAbsInUsd
-            : _position.collateralSizeInUsd - _collateralSizeDeltaAbsInUsd;
+        _position.collateralInUsd = _isCollateralIncrease
+            ? _position.collateralInUsd + _collateralSizeDeltaAbsInUsd
+            : _position.collateralInUsd - _collateralSizeDeltaAbsInUsd;
 
         _position.lastUpdatedTime = block.timestamp;
     }
@@ -385,31 +386,31 @@ contract L3Vault {
         );
         require(
             traderBalances[msg.sender][c._collateralAssetId] >=
-                c._collateralSize,
+                c._collateralAbsInUsd,
             "L3Vault: Not enough balance"
         );
-        require(c._size >= 0, "L3Vault: Invalid size");
-        require(c._collateralSize >= 0, "L3Vault: Invalid collateral size");
+        require(c._sizeAbsInUsd >= 0, "L3Vault: Invalid size");
+        require(c._collateralAbsInUsd >= 0, "L3Vault: Invalid collateral size");
     }
 
     function _validateIncreaseExecution(OrderContext calldata c) internal view {
         require(
             tokenPoolAmounts[c._indexAssetId] >=
-                tokenReserveAmounts[c._indexAssetId] + c._size,
+                tokenReserveAmounts[c._indexAssetId] + c._sizeAbsInUsd,
             "L3Vault: Not enough token pool amount"
         );
         if (c._isLong) {
             require(
                 maxLongCapacity[c._indexAssetId] >=
-                    globalPositionState[true][c._indexAssetId].totalSize +
-                        c._size,
+                    globalPositionState[true][c._indexAssetId].totalSizeInUsd +
+                        c._sizeAbsInUsd,
                 "L3Vault: Exceeds max long capacity"
             );
         } else {
             require(
                 maxShortCapacity[c._indexAssetId] >=
-                    globalPositionState[false][c._indexAssetId].totalSize +
-                        c._size,
+                    globalPositionState[false][c._indexAssetId].totalSizeInUsd +
+                        c._sizeAbsInUsd,
                 "L3Vault: Exceeds max short capacity"
             );
         }
@@ -421,13 +422,13 @@ contract L3Vault {
         uint256 _markPrice
     ) internal view {
         require(
-            positions[_key].size >= c._size,
+            positions[_key].sizeInUsd >= c._sizeAbsInUsd,
             "L3Vault: Not enough position size"
         );
         require(
-            positions[_key].collateralSizeInUsd >=
+            positions[_key].collateralInUsd >=
                 _tokenToUsd(
-                    c._collateralSize,
+                    c._collateralAbsInUsd,
                     _markPrice,
                     tokenDecimals[c._collateralAssetId]
                 ),
@@ -456,8 +457,8 @@ contract L3Vault {
             c._collateralAssetId,
             c._isLong,
             c._isIncrease,
-            c._size,
-            c._collateralSize,
+            c._sizeAbsInUsd,
+            c._collateralAbsInUsd,
             c._limitPrice
         );
 
@@ -644,15 +645,15 @@ contract L3Vault {
         bool _isPartial
     ) private {
         uint256 partialRatio = _isPartial
-            ? (_sizeCap / _request.sizeAbs) * 10 ** 8 // TODO: - set decimals as a constant
+            ? (_sizeCap / _request.sizeAbsInUsd) * 10 ** 8 // TODO: - set decimals as a constant
             : 1 * 10 ** 8;
         uint256 _sizeAbs = _isPartial
-            ? _request.sizeAbs - _sizeCap
-            : _request.sizeAbs;
+            ? _request.sizeAbsInUsd - _sizeCap
+            : _request.sizeAbsInUsd;
 
         uint256 _collateralSizeAbs = _isPartial
-            ? (_request.collateralSizeAbs * partialRatio) / 10 ** 8
-            : _request.collateralSizeAbs;
+            ? (_request.collateralAbsInUsd * partialRatio) / 10 ** 8
+            : _request.collateralAbsInUsd;
 
         filledOrders[_request.trader][
             traderFilledOrderCounts[_request.trader]
@@ -693,7 +694,7 @@ contract L3Vault {
             // position 삭제 검사
             Position storage position = positions[key];
             (uint256 pnlUsdAbs, bool isPositive) = _calculatePnL(
-                position.size,
+                position.sizeInUsd,
                 position.avgOpenPrice,
                 _avgExecutionPrice,
                 _request.isLong
@@ -714,12 +715,12 @@ contract L3Vault {
 
             tokenReserveAmounts[_request.indexAssetId] -= _sizeAbs;
 
-            if (_sizeAbs == position.size) {
+            if (_sizeAbs == position.sizeInUsd) {
                 delete positions[key];
             } else {
                 // updatePosition(position, _avgExecutionPrice, _sizeAbs, )
-                position.size -= _sizeAbs;
-                position.collateralSizeInUsd -= _tokenToUsd(
+                position.sizeInUsd -= _sizeAbs;
+                position.collateralInUsd -= _tokenToUsd(
                     _collateralSizeAbs,
                     _avgExecutionPrice,
                     tokenDecimals[_request.collateralAssetId]
@@ -740,8 +741,8 @@ contract L3Vault {
 
         // delete or update (isPartial) limit order
         if (_isPartial) {
-            _request.sizeAbs -= _sizeAbs;
-            _request.collateralSizeAbs -= _collateralSizeAbs;
+            _request.sizeAbsInUsd -= _sizeAbs;
+            _request.collateralAbsInUsd -= _collateralSizeAbs;
         } else {
             dequeueOrderBook(_request, _isBuy); // TODO: check - if the target order is the first one in the queue
         }
@@ -772,7 +773,11 @@ contract L3Vault {
 
         // get markprice
         bool _isBuy = c._isLong == c._isIncrease;
-        uint256 markPrice = _getMarkPrice(c._indexAssetId, c._size, _isBuy); // TODO: check - to put after validations?
+        uint256 markPrice = _getMarkPrice(
+            c._indexAssetId,
+            c._sizeAbsInUsd,
+            _isBuy
+        ); // TODO: check - to put after validations?
 
         if (c._isIncrease) {
             increasePosition(c, key, markPrice);
@@ -792,8 +797,9 @@ contract L3Vault {
         _validateIncreaseExecution(c);
 
         // update state variables
-        traderBalances[msg.sender][c._collateralAssetId] -= c._collateralSize;
-        tokenReserveAmounts[c._indexAssetId] += c._size;
+        traderBalances[msg.sender][c._collateralAssetId] -= c
+            ._collateralAbsInUsd;
+        tokenReserveAmounts[c._indexAssetId] += c._sizeAbsInUsd;
 
         // fill the order
         filledOrders[msg.sender][
@@ -803,8 +809,8 @@ contract L3Vault {
             c._collateralAssetId,
             c._isLong,
             c._isIncrease,
-            c._size,
-            c._collateralSize,
+            c._sizeAbsInUsd,
+            c._collateralAbsInUsd,
             true,
             _markPrice
         );
@@ -814,14 +820,14 @@ contract L3Vault {
         Position storage position = positions[_key];
         position.avgOpenPrice = _getNextAvgPrice(
             true,
-            position.size,
+            position.sizeInUsd,
             position.avgOpenPrice,
-            c._size,
+            c._sizeAbsInUsd,
             _markPrice
         );
-        position.size += c._size;
-        position.collateralSizeInUsd += _tokenToUsd(
-            c._collateralSize,
+        position.sizeInUsd += c._sizeAbsInUsd;
+        position.collateralInUsd += _tokenToUsd(
+            c._collateralAbsInUsd,
             _markPrice,
             tokenDecimals[c._collateralAssetId]
         );
@@ -832,8 +838,8 @@ contract L3Vault {
             c._isLong,
             c._isIncrease,
             c._indexAssetId,
-            c._size,
-            c._collateralSize,
+            c._sizeAbsInUsd,
+            c._collateralAbsInUsd,
             _markPrice
         );
     }
@@ -849,7 +855,7 @@ contract L3Vault {
         // update state variables
         Position storage position = positions[_key];
         (uint256 pnlUsdAbs, bool isPositive) = _calculatePnL(
-            position.size,
+            position.sizeInUsd,
             position.avgOpenPrice,
             _markPrice,
             c._isLong
@@ -859,7 +865,7 @@ contract L3Vault {
             c._collateralAssetId
         ];
 
-        traderBalance += c._collateralSize; // c._collateralSize calculated before this point by the amount of decrease
+        traderBalance += c._collateralAbsInUsd; // c._collateralSize calculated before this point by the amount of decrease
         traderBalance = isPositive
             ? traderBalance + pnlUsdAbs // FIXME: USD or token?
             : traderBalance - pnlUsdAbs;
@@ -870,7 +876,7 @@ contract L3Vault {
             ? tokenPoolAmounts[USD_ID] - pnlUsdAbs // add validation here for not going below 0 or allow & swap tokens => USD by system call
             : tokenPoolAmounts[USD_ID] + pnlUsdAbs;
 
-        tokenReserveAmounts[c._indexAssetId] -= c._size;
+        tokenReserveAmounts[c._indexAssetId] -= c._sizeAbsInUsd;
 
         // fill the order
         filledOrders[msg.sender][
@@ -880,8 +886,8 @@ contract L3Vault {
             c._collateralAssetId,
             c._isLong,
             c._isIncrease,
-            c._size,
-            c._collateralSize,
+            c._sizeAbsInUsd,
+            c._collateralAbsInUsd,
             true,
             _markPrice
         );
@@ -889,19 +895,19 @@ contract L3Vault {
 
         // update position
         // if close position
-        if (c._size == position.size) {
+        if (c._sizeAbsInUsd == position.sizeInUsd) {
             delete positions[_key];
         } else {
             // position.avgOpenPrice = _getNextAvgPrice(
             //     false,
-            //     position.size,
+            //     position.sizeInUsd,
             //     position.avgOpenPrice,
-            //     c._size,
+            //     c._sizeAbsInUsd,
             //     _markPrice
             // );
-            position.size -= c._size;
-            position.collateralSizeInUsd -= _tokenToUsd(
-                c._collateralSize,
+            position.sizeInUsd -= c._sizeAbsInUsd;
+            position.collateralInUsd -= _tokenToUsd(
+                c._collateralAbsInUsd,
                 _markPrice,
                 tokenDecimals[c._collateralAssetId]
             );
@@ -913,8 +919,8 @@ contract L3Vault {
             c._isLong,
             c._isIncrease,
             c._indexAssetId,
-            c._size,
-            c._collateralSize,
+            c._sizeAbsInUsd,
+            c._collateralAbsInUsd,
             _markPrice
         );
     }
