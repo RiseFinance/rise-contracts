@@ -76,8 +76,10 @@ contract L3Vault {
     mapping(address => mapping(uint256 => FilledOrder)) public filledOrders; // userAddress => traderOrderCount => Order (filled orders by trader)
     mapping(address => mapping(uint256 => OrderRequest)) public pendingOrders; // userAddress => traderOrderRequestCounts => Order (pending orders by trader)
 
-    mapping(uint256 => mapping(uint256 => OrderRequest[])) public buyOrderBook; // indexAssetId => price => Order[] (Global Queue)
-    mapping(uint256 => mapping(uint256 => OrderRequest[])) public sellOrderBook; // indexAssetId => price => Order[] (Global Queue)
+    mapping(uint256 => mapping(uint256 => mapping(uint256 => OrderRequest)))
+        public buyOrderBook; // indexAssetId => price => queue index => OrderRequest (Global Queue)
+    mapping(uint256 => mapping(uint256 => mapping(uint256 => OrderRequest)))
+        public sellOrderBook; // indexAssetId => price => queue index => OrderRequest (Global Queue)
 
     mapping(uint256 => uint256) public maxBidPrice; // indexAssetId => price
     mapping(uint256 => uint256) public minAskPrice; // indexAssetId => price
@@ -110,6 +112,72 @@ contract L3Vault {
     modifier onlyKeeper() {
         require(true, "only keeper"); // TODO: modify
         _;
+    }
+
+    // ------------------------------------------- Orderbook Queue Data Type ------------------------------------------
+    mapping(uint256 => mapping(uint256 => uint256)) public buyFirstIndex; // indexAssetId => price => queue index
+    mapping(uint256 => mapping(uint256 => uint256)) public buyLastIndex; // indexAssetId => price => queue index
+    mapping(uint256 => mapping(uint256 => uint256)) public sellFirstIndex; // indexAssetId => price => queue index
+    mapping(uint256 => mapping(uint256 => uint256)) public sellLastIndex; // indexAssetId => price => queue index
+
+    // TODO: 맵핑 방식에서도 초기화 필요 (특정 자산Id, 인덱스에 처음 추가 시 초기화 필요)
+    // uint256 buyFirst = 1;
+    // uint256 buyLast = 0;
+    // uint256 sellFirst = 1;
+    // uint256 sellLast = 0;
+
+    function enqueueOrderBook(OrderRequest memory request, bool isBuy) public {
+        if (isBuy) {
+            buyLastIndex[request.indexAssetId][request.limitPrice]++;
+            uint256 buyLast = buyLastIndex[request.indexAssetId][
+                request.limitPrice
+            ];
+
+            buyOrderBook[request.indexAssetId][request.limitPrice][
+                buyLast
+            ] = request;
+        } else {
+            sellLastIndex[request.indexAssetId][request.limitPrice]++;
+            uint256 sellLast = sellLastIndex[request.indexAssetId][
+                request.limitPrice
+            ];
+            sellOrderBook[request.indexAssetId][request.limitPrice][
+                sellLast
+            ] = request;
+        }
+    }
+
+    function dequeueOrderBook(OrderRequest memory request, bool isBuy) public {
+        if (isBuy) {
+            uint256 buyLast = buyLastIndex[request.indexAssetId][
+                request.limitPrice
+            ];
+            uint256 buyFirst = buyFirstIndex[request.indexAssetId][
+                request.limitPrice
+            ];
+            require(buyLast > buyFirst, "L3Vault: buyOrderBook queue is empty");
+            delete buyOrderBook[request.indexAssetId][request.limitPrice][
+                buyFirst
+            ];
+
+            buyFirstIndex[request.indexAssetId][request.limitPrice]++;
+        } else {
+            uint256 sellLast = sellLastIndex[request.indexAssetId][
+                request.limitPrice
+            ];
+            uint256 sellFirst = sellFirstIndex[request.indexAssetId][
+                request.limitPrice
+            ];
+            require(
+                sellLast > sellFirst,
+                "L3Vault: sellOrderBook queue is empty"
+            );
+            delete sellOrderBook[request.indexAssetId][request.limitPrice][
+                sellFirst
+            ];
+
+            sellFirstIndex[request.indexAssetId][request.limitPrice]++;
+        }
     }
 
     // ------------------------------------------------ Util Functions ------------------------------------------------
@@ -368,7 +436,6 @@ contract L3Vault {
             if (c._limitPrice > maxBidPrice[c._indexAssetId]) {
                 maxBidPrice[c._indexAssetId] = c._limitPrice;
             }
-            buyOrderBook[c._indexAssetId][c._limitPrice].push(orderRequest); // TODO: check - limit price should have validations for tick sizes
         } else {
             if (
                 c._limitPrice < minAskPrice[c._indexAssetId] ||
@@ -376,11 +443,11 @@ contract L3Vault {
             ) {
                 minAskPrice[c._indexAssetId] = c._limitPrice;
             }
-            sellOrderBook[c._indexAssetId][c._limitPrice].push(orderRequest);
         }
+        enqueueOrderBook(orderRequest, _isBuy); // TODO: check - limit price should have validations for tick sizes
     }
 
-    function removeLimitOrder() public {}
+    function cancleLimitOrder() public {}
 
     function updateLimitOrder() public {}
 
@@ -434,6 +501,20 @@ contract L3Vault {
                     // 우선순위대로 (앞에서부터) for문 돌며 가능한 수량만큼 avgExecutionPrice로 체결하고 종료
                     // 만약 하나의 Order가 일부만 체결될 수 있다면, 체결 후 해당 Order는 삭제하지 않고 업데이트
 
+                    uint256 _priceImpactInUsd = _interimMarkPrice *
+                        uint256(PRICE_BUFFER_CHANGE_CONSTANT) *
+                        _sizeCap; // (남아있는 sizeCap만큼)
+
+                    uint256 avgExecutionPrice = _getAvgExecutionPrice(
+                        _interimMarkPrice,
+                        _priceImpactInUsd,
+                        _isBuy
+                    );
+
+                    // 아래와 똑같은 로직이지만
+                    // for문을 돌면서 sizeCap을 차감하면서 _orderRequest[i].sizeAbs > sizeCap이 되는 순간
+                    // 해당 order의 일부를 체결, 업데이트하고 종료 (break)
+
                     break;
                 } else {
                     // 이번 price tick에 걸린 주문을 전부 체결한다.
@@ -448,24 +529,36 @@ contract L3Vault {
                     uint256 avgExecutionPrice = _getAvgExecutionPrice(
                         _interimMarkPrice,
                         _priceImpactInUsd,
-                        true
+                        _isBuy
                     );
 
-                    OrderRequest[] memory _orderRequests = buyOrderBook[
-                        _indexAssetId
-                    ][_limitPriceIterator];
+                    // OrderRequest[] memory _orderRequests = buyOrderBook[
+                    //     _indexAssetId
+                    // ][_limitPriceIterator];
 
-                    for (uint256 i = 0; i < _orderRequests.length; i++) {
-                        // FIXME: _isIncrease 분기처리 필요
+                    mapping(uint256 => OrderRequest)
+                        storage _orderRequests = buyOrderBook[_indexAssetId][
+                            _limitPriceIterator
+                        ];
+                    uint256 buyFirst = buyFirstIndex[_indexAssetId][
+                        _limitPriceIterator
+                    ];
+                    uint256 buyLast = buyLastIndex[_indexAssetId][
+                        _limitPriceIterator
+                    ];
+
+                    for (uint256 i = buyFirst; i <= buyLast; i++) {
                         // FilledOrder 생성 및 filledOrders에 추가, traderFilledOrderCounts++
                         // position 업데이트
-                        // orderbook에서 제거
-                        // pendingOrders에서 제거
+                        // FIXME: orderbook에서 제거
+                        // pendingOrders에서 제거 // TODO: 필요한 기능인지 점검
                         // TODO: 함수로 빼거나 increasePosition과 통합
 
                         // TODO: validateExecution here (increase, decrease)
 
                         OrderRequest memory request = _orderRequests[i];
+
+                        // 여기서 체크: request.sizeAbs > sizeCap이면, 사이즈를 다르게 한다.
 
                         // FilledOrder 생성 및 filledOrders에 추가
                         filledOrders[request.trader][
@@ -557,11 +650,17 @@ contract L3Vault {
                             request.collateralSizeAbs,
                             avgExecutionPrice
                         );
+
+                        _sizeCap -= request.sizeAbs; // TODO: validation - assert(sum(request.sizeAbs) == orderSizeInUsdForPriceTick[_indexAssetId][_limitPriceIterator])
+
+                        dequeueOrderBook(request, _isBuy); // TODO: check - if the target order is the first one in the queue
                     }
 
                     _interimMarkPrice += _priceImpactInUsd; // 이번 price tick 주문 iteration 이후 Price Impact를 interimPrice에 적용
                 }
-
+                // _sizeCap -= orderSizeInUsdForPriceTick[_indexAssetId][
+                //     _limitPriceIterator
+                // ];
                 _limitPriceIterator -= priceTickSizes[_indexAssetId]; // decrease for buy
             }
         }
