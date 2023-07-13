@@ -484,12 +484,16 @@ contract L3Vault {
                     ] == 0
                 ) {
                     // no order to execute for this price tick
-                    break;
+                    _limitPriceIterator -= priceTickSizes[_indexAssetId]; // decrease for buy
+                    continue;
                 }
 
                 uint256 _sizeCap = (_limitPriceIterator - _interimMarkPrice) /
                     (_interimMarkPrice * uint256(PRICE_BUFFER_CHANGE_CONSTANT)); // TODO: decimals 확인
 
+                uint256 _priceImpactInUsd;
+                uint256 avgExecutionPrice;
+                bool isPartial;
                 // 이번 iteration에서 모든 오더를 체결할 수 없을 경우 (다음 price tick으로 넘어갈 필요 없음)
                 if (
                     _sizeCap <
@@ -501,168 +505,213 @@ contract L3Vault {
                     // 우선순위대로 (앞에서부터) for문 돌며 가능한 수량만큼 avgExecutionPrice로 체결하고 종료
                     // 만약 하나의 Order가 일부만 체결될 수 있다면, 체결 후 해당 Order는 삭제하지 않고 업데이트
 
-                    uint256 _priceImpactInUsd = _interimMarkPrice *
+                    _priceImpactInUsd =
+                        _interimMarkPrice *
                         uint256(PRICE_BUFFER_CHANGE_CONSTANT) *
                         _sizeCap; // (남아있는 sizeCap만큼)
 
-                    uint256 avgExecutionPrice = _getAvgExecutionPrice(
+                    avgExecutionPrice = _getAvgExecutionPrice(
                         _interimMarkPrice,
                         _priceImpactInUsd,
                         _isBuy
                     );
 
+                    isPartial = true;
+
                     // 아래와 똑같은 로직이지만
                     // for문을 돌면서 sizeCap을 차감하면서 _orderRequest[i].sizeAbs > sizeCap이 되는 순간
                     // 해당 order의 일부를 체결, 업데이트하고 종료 (break)
-
-                    break;
                 } else {
                     // 이번 price tick에 걸린 주문을 전부 체결한다.
                     // avg execution price 계산
 
-                    uint256 _priceImpactInUsd = _interimMarkPrice *
+                    _priceImpactInUsd =
+                        _interimMarkPrice *
                         uint256(PRICE_BUFFER_CHANGE_CONSTANT) *
                         orderSizeInUsdForPriceTick[_indexAssetId][
                             _limitPriceIterator
                         ];
 
-                    uint256 avgExecutionPrice = _getAvgExecutionPrice(
+                    avgExecutionPrice = _getAvgExecutionPrice(
                         _interimMarkPrice,
                         _priceImpactInUsd,
                         _isBuy
                     );
 
-                    // OrderRequest[] memory _orderRequests = buyOrderBook[
-                    //     _indexAssetId
-                    // ][_limitPriceIterator];
-
-                    mapping(uint256 => OrderRequest)
-                        storage _orderRequests = buyOrderBook[_indexAssetId][
-                            _limitPriceIterator
-                        ];
-                    uint256 buyFirst = buyFirstIndex[_indexAssetId][
-                        _limitPriceIterator
-                    ];
-                    uint256 buyLast = buyLastIndex[_indexAssetId][
-                        _limitPriceIterator
-                    ];
-
-                    for (uint256 i = buyFirst; i <= buyLast; i++) {
-                        // FilledOrder 생성 및 filledOrders에 추가, traderFilledOrderCounts++
-                        // position 업데이트
-                        // FIXME: orderbook에서 제거
-                        // pendingOrders에서 제거 // TODO: 필요한 기능인지 점검
-                        // TODO: 함수로 빼거나 increasePosition과 통합
-
-                        // TODO: validateExecution here (increase, decrease)
-
-                        OrderRequest memory request = _orderRequests[i];
-
-                        // 여기서 체크: request.sizeAbs > sizeCap이면, 사이즈를 다르게 한다.
-
-                        // FilledOrder 생성 및 filledOrders에 추가
-                        filledOrders[request.trader][
-                            traderFilledOrderCounts[request.trader]
-                        ] = FilledOrder(
-                            request.indexAssetId,
-                            request.collateralAssetId,
-                            request.isLong,
-                            request.isIncrease,
-                            request.sizeAbs,
-                            request.collateralSizeAbs,
-                            false,
-                            avgExecutionPrice
-                        );
-                        traderFilledOrderCounts[request.trader] += 1;
-
-                        // update position
-                        bytes32 key = _getPositionKey(
-                            request.trader,
-                            request.isLong,
-                            request.indexAssetId,
-                            request.collateralAssetId
-                        );
-                        // Position {size, collateralSizeInUsd, avgOpenPrice, lastUpdatedTime}
-                        if (request.isIncrease) {
-                            Position storage position = positions[key];
-                            position.avgOpenPrice = _getNewAvgPrice(
-                                request.isIncrease,
-                                position.size,
-                                position.avgOpenPrice,
-                                request.sizeAbs,
-                                avgExecutionPrice
-                            );
-                            position.size += request.sizeAbs;
-                            position.collateralSizeInUsd += _tokenToUsd(
-                                request.collateralSizeAbs,
-                                avgExecutionPrice,
-                                tokenDecimals[request.collateralAssetId]
-                            );
-                            position.lastUpdatedTime = block.timestamp;
-                        } else {
-                            // position 업데이트
-                            // PnL 계산, trader balance, poolAmounts, reservedAmounts 업데이트
-                            // position 삭제 검사
-                            Position storage position = positions[key];
-                            (
-                                uint256 pnlUsdAbs,
-                                bool isPositive
-                            ) = _calculatePnL(
-                                    position.size,
-                                    position.avgOpenPrice,
-                                    avgExecutionPrice,
-                                    request.isLong
-                                );
-
-                            uint256 traderBalance = traderBalances[
-                                request.trader
-                            ][request.collateralAssetId];
-
-                            traderBalance += request.collateralSizeAbs;
-                            traderBalance = isPositive
-                                ? traderBalance + pnlUsdAbs
-                                : traderBalance - pnlUsdAbs;
-
-                            tokenPoolAmounts[USD_ID] = isPositive
-                                ? tokenPoolAmounts[USD_ID] - pnlUsdAbs
-                                : tokenPoolAmounts[USD_ID] + pnlUsdAbs;
-
-                            tokenReserveAmounts[request.indexAssetId] -= request
-                                .sizeAbs;
-
-                            if (request.sizeAbs == position.size) {
-                                delete positions[key];
-                            } else {
-                                position.size -= request.sizeAbs;
-                                position.collateralSizeInUsd -= _tokenToUsd(
-                                    request.collateralSizeAbs,
-                                    avgExecutionPrice,
-                                    tokenDecimals[request.collateralAssetId]
-                                );
-                                position.lastUpdatedTime = block.timestamp;
-                            }
-                        }
-                        _updateGlobalPositionState(
-                            request.isLong,
-                            request.isIncrease,
-                            request.indexAssetId,
-                            request.sizeAbs,
-                            request.collateralSizeAbs,
-                            avgExecutionPrice
-                        );
-
-                        _sizeCap -= request.sizeAbs; // TODO: validation - assert(sum(request.sizeAbs) == orderSizeInUsdForPriceTick[_indexAssetId][_limitPriceIterator])
-
-                        dequeueOrderBook(request, _isBuy); // TODO: check - if the target order is the first one in the queue
-                    }
-
-                    _interimMarkPrice += _priceImpactInUsd; // 이번 price tick 주문 iteration 이후 Price Impact를 interimPrice에 적용
+                    isPartial = false;
                 }
+                // OrderRequest[] memory _orderRequests = buyOrderBook[
+                //     _indexAssetId
+                // ][_limitPriceIterator];
+
+                mapping(uint256 => OrderRequest)
+                    storage _orderRequests = buyOrderBook[_indexAssetId][
+                        _limitPriceIterator
+                    ];
+                uint256 buyFirst = buyFirstIndex[_indexAssetId][
+                    _limitPriceIterator
+                ];
+                uint256 buyLast = buyLastIndex[_indexAssetId][
+                    _limitPriceIterator
+                ];
+
+                for (uint256 i = buyFirst; i <= buyLast; i++) {
+                    // FilledOrder 생성 및 filledOrders에 추가, traderFilledOrderCounts++
+                    // position 업데이트
+                    // orderbook에서 제거
+                    // pendingOrders에서 제거 // TODO: 필요한 기능인지 점검
+                    // TODO: validateExecution here (increase, decrease)
+
+                    OrderRequest memory request = _orderRequests[i];
+
+                    // 여기서 체크: request.sizeAbs > sizeCap이면, 사이즈를 다르게 한다.
+
+                    // FilledOrder 생성 및 filledOrders에 추가
+                    _fillLimitOrder(
+                        request,
+                        avgExecutionPrice,
+                        _sizeCap,
+                        _isBuy,
+                        isPartial // isPartial
+                    );
+
+                    if (_sizeCap == 0) {
+                        break;
+                    }
+                }
+
+                _interimMarkPrice += _priceImpactInUsd; // 이번 price tick 주문 iteration 이후 Price Impact를 interimPrice에 적용
+
                 // _sizeCap -= orderSizeInUsdForPriceTick[_indexAssetId][
                 //     _limitPriceIterator
                 // ];
                 _limitPriceIterator -= priceTickSizes[_indexAssetId]; // decrease for buy
+
+                if (isPartial) {
+                    break;
+                }
+                // Note: if `isPartial = true` in this while loop,  _sizeCap will be 0 after the for loop
             }
+        }
+    }
+
+    /**
+     *
+     * @param _request OrderRequest
+     * @param _isPartial true if the order is partially filled
+     */
+    function _fillLimitOrder(
+        OrderRequest memory _request,
+        uint256 _avgExecutionPrice,
+        uint256 _sizeCap,
+        bool _isBuy,
+        bool _isPartial
+    ) private {
+        uint256 partialRatio = _isPartial
+            ? (_sizeCap / _request.sizeAbs) * 10 ** 8 // TODO - set decimals as a constant
+            : 1;
+        uint256 _sizeAbs = _isPartial
+            ? _request.sizeAbs - _sizeCap
+            : _request.sizeAbs;
+
+        uint256 _collateralSizeAbs = _isPartial
+            ? (_request.collateralSizeAbs * partialRatio) / 10 ** 8
+            : _request.collateralSizeAbs;
+
+        filledOrders[_request.trader][
+            traderFilledOrderCounts[_request.trader]
+        ] = FilledOrder(
+            _request.indexAssetId,
+            _request.collateralAssetId,
+            _request.isLong,
+            _request.isIncrease,
+            _sizeAbs,
+            _collateralSizeAbs,
+            false,
+            _avgExecutionPrice
+        );
+        traderFilledOrderCounts[_request.trader] += 1;
+
+        // update position
+        bytes32 key = _getPositionKey(
+            _request.trader,
+            _request.isLong,
+            _request.indexAssetId,
+            _request.collateralAssetId
+        );
+        // Position {size, collateralSizeInUsd, avgOpenPrice, lastUpdatedTime}
+        if (_request.isIncrease) {
+            Position storage position = positions[key];
+            position.avgOpenPrice = _getNewAvgPrice(
+                _request.isIncrease,
+                position.size,
+                position.avgOpenPrice,
+                _sizeAbs,
+                _avgExecutionPrice
+            );
+            position.size += _sizeAbs;
+            position.collateralSizeInUsd += _tokenToUsd(
+                _collateralSizeAbs,
+                _avgExecutionPrice,
+                tokenDecimals[_request.collateralAssetId]
+            );
+            position.lastUpdatedTime = block.timestamp;
+        } else {
+            // position 업데이트
+            // PnL 계산, trader balance, poolAmounts, reservedAmounts 업데이트
+            // position 삭제 검사
+            Position storage position = positions[key];
+            (uint256 pnlUsdAbs, bool isPositive) = _calculatePnL(
+                position.size,
+                position.avgOpenPrice,
+                _avgExecutionPrice,
+                _request.isLong
+            );
+
+            uint256 traderBalance = traderBalances[_request.trader][
+                _request.collateralAssetId
+            ];
+
+            traderBalance += _collateralSizeAbs;
+            traderBalance = isPositive
+                ? traderBalance + pnlUsdAbs
+                : traderBalance - pnlUsdAbs;
+
+            tokenPoolAmounts[USD_ID] = isPositive
+                ? tokenPoolAmounts[USD_ID] - pnlUsdAbs
+                : tokenPoolAmounts[USD_ID] + pnlUsdAbs;
+
+            tokenReserveAmounts[_request.indexAssetId] -= _sizeAbs;
+
+            if (_sizeAbs == position.size) {
+                delete positions[key];
+            } else {
+                position.size -= _sizeAbs;
+                position.collateralSizeInUsd -= _tokenToUsd(
+                    _collateralSizeAbs,
+                    _avgExecutionPrice,
+                    tokenDecimals[_request.collateralAssetId]
+                );
+                position.lastUpdatedTime = block.timestamp;
+            }
+        }
+        _updateGlobalPositionState(
+            _request.isLong,
+            _request.isIncrease,
+            _request.indexAssetId,
+            _sizeAbs,
+            _collateralSizeAbs,
+            _avgExecutionPrice
+        );
+
+        _sizeCap -= _sizeAbs; // TODO: validation - assert(sum(request.sizeAbs) == orderSizeInUsdForPriceTick[_indexAssetId][_limitPriceIterator])
+
+        // delete or update (isPartial) limit order
+        if (_isPartial) {
+            _request.sizeAbs -= _sizeAbs;
+            _request.collateralSizeAbs -= _collateralSizeAbs;
+        } else {
+            dequeueOrderBook(_request, _isBuy); // TODO: check - if the target order is the first one in the queue
         }
     }
 
