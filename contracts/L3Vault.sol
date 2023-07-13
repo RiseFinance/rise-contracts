@@ -224,7 +224,7 @@ contract L3Vault {
         uint256 _collateralDelta,
         uint256 _markPrice
     ) internal {
-        globalPositionState[_isLong][_indexAssetId].avgPrice = _getNewAvgPrice(
+        globalPositionState[_isLong][_indexAssetId].avgPrice = _getNextAvgPrice(
             _isIncrease,
             globalPositionState[_isLong][_indexAssetId].totalSize,
             globalPositionState[_isLong][_indexAssetId].avgPrice,
@@ -246,7 +246,7 @@ contract L3Vault {
     /**
      * (new avg price) * (new size) = (old avg price) * (old size) + (mark price) * (size delta)
      * */
-    function _getNewAvgPrice(
+    function _getNextAvgPrice(
         bool _isIncrease,
         uint256 _oldSize,
         uint256 _oldAvgPrice,
@@ -338,6 +338,34 @@ contract L3Vault {
         tokenReserveAmounts[assetId] -= _amount;
     }
 
+    function updatePosition(
+        Position storage _position,
+        uint256 _markPrice,
+        uint256 _sizeDeltaAbs,
+        uint256 _collateralSizeDeltaAbsInUsd,
+        bool _isSizeIncrease,
+        bool _isCollateralIncrease
+    ) internal {
+        if (_sizeDeltaAbs > 0) {
+            _position.avgOpenPrice = _getNextAvgPrice(
+                _isSizeIncrease,
+                _position.size,
+                _position.avgOpenPrice,
+                _sizeDeltaAbs,
+                _markPrice
+            );
+        }
+        _position.size = _isSizeIncrease
+            ? _position.size + _sizeDeltaAbs
+            : _position.size - _sizeDeltaAbs;
+
+        _position.collateralSizeInUsd = _isCollateralIncrease
+            ? _position.collateralSizeInUsd + _collateralSizeDeltaAbsInUsd
+            : _position.collateralSizeInUsd - _collateralSizeDeltaAbsInUsd;
+
+        _position.lastUpdatedTime = block.timestamp;
+    }
+
     // --------------------------------------------- Validation Functions ---------------------------------------------
 
     function _isAssetIdValid(uint256 _assetId) internal pure returns (bool) {
@@ -408,6 +436,14 @@ contract L3Vault {
     }
 
     // ----------------------------------------------- Order Functions ------------------------------------------------
+
+    function increaseCollateral() external {
+        // call when sizeDelta = 0 (leverage down)
+    }
+
+    function decreaseCollateral() external {
+        // call when sizeDelta = 0 (leverage up)
+    }
 
     function placeLimitOrder(OrderContext calldata c) external {
         // FIXME: orderSizeForPriceTick 업데이트
@@ -608,8 +644,8 @@ contract L3Vault {
         bool _isPartial
     ) private {
         uint256 partialRatio = _isPartial
-            ? (_sizeCap / _request.sizeAbs) * 10 ** 8 // TODO - set decimals as a constant
-            : 1;
+            ? (_sizeCap / _request.sizeAbs) * 10 ** 8 // TODO: - set decimals as a constant
+            : 1 * 10 ** 8;
         uint256 _sizeAbs = _isPartial
             ? _request.sizeAbs - _sizeCap
             : _request.sizeAbs;
@@ -642,20 +678,15 @@ contract L3Vault {
         // Position {size, collateralSizeInUsd, avgOpenPrice, lastUpdatedTime}
         if (_request.isIncrease) {
             Position storage position = positions[key];
-            position.avgOpenPrice = _getNewAvgPrice(
-                _request.isIncrease,
-                position.size,
-                position.avgOpenPrice,
-                _sizeAbs,
-                _avgExecutionPrice
-            );
-            position.size += _sizeAbs;
-            position.collateralSizeInUsd += _tokenToUsd(
-                _collateralSizeAbs,
+
+            updatePosition(
+                position,
                 _avgExecutionPrice,
-                tokenDecimals[_request.collateralAssetId]
+                _sizeAbs,
+                _collateralSizeAbs,
+                _request.isIncrease,
+                _request.isIncrease
             );
-            position.lastUpdatedTime = block.timestamp;
         } else {
             // position 업데이트
             // PnL 계산, trader balance, poolAmounts, reservedAmounts 업데이트
@@ -672,7 +703,7 @@ contract L3Vault {
                 _request.collateralAssetId
             ];
 
-            traderBalance += _collateralSizeAbs;
+            traderBalance += _collateralSizeAbs; // FIXME: collateralSize has to be in USD
             traderBalance = isPositive
                 ? traderBalance + pnlUsdAbs
                 : traderBalance - pnlUsdAbs;
@@ -686,6 +717,7 @@ contract L3Vault {
             if (_sizeAbs == position.size) {
                 delete positions[key];
             } else {
+                // updatePosition(position, _avgExecutionPrice, _sizeAbs, )
                 position.size -= _sizeAbs;
                 position.collateralSizeInUsd -= _tokenToUsd(
                     _collateralSizeAbs,
@@ -780,7 +812,7 @@ contract L3Vault {
 
         // update position
         Position storage position = positions[_key];
-        position.avgOpenPrice = _getNewAvgPrice(
+        position.avgOpenPrice = _getNextAvgPrice(
             true,
             position.size,
             position.avgOpenPrice,
@@ -860,7 +892,7 @@ contract L3Vault {
         if (c._size == position.size) {
             delete positions[_key];
         } else {
-            // position.avgOpenPrice = _getNewAvgPrice(
+            // position.avgOpenPrice = _getNextAvgPrice(
             //     false,
             //     position.size,
             //     position.avgOpenPrice,
