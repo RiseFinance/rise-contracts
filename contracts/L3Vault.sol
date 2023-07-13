@@ -24,10 +24,10 @@ contract L3Vault {
     mapping(uint256 => uint256) public tokenDecimals; // TODO: listing restriction needed
 
     struct OrderContext {
-        uint256 _indexAssetId;
-        uint256 _collateralAssetId;
         bool _isLong;
         bool _isIncrease;
+        uint256 _indexAssetId;
+        uint256 _collateralAssetId;
         uint256 _sizeAbsInUsd;
         uint256 _collateralAbsInUsd;
         uint256 _limitPrice; // empty for market orders
@@ -35,23 +35,23 @@ contract L3Vault {
 
     struct OrderRequest {
         address trader;
-        uint256 indexAssetId; // redundant?
-        uint256 collateralAssetId;
         bool isLong;
         bool isIncrease;
+        uint256 indexAssetId; // redundant?
+        uint256 collateralAssetId;
         uint256 sizeAbsInUsd;
         uint256 collateralAbsInUsd;
         uint256 limitPrice;
     }
 
     struct FilledOrder {
-        uint256 indexAssetId;
-        uint256 collateralAssetId;
+        bool isMarketOrder;
         bool isLong;
         bool isIncrease;
+        uint256 indexAssetId;
+        uint256 collateralAssetId;
         uint256 sizeAbsInUsd;
         uint256 collateralAbsInUsd;
-        bool isMarketOrder;
         uint256 executionPrice;
     }
 
@@ -84,7 +84,7 @@ contract L3Vault {
     mapping(uint256 => uint256) public minAskPrice; // indexAssetId => price
 
     mapping(uint256 => mapping(uint256 => uint256))
-        public orderSizeInUsdForPriceTick; // indexAssetID => price => sum(sizeDeltaAbs) // TODO: 일단 USD 단위로 기록
+        public orderSizeInUsdForPriceTick; // indexAssetId => price => sum(sizeDeltaAbs) // TODO: 일단 USD 단위로 기록
 
     mapping(uint256 => uint256) public priceTickSizes; // indexAssetId => priceTickSize (in USD, 10^8 decimals)
 
@@ -95,7 +95,7 @@ contract L3Vault {
     mapping(uint256 => uint256) public maxShortCapacity; // assetId => tokenCount // TODO: check - is it for stablecoins?
 
     mapping(bool => mapping(uint256 => GlobalPositionState))
-        public globalPositionState; // assetId => GlobalPositionState
+        public globalPositionStates; // assetId => GlobalPositionState
 
     // TODO: open <> close 사이의 position을 하나로 연결하여 기록
     mapping(bytes32 => Position) public positions; // positionHash => Position
@@ -208,7 +208,7 @@ contract L3Vault {
         bool _isLong
     ) internal returns (uint256) {
         /**
-         *
+         * // TODO: impl
          * @dev Jae Yoon
          */
         return priceManager.getAverageExecutionPrice(_assetId, _size, _isLong);
@@ -223,23 +223,24 @@ contract L3Vault {
         uint256 _collateralDelta,
         uint256 _markPrice
     ) internal {
-        globalPositionState[_isLong][_indexAssetId].avgPrice = _getNextAvgPrice(
+        globalPositionStates[_isLong][_indexAssetId]
+            .avgPrice = _getNextAvgPrice(
             _isIncrease,
-            globalPositionState[_isLong][_indexAssetId].totalSizeInUsd,
-            globalPositionState[_isLong][_indexAssetId].avgPrice,
+            globalPositionStates[_isLong][_indexAssetId].totalSizeInUsd,
+            globalPositionStates[_isLong][_indexAssetId].avgPrice,
             _sizeDelta,
             _markPrice
         );
 
         if (_isIncrease) {
-            globalPositionState[_isLong][_indexAssetId]
+            globalPositionStates[_isLong][_indexAssetId]
                 .totalSizeInUsd += _sizeDelta;
-            globalPositionState[_isLong][_indexAssetId]
+            globalPositionStates[_isLong][_indexAssetId]
                 .totalCollateralInUsd += _collateralDelta;
         } else {
-            globalPositionState[_isLong][_indexAssetId]
+            globalPositionStates[_isLong][_indexAssetId]
                 .totalSizeInUsd -= _sizeDelta;
-            globalPositionState[_isLong][_indexAssetId]
+            globalPositionStates[_isLong][_indexAssetId]
                 .totalCollateralInUsd -= _collateralDelta;
         }
     }
@@ -249,23 +250,25 @@ contract L3Vault {
      * */
     function _getNextAvgPrice(
         bool _isIncrease,
-        uint256 _oldSize,
-        uint256 _oldAvgPrice,
+        uint256 _prevSize,
+        uint256 _prevAvgPrice,
         uint256 _sizeDelta,
         uint256 _markPrice
     ) internal pure returns (uint256) {
         if (_isIncrease) {
-            uint256 newSize = _oldSize + _sizeDelta;
+            uint256 newSize = _prevSize + _sizeDelta;
             uint256 newAvgPrice = newSize == 0
                 ? 0
-                : (_oldAvgPrice * _oldSize + _markPrice * _sizeDelta) / newSize;
+                : (_prevAvgPrice * _prevSize + _markPrice * _sizeDelta) /
+                    newSize;
             return newAvgPrice;
         } else {
             // TODO: check - this logic needed?
-            uint256 newSize = _oldSize - _sizeDelta;
+            uint256 newSize = _prevSize - _sizeDelta;
             uint256 newAvgPrice = newSize == 0
                 ? 0
-                : (_oldAvgPrice * _oldSize - _markPrice * _sizeDelta) / newSize;
+                : (_prevAvgPrice * _prevSize - _markPrice * _sizeDelta) /
+                    newSize;
             return newAvgPrice;
         }
     }
@@ -402,14 +405,15 @@ contract L3Vault {
         if (c._isLong) {
             require(
                 maxLongCapacity[c._indexAssetId] >=
-                    globalPositionState[true][c._indexAssetId].totalSizeInUsd +
+                    globalPositionStates[true][c._indexAssetId].totalSizeInUsd +
                         c._sizeAbsInUsd,
                 "L3Vault: Exceeds max long capacity"
             );
         } else {
             require(
                 maxShortCapacity[c._indexAssetId] >=
-                    globalPositionState[false][c._indexAssetId].totalSizeInUsd +
+                    globalPositionStates[false][c._indexAssetId]
+                        .totalSizeInUsd +
                         c._sizeAbsInUsd,
                 "L3Vault: Exceeds max short capacity"
             );
@@ -453,10 +457,10 @@ contract L3Vault {
 
         OrderRequest memory orderRequest = OrderRequest(
             msg.sender,
-            c._indexAssetId,
-            c._collateralAssetId,
             c._isLong,
             c._isIncrease,
+            c._indexAssetId,
+            c._collateralAssetId,
             c._sizeAbsInUsd,
             c._collateralAbsInUsd,
             c._limitPrice
@@ -658,13 +662,13 @@ contract L3Vault {
         filledOrders[_request.trader][
             traderFilledOrderCounts[_request.trader]
         ] = FilledOrder(
-            _request.indexAssetId,
-            _request.collateralAssetId,
             _request.isLong,
             _request.isIncrease,
+            false,
+            _request.indexAssetId,
+            _request.collateralAssetId,
             _sizeAbs,
             _collateralSizeAbs,
-            false,
             _avgExecutionPrice
         );
         traderFilledOrderCounts[_request.trader] += 1;
@@ -805,13 +809,13 @@ contract L3Vault {
         filledOrders[msg.sender][
             traderFilledOrderCounts[msg.sender]
         ] = FilledOrder(
-            c._indexAssetId,
-            c._collateralAssetId,
             c._isLong,
             c._isIncrease,
+            true,
+            c._indexAssetId,
+            c._collateralAssetId,
             c._sizeAbsInUsd,
             c._collateralAbsInUsd,
-            true,
             _markPrice
         );
         traderFilledOrderCounts[msg.sender] += 1;
@@ -882,13 +886,13 @@ contract L3Vault {
         filledOrders[msg.sender][
             traderFilledOrderCounts[msg.sender]
         ] = FilledOrder(
-            c._indexAssetId,
-            c._collateralAssetId,
             c._isLong,
             c._isIncrease,
+            true,
+            c._indexAssetId,
+            c._collateralAssetId,
             c._sizeAbsInUsd,
             c._collateralAbsInUsd,
-            true,
             _markPrice
         );
         traderFilledOrderCounts[msg.sender] += 1;
