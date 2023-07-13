@@ -530,99 +530,77 @@ contract L3Vault {
 
     function updateLimitOrder() public {}
 
+    /**
+     *
+     * @param _isBuy used to determine which orderbook to iterate
+     * @param _indexAssetId index asset
+     * @param _currentMarkPrice mark price from PriceManager before price impacts from limit orders execution
+     * @return uint256  markPriceWithLimitOrderPriceImpact
+     *
+     * @dev iterate buy/sell orderbooks and execute limit orders until the mark price with price impact reaches the limit price levels.
+     * primary iteration - while loop for limit price ticks in the orderbook
+     * secondary iteration - for loop for orders in the limit price tick (First-In-First-Out)
+     *
+     * completely filled orders are removed from the orderbook
+     * if the order is partially filled, the order is updated with the remaining size
+     *
+     */
     function executeLimitOrders(
         bool _isBuy,
         uint256 _indexAssetId,
         uint256 _currentMarkPrice
     ) external onlyKeeper returns (uint256) {
-        // TODO: 주문 체결 후 호가 창 빌 때마다 maxBidPrice, minAskPrice 업데이트
-        // price tick 단위로 오더북을 순회하며 체결할 수 있는 오더를 우선순위대로 체결시키고
-        // 종료된 후의 PriceBufferDelta값을 리턴하여
-        // PriceManager 컨트랙트에서 업데이트할 수 있도록 한다.
+        // FIXME: 주문 체결 후 호가 창 빌 때마다 maxBidPrice, minAskPrice 업데이트
+
         uint256 _interimMarkPrice = _currentMarkPrice; // initialize
 
         if (_isBuy) {
             uint256 _limitPriceIterator = maxBidPrice[_indexAssetId]; // intialize
 
             // TODO: maxBidPrice에 이상치가 있을 경우 처리
-
-            // check - 같을 때에도 iteration 돌기?
+            // check - for the case the two values are equal
             while (_interimMarkPrice < _limitPriceIterator) {
-                // 이번 티커에서 체결할 수 있는 오더의 수량을 체크한다.
-                // _interimMarkPrice에서 sizeCap만큼 주문을 체결하면 _interimMarkPrice + priceBuffer가 _limitPriceIterator까지 올라간다고 하면,
-                // 이번 순회에서는 min(sizeCap, orderSizeForPriceTick[_indexAssetId][_limitPriceIterator])만큼 체결할 수 있다.
+                // check amounts of orders that can be filled in this price tick
+                // if `_sizeCap` amount of orders are filled, the mark price will reach `_limitPriceIterator`.
+                // i.e. _interimMarkPrice + (price buffer) => _limitPriceIterator
 
-                // 체결할 수 있는 오더의 수량을 체크한다.
-                // PBC = PRICE_BUFFER_CHANGE_CONSTANT = 사이즈 당 가격 변화량(%) 상수
-                // _interimMarkPrice * PBC * (sizeCap) = (가격 delta) = (_limitPriceIterator - _interimMarkPrice)
+                // then, the max amount of orders that can be filled in this price tick iteration is
+                // min(sizeCap, orderSizeForPriceTick[_indexAssetId][_limitPriceIterator])
 
-                // sizecap = 이번 limitPriceIterator (가격 티커)에서 체결할 수 있는 오더의 최대 사이즈
+                // PBC = PRICE_BUFFER_CHANGE_CONSTANT
+                // _interimMarkPrice * PBC * (sizeCap) = (price shift) = (_limitPriceIterator - _interimMarkPrice)
 
                 if (
                     orderSizeInUsdForPriceTick[_indexAssetId][
                         _limitPriceIterator
                     ] == 0
                 ) {
-                    // no order to execute for this price tick
+                    // no order to execute for this limit price tick
                     _limitPriceIterator -= priceTickSizes[_indexAssetId]; // decrease for buy
                     continue;
                 }
 
                 uint256 _sizeCap = (_limitPriceIterator - _interimMarkPrice) /
                     (_interimMarkPrice * uint256(PRICE_BUFFER_CHANGE_CONSTANT)); // TODO: decimals 확인
-
-                uint256 _priceImpactInUsd;
-                uint256 avgExecutionPrice;
-                bool isPartial;
-                // 이번 iteration에서 모든 오더를 체결할 수 없을 경우 (다음 price tick으로 넘어갈 필요 없음)
-                if (
-                    _sizeCap <
+                bool isPartial = _sizeCap <
                     orderSizeInUsdForPriceTick[_indexAssetId][
                         _limitPriceIterator
-                    ]
-                ) {
-                    // execute limit orders
-                    // 우선순위대로 (앞에서부터) for문 돌며 가능한 수량만큼 avgExecutionPrice로 체결하고 종료
-                    // 만약 하나의 Order가 일부만 체결될 수 있다면, 체결 후 해당 Order는 삭제하지 않고 업데이트
+                    ];
+                uint256 _fillAmount = isPartial
+                    ? _sizeCap // _sizeCap 남아있는만큼 체결하고 종료
+                    : orderSizeInUsdForPriceTick[_indexAssetId][
+                        _limitPriceIterator
+                    ];
+                uint256 _priceImpactInUsd = _interimMarkPrice *
+                    uint256(PRICE_BUFFER_CHANGE_CONSTANT) *
+                    _fillAmount;
+                uint256 avgExecutionPrice = _getAvgExecutionPrice(
+                    _interimMarkPrice,
+                    _priceImpactInUsd,
+                    _isBuy
+                );
 
-                    _priceImpactInUsd =
-                        _interimMarkPrice *
-                        uint256(PRICE_BUFFER_CHANGE_CONSTANT) *
-                        _sizeCap; // (남아있는 sizeCap만큼)
-
-                    avgExecutionPrice = _getAvgExecutionPrice(
-                        _interimMarkPrice,
-                        _priceImpactInUsd,
-                        _isBuy
-                    );
-
-                    isPartial = true;
-
-                    // 아래와 똑같은 로직이지만
-                    // for문을 돌면서 sizeCap을 차감하면서 _orderRequest[i].sizeAbs > sizeCap이 되는 순간
-                    // 해당 order의 일부를 체결, 업데이트하고 종료 (break)
-                } else {
-                    // 이번 price tick에 걸린 주문을 전부 체결한다.
-                    // avg execution price 계산
-
-                    _priceImpactInUsd =
-                        _interimMarkPrice *
-                        uint256(PRICE_BUFFER_CHANGE_CONSTANT) *
-                        orderSizeInUsdForPriceTick[_indexAssetId][
-                            _limitPriceIterator
-                        ];
-
-                    avgExecutionPrice = _getAvgExecutionPrice(
-                        _interimMarkPrice,
-                        _priceImpactInUsd,
-                        _isBuy
-                    );
-
-                    isPartial = false;
-                }
-                // OrderRequest[] memory _orderRequests = buyOrderBook[
-                //     _indexAssetId
-                // ][_limitPriceIterator];
+                // _orderRequest[i].sizeAbs > _sizeCap => isPartial = true
 
                 mapping(uint256 => OrderRequest)
                     storage _orderRequests = buyOrderBook[_indexAssetId][
@@ -635,18 +613,13 @@ contract L3Vault {
                     _limitPriceIterator
                 ];
 
+                // FIXME: loop 안에서 _sizeCap을 차감시켜야 함?
                 for (uint256 i = buyFirst; i <= buyLast; i++) {
-                    // FilledOrder 생성 및 filledOrders에 추가, traderFilledOrderCounts++
-                    // position 업데이트
-                    // orderbook에서 제거
-                    // pendingOrders에서 제거 // TODO: 필요한 기능인지 점검
+                    // TODO: pendingOrders에서 제거 - 필요한 기능인지 점검
                     // TODO: validateExecution here (increase, decrease)
 
                     OrderRequest memory request = _orderRequests[i];
 
-                    // 여기서 체크: request.sizeAbs > sizeCap이면, 사이즈를 다르게 한다.
-
-                    // FilledOrder 생성 및 filledOrders에 추가
                     _fillLimitOrder(
                         request,
                         avgExecutionPrice,
