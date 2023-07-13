@@ -32,12 +32,28 @@ contract PriceManager is IPriceManager {
 
     function setPrice(
         uint[] calldata _assetId,
-        int[] calldata _price
+        int[] calldata _price // new index price from the data source
     ) external override onlyKeeper {
         require(_assetId.length == _price.length, "Wrong input");
         uint l = _assetId.length;
         for (uint i = 0; i < uint(l); i++) {
             require(_price[i] > 0, "price has to be positive");
+
+            int currentPriceBuffer = getPriceBuffer(_assetId[i]); // % of price shift
+            int currentPriceBufferInUsd = (_price[i] * currentPriceBuffer) /
+                PRICE_BUFFER_PRECISION;
+
+            int currentMarkPrice = _price[i] + currentPriceBufferInUsd;
+            int prevMarkPrice = indexPrice[_assetId[i]] +
+                currentPriceBufferInUsd;
+
+            // 가능한 limit order 체결
+            if (_price[i] < indexPrice[_assetId[i]]) {
+                // check buy orderbook (가격 하락)
+            } else {
+                // check sell orderbook (가격 상승)
+            }
+
             indexPrice[_assetId[i]] = _price[i];
         }
     }
