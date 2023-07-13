@@ -215,7 +215,7 @@ contract L3Vault {
     }
 
     // TODO: check - for short positions, should we use collateralAsset for tracking position size?
-    function _updateGlobalPositionState(
+    function updateGlobalPositionState(
         bool _isLong,
         bool _isIncrease,
         uint256 _indexAssetId,
@@ -375,6 +375,35 @@ contract L3Vault {
             : _position.collateralInUsd - _collateralDeltaAbsInUsd;
 
         _position.lastUpdatedTime = block.timestamp;
+    }
+
+    function settlePnL(
+        Position memory _position,
+        bool _isLong,
+        uint256 _markPrice,
+        uint256 _indexAssetId,
+        uint256 _collateralAssetId,
+        uint256 _sizeAbsInUsd,
+        uint256 _collateralAbsInUsd
+    ) internal {
+        (uint256 pnlUsdAbs, bool traderHasProfit) = _calculatePnL(
+            _position.sizeInUsd,
+            _position.avgOpenPrice,
+            _markPrice,
+            _isLong
+        );
+
+        traderBalances[msg.sender][_collateralAssetId] += _collateralAbsInUsd;
+        traderBalances[msg.sender][_collateralAssetId] = traderHasProfit
+            ? traderBalances[msg.sender][_collateralAssetId] + pnlUsdAbs
+            : traderBalances[msg.sender][_collateralAssetId] - pnlUsdAbs;
+        // TODO: check - PnL includes collateral?
+
+        tokenPoolAmounts[USD_ID] = traderHasProfit // TODO: check- settlement in USD or in tokens?
+            ? tokenPoolAmounts[USD_ID] - pnlUsdAbs
+            : tokenPoolAmounts[USD_ID] + pnlUsdAbs;
+
+        tokenReserveAmounts[_indexAssetId] -= _sizeAbsInUsd;
     }
 
     // --------------------------------------------- Validation Functions ---------------------------------------------
@@ -671,9 +700,9 @@ contract L3Vault {
         filledOrders[_request.trader][
             traderFilledOrderCounts[_request.trader]
         ] = FilledOrder(
+            false,
             _request.isLong,
             _request.isIncrease,
-            false,
             _request.indexAssetId,
             _request.collateralAssetId,
             _sizeAbsInUsd,
@@ -706,27 +735,16 @@ contract L3Vault {
             // PnL 계산, trader balance, poolAmounts, reservedAmounts 업데이트
             // position 삭제 검사
             Position storage position = positions[key];
-            (uint256 pnlUsdAbs, bool isPositive) = _calculatePnL(
-                position.sizeInUsd,
-                position.avgOpenPrice,
+
+            settlePnL(
+                position,
+                _request.isLong,
                 _avgExecutionPrice,
-                _request.isLong
+                _request.indexAssetId,
+                _request.collateralAssetId,
+                _sizeAbsInUsd,
+                _collateralAbsInUsd
             );
-
-            uint256 traderBalance = traderBalances[_request.trader][
-                _request.collateralAssetId
-            ];
-
-            traderBalance += _collateralAbsInUsd; // FIXME: collateralSize has to be in USD
-            traderBalance = isPositive
-                ? traderBalance + pnlUsdAbs
-                : traderBalance - pnlUsdAbs;
-
-            tokenPoolAmounts[USD_ID] = isPositive
-                ? tokenPoolAmounts[USD_ID] - pnlUsdAbs
-                : tokenPoolAmounts[USD_ID] + pnlUsdAbs;
-
-            tokenReserveAmounts[_request.indexAssetId] -= _sizeAbsInUsd;
 
             if (_sizeAbsInUsd == position.sizeInUsd) {
                 delete positions[key];
@@ -741,7 +759,8 @@ contract L3Vault {
                 );
             }
         }
-        _updateGlobalPositionState(
+
+        updateGlobalPositionState(
             _request.isLong,
             _request.isIncrease,
             _request.indexAssetId,
@@ -818,9 +837,9 @@ contract L3Vault {
         filledOrders[msg.sender][
             traderFilledOrderCounts[msg.sender]
         ] = FilledOrder(
+            true,
             c._isLong,
             c._isIncrease,
-            true,
             c._indexAssetId,
             c._collateralAssetId,
             c._sizeAbsInUsd,
@@ -842,7 +861,7 @@ contract L3Vault {
         );
 
         // update global position state
-        _updateGlobalPositionState(
+        updateGlobalPositionState(
             c._isLong,
             c._isIncrease,
             c._indexAssetId,
@@ -862,29 +881,16 @@ contract L3Vault {
 
         // update state variables
         Position storage position = positions[_key];
-        (uint256 pnlUsdAbs, bool isPositive) = _calculatePnL(
-            position.sizeInUsd,
-            position.avgOpenPrice,
+
+        settlePnL(
+            position,
+            c._isLong,
             _markPrice,
-            c._isLong
+            c._indexAssetId,
+            c._collateralAssetId,
+            c._sizeAbsInUsd,
+            c._collateralAbsInUsd
         );
-
-        uint256 traderBalance = traderBalances[msg.sender][
-            c._collateralAssetId
-        ];
-
-        traderBalance += c._collateralAbsInUsd; // c._collateralSize calculated before this point by the amount of decrease
-        traderBalance = isPositive
-            ? traderBalance + pnlUsdAbs // FIXME: USD or token?
-            : traderBalance - pnlUsdAbs;
-        // TODO: check - PnL includes collateral?
-
-        // TODO: settlement in USD or tokens?
-        tokenPoolAmounts[USD_ID] = isPositive
-            ? tokenPoolAmounts[USD_ID] - pnlUsdAbs // add validation here for not going below 0 or allow & swap tokens => USD by system call
-            : tokenPoolAmounts[USD_ID] + pnlUsdAbs;
-
-        tokenReserveAmounts[c._indexAssetId] -= c._sizeAbsInUsd;
 
         // fill the order
         filledOrders[msg.sender][
@@ -901,30 +907,24 @@ contract L3Vault {
         );
         traderFilledOrderCounts[msg.sender] += 1;
 
-        // update position
-        // if close position
         if (c._sizeAbsInUsd == position.sizeInUsd) {
+            // close position
             delete positions[_key];
         } else {
-            // FIXME:
-            // position.avgOpenPrice = _getNextAvgPrice(
-            //     false,
-            //     position.sizeInUsd,
-            //     position.avgOpenPrice,
-            //     c._sizeAbsInUsd,
-            //     _markPrice
-            // );
-            position.sizeInUsd -= c._sizeAbsInUsd;
-            position.collateralInUsd -= _tokenToUsd(
-                c._collateralAbsInUsd,
+            // partial close position
+
+            updatePosition(
+                position,
                 _markPrice,
-                tokenDecimals[c._collateralAssetId]
+                c._sizeAbsInUsd,
+                c._collateralAbsInUsd,
+                false, // isIncreaseInSize
+                false // isIncreaseInCollateral
             );
-            position.lastUpdatedTime = block.timestamp;
         }
 
         // update global position state
-        _updateGlobalPositionState(
+        updateGlobalPositionState(
             c._isLong,
             c._isIncrease,
             c._indexAssetId,
