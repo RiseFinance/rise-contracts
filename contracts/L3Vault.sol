@@ -185,6 +185,10 @@ contract L3Vault {
         return a < b ? a : b;
     }
 
+    function _abs(int x) private pure returns (uint256) {
+        return x >= 0 ? uint256(x) : uint256(-x);
+    }
+
     function _getPositionKey(
         address _account,
         bool _isLong,
@@ -554,97 +558,119 @@ contract L3Vault {
 
         uint256 _interimMarkPrice = _currentMarkPrice; // initialize
 
-        if (_isBuy) {
-            uint256 _limitPriceIterator = maxBidPrice[_indexAssetId]; // intialize
+        // uint256 _limitPriceIterator = maxBidPrice[_indexAssetId]; // intialize
 
-            // TODO: maxBidPrice에 이상치가 있을 경우 처리
-            // check - for the case the two values are equal
-            while (_interimMarkPrice < _limitPriceIterator) {
-                // check amounts of orders that can be filled in this price tick
-                // if `_sizeCap` amount of orders are filled, the mark price will reach `_limitPriceIterator`.
-                // i.e. _interimMarkPrice + (price buffer) => _limitPriceIterator
+        uint256 _limitPriceIterator = _isBuy
+            ? maxBidPrice[_indexAssetId]
+            : minAskPrice[_indexAssetId]; // intialize
 
-                // then, the max amount of orders that can be filled in this price tick iteration is
-                // min(sizeCap, orderSizeForPriceTick[_indexAssetId][_limitPriceIterator])
+        bool loopCondition = _isBuy
+            ? _limitPriceIterator >= _interimMarkPrice
+            : _limitPriceIterator < _interimMarkPrice;
 
-                // PBC = PRICE_BUFFER_CHANGE_CONSTANT
-                // _interimMarkPrice * PBC * (sizeCap) = (price shift) = (_limitPriceIterator - _interimMarkPrice)
+        // TODO: maxBidPrice에 이상치가 있을 경우 처리
+        // check - for the case the two values are equal
+        while (loopCondition) {
+            // check amounts of orders that can be filled in this price tick
+            // if `_sizeCap` amount of orders are filled, the mark price will reach `_limitPriceIterator`.
+            // i.e. _interimMarkPrice + (price buffer) => _limitPriceIterator
 
-                if (
-                    orderSizeInUsdForPriceTick[_indexAssetId][
-                        _limitPriceIterator
-                    ] == 0
-                ) {
-                    // no order to execute for this limit price tick
-                    _limitPriceIterator -= priceTickSizes[_indexAssetId]; // decrease for buy
-                    continue;
-                }
+            // then, the max amount of orders that can be filled in this price tick iteration is
+            // min(sizeCap, orderSizeForPriceTick[_indexAssetId][_limitPriceIterator])
 
-                uint256 _sizeCap = (_limitPriceIterator - _interimMarkPrice) /
-                    (_interimMarkPrice * uint256(PRICE_BUFFER_CHANGE_CONSTANT)); // TODO: decimals 확인
-                bool isPartial = _sizeCap <
-                    orderSizeInUsdForPriceTick[_indexAssetId][
-                        _limitPriceIterator
-                    ];
-                uint256 _fillAmount = isPartial
-                    ? _sizeCap // _sizeCap 남아있는만큼 체결하고 종료
-                    : orderSizeInUsdForPriceTick[_indexAssetId][
-                        _limitPriceIterator
-                    ];
-                uint256 _priceImpactInUsd = _interimMarkPrice *
-                    uint256(PRICE_BUFFER_CHANGE_CONSTANT) *
-                    _fillAmount;
-                uint256 avgExecutionPrice = _getAvgExecutionPrice(
-                    _interimMarkPrice,
-                    _priceImpactInUsd,
-                    _isBuy
+            // PBC = PRICE_BUFFER_CHANGE_CONSTANT
+            // _interimMarkPrice * PBC * (sizeCap) = (price shift) = (_limitPriceIterator - _interimMarkPrice)
+
+            if (
+                orderSizeInUsdForPriceTick[_indexAssetId][
+                    _limitPriceIterator
+                ] == 0
+            ) {
+                // no order to execute for this limit price tick
+
+                _limitPriceIterator = _isBuy
+                    ? _limitPriceIterator + priceTickSizes[_indexAssetId]
+                    : _limitPriceIterator - priceTickSizes[_indexAssetId]; // decrease for buy
+                continue;
+            }
+
+            uint256 _sizeCap = _abs(
+                int256(_limitPriceIterator) - int256(_interimMarkPrice)
+            ) / (_interimMarkPrice * uint256(PRICE_BUFFER_CHANGE_CONSTANT)); // TODO: decimals 확인
+
+            bool isPartial = _sizeCap <
+                orderSizeInUsdForPriceTick[_indexAssetId][_limitPriceIterator];
+
+            uint256 _fillAmount = isPartial
+                ? _sizeCap // _sizeCap 남아있는만큼 체결하고 종료
+                : orderSizeInUsdForPriceTick[_indexAssetId][
+                    _limitPriceIterator
+                ];
+
+            uint256 _priceImpactInUsd = _interimMarkPrice *
+                uint256(PRICE_BUFFER_CHANGE_CONSTANT) *
+                _fillAmount;
+
+            uint256 avgExecutionPrice = _getAvgExecutionPrice(
+                _interimMarkPrice,
+                _priceImpactInUsd,
+                _isBuy
+            );
+
+            // _orderRequest[i].sizeAbs > _sizeCap => isPartial = true
+
+            mapping(uint256 => OrderRequest) storage _orderRequests = _isBuy
+                ? buyOrderBook[_indexAssetId][_limitPriceIterator]
+                : sellOrderBook[_indexAssetId][_limitPriceIterator];
+
+            uint256 firstIdx = _isBuy
+                ? buyFirstIndex[_indexAssetId][_limitPriceIterator]
+                : sellFirstIndex[_indexAssetId][_limitPriceIterator];
+
+            uint256 lastIdx = _isBuy
+                ? buyLastIndex[_indexAssetId][_limitPriceIterator]
+                : sellLastIndex[_indexAssetId][_limitPriceIterator];
+
+            // FIXME: loop 안에서 _sizeCap을 차감시켜야 함?
+            for (uint256 i = firstIdx; i <= lastIdx; i++) {
+                // TODO: pendingOrders에서 제거 - 필요한 기능인지 점검
+                // TODO: validateExecution here (increase, decrease)
+
+                OrderRequest memory request = _orderRequests[i];
+
+                _fillLimitOrder(
+                    request,
+                    avgExecutionPrice,
+                    _sizeCap,
+                    _isBuy,
+                    isPartial // isPartial
                 );
 
-                // _orderRequest[i].sizeAbs > _sizeCap => isPartial = true
-
-                mapping(uint256 => OrderRequest)
-                    storage _orderRequests = buyOrderBook[_indexAssetId][
-                        _limitPriceIterator
-                    ];
-                uint256 buyFirst = buyFirstIndex[_indexAssetId][
-                    _limitPriceIterator
-                ];
-                uint256 buyLast = buyLastIndex[_indexAssetId][
-                    _limitPriceIterator
-                ];
-
-                // FIXME: loop 안에서 _sizeCap을 차감시켜야 함?
-                for (uint256 i = buyFirst; i <= buyLast; i++) {
-                    // TODO: pendingOrders에서 제거 - 필요한 기능인지 점검
-                    // TODO: validateExecution here (increase, decrease)
-
-                    OrderRequest memory request = _orderRequests[i];
-
-                    _fillLimitOrder(
-                        request,
-                        avgExecutionPrice,
-                        _sizeCap,
-                        _isBuy,
-                        isPartial // isPartial
-                    );
-
-                    if (_sizeCap == 0) {
-                        break;
-                    }
-                }
-
-                _interimMarkPrice += _priceImpactInUsd; // 이번 price tick 주문 iteration 이후 Price Impact를 interimPrice에 적용
-
-                // _sizeCap -= orderSizeInUsdForPriceTick[_indexAssetId][
-                //     _limitPriceIterator
-                // ];
-                _limitPriceIterator -= priceTickSizes[_indexAssetId]; // decrease for buy
-
-                if (isPartial) {
+                if (_sizeCap == 0) {
                     break;
                 }
-                // Note: if `isPartial = true` in this while loop,  _sizeCap will be 0 after the for loop
             }
+
+            _interimMarkPrice = _isBuy
+                ? _interimMarkPrice + _priceImpactInUsd
+                : _interimMarkPrice - _priceImpactInUsd; // 이번 price tick 주문 iteration 이후 Price Impact를 interimPrice에 적용
+
+            // _sizeCap -= orderSizeInUsdForPriceTick[_indexAssetId][
+            //     _limitPriceIterator
+            // ];
+            _limitPriceIterator = _isBuy
+                ? _limitPriceIterator - priceTickSizes[_indexAssetId]
+                : _limitPriceIterator + priceTickSizes[_indexAssetId]; // next iteration; decrease for buy
+
+            // update while loop condition for the next iteration
+            loopCondition = _isBuy
+                ? _limitPriceIterator >= _interimMarkPrice
+                : _limitPriceIterator < _interimMarkPrice;
+
+            if (isPartial) {
+                break;
+            }
+            // Note: if `isPartial = true` in this while loop,  _sizeCap will be 0 after the for loop
         }
         return _interimMarkPrice;
     }
