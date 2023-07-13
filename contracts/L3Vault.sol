@@ -549,7 +549,7 @@ contract L3Vault {
      * if the order is partially filled, the order is updated with the remaining size
      *
      */
-    function executeLimitOrders(
+    function executeLimitOrdersAndGetPriceImpact(
         bool _isBuy,
         uint256 _indexAssetId,
         uint256 _currentMarkPrice
@@ -569,7 +569,7 @@ contract L3Vault {
             : _limitPriceIterator < _interimMarkPrice;
 
         // TODO: maxBidPrice에 이상치가 있을 경우 처리
-        // check - for the case the two values are equal
+        // check - for the case the two values are equal?
         while (loopCondition) {
             // check amounts of orders that can be filled in this price tick
             // if `_sizeCap` amount of orders are filled, the mark price will reach `_limitPriceIterator`.
@@ -594,19 +594,26 @@ contract L3Vault {
                 continue;
             }
 
+            // _sizeCap = 이번 limit price tick에서 체결할 수 있는 최대 주문량
+            // i.e. price impact가 발생하여 interimMarkPrice가 limitPriceIterator에 도달하는 경우
+            // 하나의 price tick 안의 다 requests를 처리하고나면 _sizeCap -= orderSizeInUsdForPriceTick[_indexAssetId][_limitPriceIterator]
+
+            // note: this is the right place for the variable `_sizeCap` declaration
+            // `_sizeCap` maintains its context within the while loop
             uint256 _sizeCap = _abs(
                 int256(_limitPriceIterator) - int256(_interimMarkPrice)
             ) / (_interimMarkPrice * uint256(PRICE_BUFFER_CHANGE_CONSTANT)); // TODO: decimals 확인
 
-            bool isPartial = _sizeCap <
+            bool isPartialForThePriceTick = _sizeCap <
                 orderSizeInUsdForPriceTick[_indexAssetId][_limitPriceIterator];
 
-            uint256 _fillAmount = isPartial
+            uint256 _fillAmount = isPartialForThePriceTick
                 ? _sizeCap // _sizeCap 남아있는만큼 체결하고 종료
                 : orderSizeInUsdForPriceTick[_indexAssetId][
                     _limitPriceIterator
-                ];
+                ]; // _fillAmount = 이번 price tick에서 체결할 주문량
 
+            // 이번 price tick에서 발생할 price impact
             uint256 _priceImpactInUsd = _interimMarkPrice *
                 uint256(PRICE_BUFFER_CHANGE_CONSTANT) *
                 _fillAmount;
@@ -631,20 +638,13 @@ contract L3Vault {
                 ? buyLastIndex[_indexAssetId][_limitPriceIterator]
                 : sellLastIndex[_indexAssetId][_limitPriceIterator];
 
-            // FIXME: loop 안에서 _sizeCap을 차감시켜야 함?
             for (uint256 i = firstIdx; i <= lastIdx; i++) {
                 // TODO: pendingOrders에서 제거 - 필요한 기능인지 점검
                 // TODO: validateExecution here (increase, decrease)
 
                 OrderRequest memory request = _orderRequests[i];
 
-                _fillLimitOrder(
-                    request,
-                    avgExecutionPrice,
-                    _sizeCap,
-                    _isBuy,
-                    isPartial // isPartial
-                );
+                _fillLimitOrder(request, avgExecutionPrice, _sizeCap, _isBuy);
 
                 if (_sizeCap == 0) {
                     break;
@@ -667,7 +667,7 @@ contract L3Vault {
                 ? _limitPriceIterator >= _interimMarkPrice
                 : _limitPriceIterator < _interimMarkPrice;
 
-            if (isPartial) {
+            if (isPartialForThePriceTick) {
                 break;
             }
             // Note: if `isPartial = true` in this while loop,  _sizeCap will be 0 after the for loop
@@ -675,24 +675,21 @@ contract L3Vault {
         return _interimMarkPrice;
     }
 
-    /**
-     *
-     * @param _request OrderRequest
-     * @param _isPartial true if the order is partially filled
-     */
     function _fillLimitOrder(
         OrderRequest memory _request,
         uint256 _avgExecutionPrice,
         uint256 _sizeCap,
-        bool _isBuy,
-        bool _isPartial
+        bool _isBuy // bool _isPartial
     ) private {
+        bool _isPartial = _request.sizeAbsInUsd > _sizeCap;
         uint256 partialRatio = _isPartial
             ? (_sizeCap / _request.sizeAbsInUsd) * 10 ** 8 // TODO: - set decimals as a constant
             : 1 * 10 ** 8;
-        uint256 _sizeAbsInUsd = _isPartial
-            ? _request.sizeAbsInUsd - _sizeCap
-            : _request.sizeAbsInUsd;
+        // uint256 _sizeAbsInUsd = _isPartial
+        //     ? _request.sizeAbsInUsd - _sizeCap
+        //     : _request.sizeAbsInUsd;
+
+        uint256 _sizeAbsInUsd = _isPartial ? _sizeCap : _request.sizeAbsInUsd;
 
         uint256 _collateralAbsInUsd = _isPartial
             ? (_request.collateralAbsInUsd * partialRatio) / 10 ** 8
