@@ -13,7 +13,8 @@ contract L3Vault {
 
     uint256 public constant PRICE_BUFFER_PRECISION = 10 ** 8;
     uint256 public constant USD_PRECISION = 10 ** 20;
-    uint256 public constant DECAY_CONSTANT = (PRICE_BUFFER_PRECISION / 100) / 300; // 1% decay per 5 miniutes
+    uint256 public constant DECAY_CONSTANT =
+        (PRICE_BUFFER_PRECISION / 100) / 300; // 1% decay per 5 miniutes
     uint256 public constant PRICE_BUFFER_DELTA_TO_SIZE =
         ((10 ** 6) * USD_PRECISION) / (PRICE_BUFFER_PRECISION / 100); // 1% price buffer per 10^6 USD
 
@@ -185,7 +186,7 @@ contract L3Vault {
         return a < b ? a : b;
     }
 
-    function _abs(int x) private pure returns (uint256) {
+    function _abs(int256 x) private pure returns (uint256) {
         return x >= 0 ? uint256(x) : uint256(-x);
     }
 
