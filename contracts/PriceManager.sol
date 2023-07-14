@@ -2,21 +2,23 @@
 
 pragma solidity ^0.8.0;
 import "./interfaces/IPriceManager.sol";
-import "./L3Vault.sol";
+import "./CommonContext.sol";
+import "./OrderBook.sol";
 
 import "hardhat/console.sol";
 
-contract PriceManager is IPriceManager {
-    uint256 public constant PRICE_BUFFER_PRECISION = 10 ** 8;
-    uint256 public constant USD_PRECISION = 10 ** 20;
-    uint256 public constant DECAY_CONSTANT =
-        (PRICE_BUFFER_PRECISION / 100) / 300; // 1% decay per 5 miniutes
-    uint256 public constant PRICE_BUFFER_DELTA_TO_SIZE =
-        ((10 ** 6) * USD_PRECISION) / (PRICE_BUFFER_PRECISION / 100); // 1% price buffer per 10^6 USD
+contract PriceManager is IPriceManager, CommonContext {
+    // uint256 public constant PRICE_BUFFER_PRECISION = 10 ** 8;
+    // uint256 public constant USD_PRECISION = 10 ** 20;
+    // uint256 public constant DECAY_CONSTANT =
+    //     (PRICE_BUFFER_PRECISION / 100) / 300; // 1% decay per 5 miniutes
+    // uint256 public constant PRICE_BUFFER_DELTA_TO_SIZE =
+    //     ((10 ** 6) * USD_PRECISION) / (PRICE_BUFFER_PRECISION / 100); // 1% price buffer per 10^6 USD
 
     L3Vault public l3Vault;
+    OrderBook public orderBook;
 
-    mapping(address => bool) public isKeeper;
+    mapping(address => bool) public isPriceKeeper;
     mapping(uint256 => uint256) public indexPrice;
     mapping(uint256 => uint256) public priceBufferUpdatedTime;
     mapping(uint256 => int256) public lastPriceBuffer;
@@ -24,19 +26,19 @@ contract PriceManager is IPriceManager {
     event Execution(uint256 assetId, int256 price);
 
     constructor(address _keeperAddress, address _l3VaultAddress) {
-        isKeeper[_keeperAddress] = true;
+        isPriceKeeper[_keeperAddress] = true;
         l3Vault = L3Vault(_l3VaultAddress);
     }
 
-    modifier onlyKeeper() {
-        require(isKeeper[msg.sender], "Should be called by keeper");
+    modifier onlyPriceKeeper() {
+        require(isPriceKeeper[msg.sender], "Should be called by keeper");
         _;
     }
 
     function setPrice(
         uint256[] calldata _assetId,
         uint256[] calldata _price // new index price from the data source
-    ) external override onlyKeeper {
+    ) external override onlyPriceKeeper {
         require(_assetId.length == _price.length, "Wrong input");
         uint256 l = _assetId.length;
         for (uint256 i = 0; i < uint256(l); i++) {
@@ -56,7 +58,7 @@ contract PriceManager is IPriceManager {
 
             bool checkBuyOrderBook = _price[i] < indexPrice[_assetId[i]];
 
-            markPriceWithLimitOrderPriceImpact = l3Vault
+            markPriceWithLimitOrderPriceImpact = orderBook
                 .executeLimitOrdersAndGetFinalMarkPrice(
                     checkBuyOrderBook, // isBuy
                     _assetId[i],
