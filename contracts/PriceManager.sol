@@ -7,13 +7,11 @@ import "./L3Vault.sol";
 import "hardhat/console.sol";
 
 contract PriceManager is IPriceManager {
-    int public constant PRICE_BUFFER_PRECISION = 10 ** 6;
-    int public constant SIZE_PRECISION = 10 ** 3;
-    int public constant DECAY_CONSTANT = (PRICE_BUFFER_PRECISION / 100) / 300;
-    // 1% decay per 5 miniutes
-    int public constant PRICE_BUFFER_CHANGE_CONSTANT =
-        ((10 ** 6) * SIZE_PRECISION) / (PRICE_BUFFER_PRECISION / 100);
-    // 1% price buffer per 10^6 USD
+    int public constant PRICE_BUFFER_PRECISION = 10 ** 8;
+    int public constant USD_PRECISION = 10 ** 20;
+    int public constant DECAY_CONSTANT = (PRICE_BUFFER_PRECISION / 100) / 300; // 1% decay per 5 miniutes
+    int public constant PRICE_BUFFER_DELTA_TO_SIZE =
+        ((10 ** 6) * USD_PRECISION) / (PRICE_BUFFER_PRECISION / 100); // 1% price buffer per 10^6 USD
 
     L3Vault public l3Vault;
 
@@ -64,7 +62,9 @@ contract PriceManager is IPriceManager {
                 );
 
             // TODO: set price with markPriceWithLimitOrderPriceImpact
-
+            int newPriceBuffer = ((markPriceWithLimitOrderPriceImpact -
+                _price[i]) * PRICE_BUFFER_PRECISION) / price[i];
+            setPriceBuffer(_assetId, newPriceBuffer);
             indexPrice[_assetId[i]] = _price[i];
         }
     }
@@ -87,9 +87,8 @@ contract PriceManager is IPriceManager {
         }
     }
 
-    function updatePriceBuffer(uint _assetId, int changedAmount) internal {
-        int currentPriceBuffer = getPriceBuffer(_assetId);
-        lastPriceBuffer[_assetId] = currentPriceBuffer + changedAmount;
+    function setPriceBuffer(uint _assetId, int value) internal {
+        lastPriceBuffer[_assetId] = value;
         priceBufferUpdatedTime[_assetId] = block.timestamp;
     }
 
@@ -114,8 +113,8 @@ contract PriceManager is IPriceManager {
         require(_size < 2 ** 255, "size overflow");
         require(price > 0, "price not set");
         int intSize = _isBuy ? int(_size) : -int(_size);
-        int priceBufferChange = intSize / PRICE_BUFFER_CHANGE_CONSTANT;
-        updatePriceBuffer(_assetId, priceBufferChange);
+        int priceBufferChange = intSize / PRICE_BUFFER_DELTA_TO_SIZE;
+        setPriceBuffer(_assetId, getPriceBuffer(_assetId) + priceBufferChange);
         int averageExecutedPrice = price +
             (price * priceBufferChange) /
             2 /

@@ -11,13 +11,12 @@ contract L3Vault {
     // ---------------------------------------------------- States ----------------------------------------------------
     IPriceManager public priceManager;
 
-    int public constant PRICE_BUFFER_PRECISION = 10 ** 6;
-    int public constant SIZE_PRECISION = 10 ** 3;
+    int public constant PRICE_BUFFER_PRECISION = 10 ** 8;
+    int public constant USD_PRECISION = 10 ** 20;
     int public constant DECAY_CONSTANT = (PRICE_BUFFER_PRECISION / 100) / 300; // 1% decay per 5 miniutes
-    int public constant PRICE_BUFFER_CHANGE_CONSTANT =
-        ((10 ** 6) * SIZE_PRECISION) / (PRICE_BUFFER_PRECISION / 100); // 1% price buffer per 10^6 USD
+    int public constant PRICE_BUFFER_DELTA_TO_SIZE =
+        ((10 ** 6) * USD_PRECISION) / (PRICE_BUFFER_PRECISION / 100); // 1% price buffer per 10^6 USD
 
-    uint256 public constant usdDecimals = 8;
     uint256 public constant USD_ID = 0;
     uint256 public constant ETH_ID = 1;
     uint256 private constant assetIdCounter = 1; // temporary
@@ -95,7 +94,6 @@ contract L3Vault {
     mapping(uint256 => uint256) public tokenReserveAmounts; // assetId => tokenCount
     mapping(uint256 => uint256) public maxLongCapacity; // assetId => tokenCount
     mapping(uint256 => uint256) public maxShortCapacity; // assetId => tokenCount // TODO: check - is it for stablecoins?
-
     mapping(bool => mapping(uint256 => GlobalPositionState))
         public globalPositionStates; // assetId => GlobalPositionState
 
@@ -261,8 +259,7 @@ contract L3Vault {
         uint256 _tokenDecimals
     ) internal pure returns (uint256) {
         return
-            ((_usdAmount * 10 ** _tokenDecimals) / 10 ** usdDecimals) /
-            _tokenPrice;
+            ((_usdAmount * 10 ** _tokenDecimals) / USD_PRECISION) / _tokenPrice;
     }
 
     function _tokenToUsd(
@@ -271,7 +268,7 @@ contract L3Vault {
         uint256 _tokenDecimals
     ) internal pure returns (uint256) {
         return
-            ((_tokenAmount * _tokenPrice) * 10 ** usdDecimals) /
+            ((_tokenAmount * _tokenPrice) * USD_PRECISION) /
             10 ** _tokenDecimals;
     }
 
