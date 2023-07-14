@@ -11,11 +11,14 @@ contract L3Vault {
     // ---------------------------------------------------- States ----------------------------------------------------
     IPriceManager public priceManager;
 
-    uint256 public constant PRICE_BUFFER_PRECISION = 10 ** 8;
-    uint256 public constant USD_PRECISION = 10 ** 20;
-    uint256 public constant DECAY_CONSTANT = (PRICE_BUFFER_PRECISION / 100) / 300; // 1% decay per 5 miniutes
+    uint256 public constant PRICE_BUFFER_PRECISION = 1e8;
+    uint256 public constant USD_PRECISION = 1e29;
+    uint256 public constant DECAY_CONSTANT =
+        (PRICE_BUFFER_PRECISION / 100) / 300; // 1% decay per 5 miniutes
     uint256 public constant PRICE_BUFFER_DELTA_TO_SIZE =
-        ((10 ** 6) * USD_PRECISION) / (PRICE_BUFFER_PRECISION / 100); // 1% price buffer per 10^6 USD
+        ((100000) * USD_PRECISION) / (PRICE_BUFFER_PRECISION / 100); // 1% price buffer per 100,000 USD
+
+    uint256 public constant PARTIAL_RATIO_PRECISION = 1e8;
 
     uint256 public constant USD_ID = 0;
     uint256 public constant ETH_ID = 1;
@@ -185,7 +188,7 @@ contract L3Vault {
         return a < b ? a : b;
     }
 
-    function _abs(int x) private pure returns (uint256) {
+    function _abs(int256 x) private pure returns (uint256) {
         return x >= 0 ? uint256(x) : uint256(-x);
     }
 
@@ -206,7 +209,7 @@ contract L3Vault {
             );
     }
 
-    function _getMarkPrice(
+    function getMarkPrice(
         uint256 _assetId,
         uint256 _size,
         bool _isLong
@@ -273,14 +276,14 @@ contract L3Vault {
     }
 
     function _calculatePnL(
-        uint256 _size,
+        uint256 _sizeInUsd,
         uint256 _averagePrice,
         uint256 _markPrice,
         bool _isLong
     ) internal pure returns (uint256, bool) {
         uint256 pnlAbs = _markPrice >= _averagePrice
-            ? (_size * (_markPrice - _averagePrice)) / 10 ** 18
-            : (_size * (_averagePrice - _markPrice)) / 10 ** 18;
+            ? (_sizeInUsd * (_markPrice - _averagePrice)) / USD_PRECISION
+            : (_sizeInUsd * (_averagePrice - _markPrice)) / USD_PRECISION;
         bool hasProfit = _markPrice >= _averagePrice ? _isLong : !_isLong;
         return (pnlAbs, hasProfit);
     }
@@ -587,7 +590,6 @@ contract L3Vault {
                 ] == 0
             ) {
                 // no order to execute for this limit price tick
-
                 _limitPriceIterator = _isBuy
                     ? _limitPriceIterator + priceTickSizes[_indexAssetId]
                     : _limitPriceIterator - priceTickSizes[_indexAssetId]; // decrease for buy
@@ -685,8 +687,8 @@ contract L3Vault {
     ) private {
         bool _isPartial = _request.sizeAbsInUsd > _sizeCap;
         uint256 partialRatio = _isPartial
-            ? (_sizeCap / _request.sizeAbsInUsd) * 10 ** 8 // TODO: - set decimals as a constant
-            : 1 * 10 ** 8;
+            ? (_sizeCap / _request.sizeAbsInUsd) * PARTIAL_RATIO_PRECISION
+            : 1 * PARTIAL_RATIO_PRECISION;
         // uint256 _sizeAbsInUsd = _isPartial
         //     ? _request.sizeAbsInUsd - _sizeCap
         //     : _request.sizeAbsInUsd;
@@ -694,7 +696,8 @@ contract L3Vault {
         uint256 _sizeAbsInUsd = _isPartial ? _sizeCap : _request.sizeAbsInUsd;
 
         uint256 _collateralAbsInUsd = _isPartial
-            ? (_request.collateralAbsInUsd * partialRatio) / 10 ** 8
+            ? (_request.collateralAbsInUsd * partialRatio) /
+                PARTIAL_RATIO_PRECISION
             : _request.collateralAbsInUsd;
 
         filledOrders[_request.trader][
@@ -805,22 +808,22 @@ contract L3Vault {
 
         // get markprice
         bool _isBuy = c._isLong == c._isIncrease;
-        uint256 markPrice = _getMarkPrice(
+        uint256 markPrice = getMarkPrice(
             c._indexAssetId,
             c._sizeAbsInUsd,
             _isBuy
         ); // TODO: check - to put after validations?
 
         if (c._isIncrease) {
-            increasePosition(c, key, markPrice);
+            _increasePosition(c, key, markPrice);
         } else {
-            decreasePosition(c, key, markPrice);
+            _decreasePosition(c, key, markPrice);
         }
 
         return key;
     }
 
-    function increasePosition(
+    function _increasePosition(
         OrderContext calldata c,
         bytes32 _key,
         uint256 _markPrice // TODO: change name into executionPrice? => Price Impact 적용된 상태?
@@ -871,7 +874,7 @@ contract L3Vault {
         );
     }
 
-    function decreasePosition(
+    function _decreasePosition(
         OrderContext calldata c,
         bytes32 _key,
         uint256 _markPrice
