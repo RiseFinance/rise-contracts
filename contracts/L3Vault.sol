@@ -11,10 +11,10 @@ contract L3Vault {
     // ---------------------------------------------------- States ----------------------------------------------------
     IPriceManager public priceManager;
 
-    int public constant PRICE_BUFFER_PRECISION = 10 ** 8;
-    int public constant USD_PRECISION = 10 ** 20;
-    int public constant DECAY_CONSTANT = (PRICE_BUFFER_PRECISION / 100) / 300; // 1% decay per 5 miniutes
-    int public constant PRICE_BUFFER_DELTA_TO_SIZE =
+    uint256 public constant PRICE_BUFFER_PRECISION = 10 ** 8;
+    uint256 public constant USD_PRECISION = 10 ** 20;
+    uint256 public constant DECAY_CONSTANT = (PRICE_BUFFER_PRECISION / 100) / 300; // 1% decay per 5 miniutes
+    uint256 public constant PRICE_BUFFER_DELTA_TO_SIZE =
         ((10 ** 6) * USD_PRECISION) / (PRICE_BUFFER_PRECISION / 100); // 1% price buffer per 10^6 USD
 
     uint256 public constant USD_ID = 0;
@@ -602,7 +602,7 @@ contract L3Vault {
             // `_sizeCap` maintains its context within the while loop
             uint256 _sizeCap = _abs(
                 int256(_limitPriceIterator) - int256(_interimMarkPrice)
-            ) / (_interimMarkPrice * uint256(PRICE_BUFFER_CHANGE_CONSTANT)); // TODO: decimals 확인
+            ) / (_interimMarkPrice * uint256(PRICE_BUFFER_DELTA_TO_SIZE)); // TODO: decimals 확인
 
             bool isPartialForThePriceTick = _sizeCap <
                 orderSizeInUsdForPriceTick[_indexAssetId][_limitPriceIterator];
@@ -617,7 +617,7 @@ contract L3Vault {
             // price impact is calculated based on the index price
             // to avoid cumulative price impact
             uint256 _priceImpactInUsd = _currentIndexPrice *
-                uint256(PRICE_BUFFER_CHANGE_CONSTANT) *
+                uint256(PRICE_BUFFER_DELTA_TO_SIZE) *
                 _fillAmount;
 
             uint256 avgExecutionPrice = _getAvgExecutionPrice(

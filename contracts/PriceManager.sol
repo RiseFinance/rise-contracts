@@ -7,16 +7,17 @@ import "./L3Vault.sol";
 import "hardhat/console.sol";
 
 contract PriceManager is IPriceManager {
-    int public constant PRICE_BUFFER_PRECISION = 10 ** 8;
-    int public constant USD_PRECISION = 10 ** 20;
-    int public constant DECAY_CONSTANT = (PRICE_BUFFER_PRECISION / 100) / 300; // 1% decay per 5 miniutes
-    int public constant PRICE_BUFFER_DELTA_TO_SIZE =
+    uint256 public constant PRICE_BUFFER_PRECISION = 10 ** 8;
+    uint256 public constant USD_PRECISION = 10 ** 20;
+    uint256 public constant DECAY_CONSTANT =
+        (PRICE_BUFFER_PRECISION / 100) / 300; // 1% decay per 5 miniutes
+    uint256 public constant PRICE_BUFFER_DELTA_TO_SIZE =
         ((10 ** 6) * USD_PRECISION) / (PRICE_BUFFER_PRECISION / 100); // 1% price buffer per 10^6 USD
 
     L3Vault public l3Vault;
 
     mapping(address => bool) public isKeeper;
-    mapping(uint => int) public indexPrice;
+    mapping(uint => uint) public indexPrice;
     mapping(uint => uint) public priceBufferUpdatedTime;
     mapping(uint => int) public lastPriceBuffer;
 
@@ -33,21 +34,23 @@ contract PriceManager is IPriceManager {
     }
 
     function setPrice(
-        uint[] calldata _assetId,
-        int[] calldata _price // new index price from the data source
+        uint256[] calldata _assetId,
+        uint256[] calldata _price // new index price from the data source
     ) external override onlyKeeper {
         require(_assetId.length == _price.length, "Wrong input");
-        uint l = _assetId.length;
+        uint256 l = _assetId.length;
         for (uint i = 0; i < uint(l); i++) {
             require(_price[i] > 0, "price has to be positive");
 
             int currentPriceBuffer = getPriceBuffer(_assetId[i]); // % of price shift
-            int currentPriceBufferInUsd = (_price[i] * currentPriceBuffer) /
-                PRICE_BUFFER_PRECISION;
+            int currentPriceBufferInUsd = (int256(_price[i]) *
+                currentPriceBuffer) / int256(PRICE_BUFFER_PRECISION);
 
             // int prevMarkPrice = indexPrice[_assetId[i]] +
             //     currentPriceBufferInUsd;
-            int currentMarkPrice = _price[i] + currentPriceBufferInUsd;
+            uint256 currentMarkPrice = uint256(
+                int256(_price[i]) + currentPriceBufferInUsd
+            );
 
             uint256 markPriceWithLimitOrderPriceImpact;
 
@@ -62,9 +65,10 @@ contract PriceManager is IPriceManager {
                 );
 
             // TODO: set price with markPriceWithLimitOrderPriceImpact
-            int newPriceBuffer = ((markPriceWithLimitOrderPriceImpact -
-                _price[i]) * PRICE_BUFFER_PRECISION) / price[i];
-            setPriceBuffer(_assetId, newPriceBuffer);
+            int newPriceBuffer = ((int256(markPriceWithLimitOrderPriceImpact) -
+                int256(_price[i])) * int256(PRICE_BUFFER_PRECISION)) /
+                int256(_price[i]);
+            setPriceBuffer(_assetId[i], newPriceBuffer);
             indexPrice[_assetId[i]] = _price[i];
         }
     }
@@ -73,7 +77,7 @@ contract PriceManager is IPriceManager {
         int elapsedTime = int(
             block.timestamp - priceBufferUpdatedTime[_assetId]
         );
-        int decayedAmount = elapsedTime * DECAY_CONSTANT;
+        int decayedAmount = elapsedTime * int256(DECAY_CONSTANT);
         int absLastPriceBuffer = lastPriceBuffer[_assetId] >= 0
             ? lastPriceBuffer[_assetId]
             : -lastPriceBuffer[_assetId];
@@ -92,15 +96,19 @@ contract PriceManager is IPriceManager {
         priceBufferUpdatedTime[_assetId] = block.timestamp;
     }
 
-    function getIndexPrice(uint _assetId) external view override returns (int) {
+    function getIndexPrice(
+        uint _assetId
+    ) external view override returns (uint256) {
         return indexPrice[_assetId];
     }
 
-    function getMarkPrice(uint _assetId) public view override returns (int) {
+    function getMarkPrice(
+        uint _assetId
+    ) public view override returns (uint256) {
         int newPriceBuffer = getPriceBuffer(_assetId);
-        int newPriceBufferInUsd = (indexPrice[_assetId] * newPriceBuffer) /
-            PRICE_BUFFER_PRECISION;
-        return indexPrice[_assetId] + newPriceBufferInUsd;
+        int newPriceBufferInUsd = (int256(indexPrice[_assetId]) *
+            newPriceBuffer) / int256(PRICE_BUFFER_PRECISION);
+        return uint256(int256(indexPrice[_assetId]) + newPriceBufferInUsd);
     }
 
     function getAverageExecutionPrice(
@@ -108,17 +116,17 @@ contract PriceManager is IPriceManager {
         uint _size,
         bool _isBuy
     ) external override returns (uint256) {
-        int price = getMarkPrice(_assetId);
+        uint price = getMarkPrice(_assetId);
         // require first bit of _size is 0
         require(_size < 2 ** 255, "size overflow");
         require(price > 0, "price not set");
         int intSize = _isBuy ? int(_size) : -int(_size);
-        int priceBufferChange = intSize / PRICE_BUFFER_DELTA_TO_SIZE;
+        int priceBufferChange = intSize / int256(PRICE_BUFFER_DELTA_TO_SIZE);
         setPriceBuffer(_assetId, getPriceBuffer(_assetId) + priceBufferChange);
-        int averageExecutedPrice = price +
-            (price * priceBufferChange) /
+        int averageExecutedPrice = int(price) +
+            (int(price) * priceBufferChange) /
             2 /
-            PRICE_BUFFER_PRECISION;
+            int(PRICE_BUFFER_PRECISION);
         require(averageExecutedPrice > 0, "price underflow");
         emit Execution(_assetId, averageExecutedPrice);
         return uint256(averageExecutedPrice);
