@@ -6,8 +6,9 @@ import "hardhat/console.sol"; // test-only
 import "./interfaces/IPriceManager.sol";
 import "./interfaces/IERC20.sol";
 import "./interfaces/ArbSys.sol";
+import "./Structs.sol";
 
-contract L3Vault {
+contract L3Vault is Structs {
     // ---------------------------------------------------- States ----------------------------------------------------
     IPriceManager public priceManager;
 
@@ -25,52 +26,52 @@ contract L3Vault {
     uint256 private constant assetIdCounter = 1; // temporary
     mapping(uint256 => uint256) public tokenDecimals; // TODO: listing restriction needed
 
-    struct OrderContext {
-        bool _isLong;
-        bool _isIncrease;
-        uint256 _indexAssetId;
-        uint256 _collateralAssetId;
-        uint256 _sizeAbsInUsd;
-        uint256 _collateralAbsInUsd;
-        uint256 _limitPrice; // empty for market orders
-    }
+    // struct OrderContext {
+    //     bool _isLong;
+    //     bool _isIncrease;
+    //     uint256 _indexAssetId;
+    //     uint256 _collateralAssetId;
+    //     uint256 _sizeAbsInUsd;
+    //     uint256 _collateralAbsInUsd;
+    //     uint256 _limitPrice; // empty for market orders
+    // }
 
-    // limit
-    struct OrderRequest {
-        address trader;
-        bool isLong;
-        bool isIncrease;
-        uint256 indexAssetId; // redundant?
-        uint256 collateralAssetId;
-        uint256 sizeAbsInUsd;
-        uint256 collateralAbsInUsd;
-        uint256 limitPrice;
-    }
+    // // limit
+    // struct OrderRequest {
+    //     address trader;
+    //     bool isLong;
+    //     bool isIncrease;
+    //     uint256 indexAssetId; // redundant?
+    //     uint256 collateralAssetId;
+    //     uint256 sizeAbsInUsd;
+    //     uint256 collateralAbsInUsd;
+    //     uint256 limitPrice;
+    // }
 
-    // limit, market
-    struct FilledOrder {
-        bool isMarketOrder;
-        bool isLong;
-        bool isIncrease;
-        uint256 indexAssetId;
-        uint256 collateralAssetId;
-        uint256 sizeAbsInUsd;
-        uint256 collateralAbsInUsd;
-        uint256 executionPrice;
-    }
+    // // limit, market
+    // struct FilledOrder {
+    //     bool isMarketOrder;
+    //     bool isLong;
+    //     bool isIncrease;
+    //     uint256 indexAssetId;
+    //     uint256 collateralAssetId;
+    //     uint256 sizeAbsInUsd;
+    //     uint256 collateralAbsInUsd;
+    //     uint256 executionPrice;
+    // }
 
-    struct Position {
-        uint256 sizeInUsd;
-        uint256 collateralInUsd;
-        uint256 avgOpenPrice; // TODO: check - should be coupled w/ positions link logic
-        uint256 lastUpdatedTime; // Currently not used for any validation
-    }
+    // struct Position {
+    //     uint256 sizeInUsd;
+    //     uint256 collateralInUsd;
+    //     uint256 avgOpenPrice; // TODO: check - should be coupled w/ positions link logic
+    //     uint256 lastUpdatedTime; // Currently not used for any validation
+    // }
 
-    struct GlobalPositionState {
-        uint256 totalSizeInUsd;
-        uint256 totalCollateralInUsd;
-        uint256 avgPrice;
-    }
+    // struct GlobalPositionState {
+    //     uint256 totalSizeInUsd;
+    //     uint256 totalCollateralInUsd;
+    //     uint256 avgPrice;
+    // }
 
     mapping(address => mapping(uint256 => uint256)) public traderBalances; // userAddress => assetId => Balance
     mapping(address => uint256) public traderFilledOrderCounts; // userAddress => orderCount
@@ -794,44 +795,51 @@ contract L3Vault {
                 : _basePrice - (_priceImpactInUsd / 2);
     }
 
-    function placeMarketOrder(
-        OrderContext calldata c
+    // function placeMarketOrder(
+    //     OrderContext calldata c
+    // ) external returns (bytes32) {
+    //     _validateOrder(c);
+
+    //     bytes32 key = _getPositionKey(
+    //         msg.sender,
+    //         c._isLong,
+    //         c._indexAssetId,
+    //         c._collateralAssetId
+    //     );
+
+    //     // get markprice
+    //     bool _isBuy = c._isLong == c._isIncrease;
+    //     uint256 markPrice = getMarkPrice(
+    //         c._indexAssetId,
+    //         c._sizeAbsInUsd,
+    //         _isBuy
+    //     ); // TODO: check - to put after validations?
+
+    //     if (c._isIncrease) {
+    //         _increasePosition(c, key, markPrice);
+    //     } else {
+    //         _decreasePosition(c, key, markPrice);
+    //     }
+
+    //     return key;
+    // }
+
+    function increasePosition(
+        OrderContext calldata c,
+        bool _isBuy // TODO: change name into executionPrice? => Price Impact 적용된 상태?
     ) external returns (bytes32) {
+        // validations
         _validateOrder(c);
+        _validateIncreaseExecution(c);
 
-        bytes32 key = _getPositionKey(
-            msg.sender,
-            c._isLong,
-            c._indexAssetId,
-            c._collateralAssetId
-        );
+        // update state variables
 
-        // get markprice
-        bool _isBuy = c._isLong == c._isIncrease;
         uint256 markPrice = getMarkPrice(
             c._indexAssetId,
             c._sizeAbsInUsd,
             _isBuy
-        ); // TODO: check - to put after validations?
+        );
 
-        if (c._isIncrease) {
-            _increasePosition(c, key, markPrice);
-        } else {
-            _decreasePosition(c, key, markPrice);
-        }
-
-        return key;
-    }
-
-    function _increasePosition(
-        OrderContext calldata c,
-        bytes32 _key,
-        uint256 _markPrice // TODO: change name into executionPrice? => Price Impact 적용된 상태?
-    ) internal {
-        // validation
-        _validateIncreaseExecution(c);
-
-        // update state variables
         traderBalances[msg.sender][c._collateralAssetId] -= c
             ._collateralAbsInUsd;
         tokenReserveAmounts[c._indexAssetId] += c._sizeAbsInUsd;
@@ -847,16 +855,22 @@ contract L3Vault {
             c._collateralAssetId,
             c._sizeAbsInUsd,
             c._collateralAbsInUsd,
-            _markPrice
+            markPrice
         );
         traderFilledOrderCounts[msg.sender] += 1;
 
         // update position
-        Position storage position = positions[_key];
+        bytes32 key = _getPositionKey(
+            msg.sender,
+            c._isLong,
+            c._indexAssetId,
+            c._collateralAssetId
+        );
+        Position storage position = positions[key];
 
         updatePosition(
             position,
-            _markPrice,
+            markPrice,
             c._sizeAbsInUsd,
             c._collateralAbsInUsd,
             true, // isIncreaseInSize
@@ -870,25 +884,39 @@ contract L3Vault {
             c._indexAssetId,
             c._sizeAbsInUsd,
             c._collateralAbsInUsd,
-            _markPrice
+            markPrice
         );
+
+        return key;
     }
 
-    function _decreasePosition(
+    function decreasePosition(
         OrderContext calldata c,
-        bytes32 _key,
-        uint256 _markPrice
-    ) internal {
-        // validation
-        _validateDecreaseExecution(c, _key, _markPrice);
+        bool _isBuy
+    ) external returns (bytes32) {
+        // validations
+        _validateOrder(c);
 
-        // update state variables
-        Position storage position = positions[_key];
+        uint256 markPrice = getMarkPrice(
+            c._indexAssetId,
+            c._sizeAbsInUsd,
+            _isBuy
+        );
+
+        bytes32 key = _getPositionKey(
+            msg.sender,
+            c._isLong,
+            c._indexAssetId,
+            c._collateralAssetId
+        );
+        _validateDecreaseExecution(c, key, markPrice);
+
+        Position storage position = positions[key];
 
         settlePnL(
             position,
             c._isLong,
-            _markPrice,
+            markPrice,
             c._indexAssetId,
             c._collateralAssetId,
             c._sizeAbsInUsd,
@@ -906,19 +934,19 @@ contract L3Vault {
             c._collateralAssetId,
             c._sizeAbsInUsd,
             c._collateralAbsInUsd,
-            _markPrice
+            markPrice
         );
         traderFilledOrderCounts[msg.sender] += 1;
 
         if (c._sizeAbsInUsd == position.sizeInUsd) {
             // close position
-            delete positions[_key];
+            delete positions[key];
         } else {
             // partial close position
 
             updatePosition(
                 position,
-                _markPrice,
+                markPrice,
                 c._sizeAbsInUsd,
                 c._collateralAbsInUsd,
                 false, // isIncreaseInSize
@@ -933,8 +961,10 @@ contract L3Vault {
             c._indexAssetId,
             c._sizeAbsInUsd,
             c._collateralAbsInUsd,
-            _markPrice
+            markPrice
         );
+
+        return key;
     }
 
     // ----------------------------------------- Deposit & Withdraw Functions -----------------------------------------
