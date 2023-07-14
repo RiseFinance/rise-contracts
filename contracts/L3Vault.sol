@@ -12,7 +12,7 @@ contract L3Vault {
     IPriceManager public priceManager;
 
     uint256 public constant PRICE_BUFFER_PRECISION = 1e8;
-    uint256 public constant USD_PRECISION = 1e29;
+    uint256 public constant USD_PRECISION = 1e20;
     uint256 public constant DECAY_CONSTANT =
         (PRICE_BUFFER_PRECISION / 100) / 300; // 1% decay per 5 miniutes
     uint256 public constant PRICE_BUFFER_DELTA_TO_SIZE =
