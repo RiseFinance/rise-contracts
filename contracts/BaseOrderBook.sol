@@ -28,7 +28,7 @@ contract BaseOrderBook is CommonContext {
     mapping(uint256 => mapping(uint256 => uint256)) public sellFirstIndex; // indexAssetId => price => queue index
     mapping(uint256 => mapping(uint256 => uint256)) public sellLastIndex; // indexAssetId => price => queue index
 
-    // TODO: 맵핑 방식에서도 초기화 필요 (특정 자산Id, 인덱스에 처음 추가 시 초기화 필요)
+    // FIXME: 맵핑 방식에서도 초기화 필요 (특정 자산Id, 인덱스에 처음 추가 시 초기화 필요)
     // uint256 buyFirst = 1;
     // uint256 buyLast = 0;
     // uint256 sellFirst = 1;
