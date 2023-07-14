@@ -45,14 +45,7 @@ contract OrderRouter is Context {
     ) external returns (bytes32) {
         _validateOrder(c);
 
-        // get markprice
-        bool isBuy = c._isLong == c._isIncrease;
-
-        if (c._isIncrease) {
-            return l3Vault.increasePosition(c, isBuy);
-        } else {
-            return l3Vault.decreasePosition(c, isBuy);
-        }
+        return l3Vault.executeMarketOrder(c);
     }
 
     function placeLimitOrder(OrderContext calldata c) external {

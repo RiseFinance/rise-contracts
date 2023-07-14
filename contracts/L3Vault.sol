@@ -280,97 +280,35 @@ contract L3Vault is Context {
         );
     }
 
-    function increasePosition(
-        OrderContext calldata c,
-        bool _isBuy // TODO: change name into executionPrice? => Price Impact 적용된 상태?
+    function executeMarketOrder(
+        OrderContext calldata c
     ) external returns (bytes32) {
+        bool isBuy = c._isLong == c._isIncrease;
+
+        uint256 markPrice = getMarkPrice(
+            c._indexAssetId,
+            c._sizeAbsInUsd,
+            isBuy
+        );
+
+        bytes32 key = _getPositionKey(
+            msg.sender,
+            c._isLong,
+            c._indexAssetId,
+            c._collateralAssetId
+        );
+
         // validations
-        _validateIncreaseExecution(c);
+        c._isIncrease
+            ? _validateIncreaseExecution(c)
+            : _validateDecreaseExecution(c, key, markPrice);
 
         // update state variables
-
-        uint256 markPrice = getMarkPrice(
-            c._indexAssetId,
-            c._sizeAbsInUsd,
-            _isBuy
-        );
-
-        traderBalances[msg.sender][c._collateralAssetId] -= c
-            ._collateralAbsInUsd;
-        tokenReserveAmounts[c._indexAssetId] += c._sizeAbsInUsd;
-
-        // fill the order
-        fillOrder(
-            msg.sender,
-            true, // isMarketOrder
-            c._isLong,
-            c._isIncrease,
-            c._indexAssetId,
-            c._collateralAssetId,
-            c._sizeAbsInUsd,
-            c._collateralAbsInUsd,
-            markPrice
-        );
-
-        // update position
-        bytes32 key = _getPositionKey(
-            msg.sender,
-            c._isLong,
-            c._indexAssetId,
-            c._collateralAssetId
-        );
-
-        updatePosition(
-            key,
-            markPrice,
-            c._sizeAbsInUsd,
-            c._collateralAbsInUsd,
-            true, // isIncreaseInSize
-            true // isIncreaseInCollateral
-        );
-
-        // update global position state
-        updateGlobalPositionState(
-            c._isLong,
-            c._isIncrease,
-            c._indexAssetId,
-            c._sizeAbsInUsd,
-            c._collateralAbsInUsd,
-            markPrice
-        );
-
-        return key;
-    }
-
-    function decreasePosition(
-        OrderContext calldata c,
-        bool _isBuy
-    ) external returns (bytes32) {
-        // validations
-
-        uint256 markPrice = getMarkPrice(
-            c._indexAssetId,
-            c._sizeAbsInUsd,
-            _isBuy
-        );
-
-        bytes32 key = _getPositionKey(
-            msg.sender,
-            c._isLong,
-            c._indexAssetId,
-            c._collateralAssetId
-        );
-        _validateDecreaseExecution(c, key, markPrice);
-
-        settlePnL(
-            key,
-            c._isLong,
-            markPrice,
-            c._indexAssetId,
-            c._collateralAssetId,
-            c._sizeAbsInUsd,
-            c._collateralAbsInUsd
-        );
+        if (c._isIncrease) {
+            traderBalances[msg.sender][c._collateralAssetId] -= c
+                ._collateralAbsInUsd;
+            tokenReserveAmounts[c._indexAssetId] += c._sizeAbsInUsd;
+        }
 
         // fill the order
         fillOrder(
@@ -387,7 +325,7 @@ contract L3Vault is Context {
 
         uint256 positionSizeInUsd = getPositionSizeInUsd(key);
 
-        if (c._sizeAbsInUsd == positionSizeInUsd) {
+        if (!c._isIncrease && c._sizeAbsInUsd == positionSizeInUsd) {
             // close position
             deletePosition(key);
         } else {
@@ -397,8 +335,8 @@ contract L3Vault is Context {
                 markPrice,
                 c._sizeAbsInUsd,
                 c._collateralAbsInUsd,
-                false, // isIncreaseInSize
-                false // isIncreaseInCollateral
+                c._isIncrease, // isIncreaseInSize
+                c._isIncrease // isIncreaseInCollateral
             );
         }
 
