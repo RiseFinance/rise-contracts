@@ -3,10 +3,11 @@
 pragma solidity ^0.8.0;
 
 import "./BaseOrderBook.sol";
-import "./L3Vault.sol";
+import "./interfaces/IL3Vault.sol";
+import "./interfaces/IOrderBook.sol";
 
-contract OrderBook is BaseOrderBook {
-    L3Vault public l3Vault;
+contract OrderBook is IOrderBook, BaseOrderBook {
+    IL3Vault public l3Vault;
 
     struct IterationContext {
         uint256 interimMarkPrice;
@@ -33,10 +34,10 @@ contract OrderBook is BaseOrderBook {
     }
 
     constructor(address _l3Vault) {
-        l3Vault = L3Vault(_l3Vault);
+        l3Vault = IL3Vault(_l3Vault);
     }
 
-    function placeLimitOrder(OrderContext calldata c) external {
+    function placeLimitOrder(IL3Vault.OrderContext calldata c) external {
         // FIXME: orderSizeForPriceTick 업데이트
 
         OrderRequest memory orderRequest = OrderRequest(

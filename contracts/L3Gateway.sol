@@ -3,16 +3,17 @@
 pragma solidity ^0.8.0;
 
 import "./common/Context.sol";
-import "./L3Vault.sol";
+import "./interfaces/IL3Vault.sol";
+import {ArbSys} from "./interfaces/ArbSys.sol";
 
 contract L3Gateway is Context {
     // FIXME: token trasfers from L3Vault to L3Gateway should be done by L3Vault
-    L3Vault public l3Vault;
+    IL3Vault public l3Vault;
 
     mapping(uint256 => uint256) public balancesTracker; // assetId => balance; only used in _depositInAmount
 
     constructor(address _l3Vault) {
-        l3Vault = L3Vault(_l3Vault);
+        l3Vault = IL3Vault(_l3Vault);
     }
 
     // for ERC-20

@@ -3,14 +3,14 @@
 pragma solidity ^0.8.0;
 
 import "hardhat/console.sol"; // test-only
-import "./interfaces/IPriceManager.sol";
+import "./interfaces/IL3Vault.sol";
 import "./interfaces/IERC20.sol";
 import "./interfaces/ArbSys.sol";
 import "./common/Context.sol";
 
-contract L3Vault is Context {
+// TODO: check - `override` needed for function declared in the interface `IL3Vault`?
+contract L3Vault is IL3Vault, Context {
     // ---------------------------------------------------- States ----------------------------------------------------
-    IPriceManager public priceManager;
 
     uint256 private constant assetIdCounter = 1; // temporary
     mapping(uint256 => uint256) public tokenDecimals; // TODO: listing restriction needed
@@ -29,24 +29,6 @@ contract L3Vault is Context {
 
     // TODO: open <> close 사이의 position을 하나로 연결하여 기록
     mapping(bytes32 => Position) public positions; // positionHash => Position
-
-    // ------------------------------------------------- Constructor --------------------------------------------------
-
-    constructor(address _priceManager) {
-        priceManager = IPriceManager(_priceManager);
-    }
-
-    function getMarkPrice(
-        uint256 _assetId,
-        uint256 _size,
-        bool _isLong
-    ) internal returns (uint256) {
-        /**
-         * // TODO: impl
-         * @dev Jae Yoon
-         */
-        return priceManager.getAverageExecutionPrice(_assetId, _size, _isLong);
-    }
 
     // ---------------------------------------------- Primary Functions -----------------------------------------------
 
@@ -85,10 +67,7 @@ contract L3Vault is Context {
         return traderBalances[_trader][_assetId];
     }
 
-    function _increaseReserveAmounts(
-        uint256 assetId,
-        uint256 _amount
-    ) internal {
+    function increaseReserveAmounts(uint256 assetId, uint256 _amount) external {
         require(
             tokenPoolAmounts[assetId] >= tokenReserveAmounts[assetId] + _amount,
             "L3Vault: Not enough token pool amount"
@@ -96,10 +75,7 @@ contract L3Vault is Context {
         tokenReserveAmounts[assetId] += _amount;
     }
 
-    function _decreaseReserveAmounts(
-        uint256 assetId,
-        uint256 _amount
-    ) internal {
+    function decreaseReserveAmounts(uint256 assetId, uint256 _amount) external {
         require(
             tokenReserveAmounts[assetId] >= _amount,
             "L3Vault: Not enough token reserve amount"
@@ -107,7 +83,7 @@ contract L3Vault is Context {
         tokenReserveAmounts[assetId] -= _amount;
     }
 
-    function getPositionSizeInUsd(bytes32 key) public view returns (uint256) {
+    function getPositionSizeInUsd(bytes32 key) external view returns (uint256) {
         return positions[key].sizeInUsd;
     }
 
@@ -118,7 +94,7 @@ contract L3Vault is Context {
         uint256 _collateralDeltaAbsInUsd,
         bool _isIncreaseInSize,
         bool _isIncreaseInCollateral
-    ) public {
+    ) external {
         Position storage _position = positions[_key];
         if (_sizeDeltaAbsInUsd > 0 && _isIncreaseInSize) {
             _position.avgOpenPrice = _getNextAvgPrice(
@@ -140,7 +116,7 @@ contract L3Vault is Context {
         _position.lastUpdatedTime = block.timestamp;
     }
 
-    function deletePosition(bytes32 _key) public {
+    function deletePosition(bytes32 _key) external {
         delete positions[_key];
     }
 
@@ -154,7 +130,7 @@ contract L3Vault is Context {
         uint256 _sizeAbsInUsd,
         uint256 _collateralAbsInUsd,
         uint256 _executionPrice
-    ) public {
+    ) external {
         filledOrders[_trader][traderFilledOrderCounts[_trader]] = FilledOrder(
             _isMarketOrder,
             _isLong,
@@ -176,7 +152,7 @@ contract L3Vault is Context {
         uint256 _collateralAssetId,
         uint256 _sizeAbsInUsd,
         uint256 _collateralAbsInUsd
-    ) public {
+    ) external {
         Position memory position = positions[_key];
         (uint256 pnlUsdAbs, bool traderHasProfit) = _calculatePnL(
             position.sizeInUsd,
@@ -206,7 +182,7 @@ contract L3Vault is Context {
         uint256 _sizeDelta,
         uint256 _collateralDelta,
         uint256 _markPrice
-    ) public {
+    ) external {
         globalPositionStates[_isLong][_indexAssetId]
             .avgPrice = _getNextAvgPrice(
             _isIncrease,
@@ -236,7 +212,7 @@ contract L3Vault is Context {
         return _assetId < assetIdCounter;
     }
 
-    function _validateIncreaseExecution(OrderContext calldata c) internal view {
+    function validateIncreaseExecution(OrderContext calldata c) external view {
         require(
             tokenPoolAmounts[c._indexAssetId] >=
                 tokenReserveAmounts[c._indexAssetId] + c._sizeAbsInUsd,
@@ -260,11 +236,11 @@ contract L3Vault is Context {
         }
     }
 
-    function _validateDecreaseExecution(
+    function validateDecreaseExecution(
         OrderContext calldata c,
         bytes32 _key,
         uint256 _markPrice
-    ) internal view {
+    ) external view {
         require(
             positions[_key].sizeInUsd >= c._sizeAbsInUsd,
             "L3Vault: Not enough position size"
@@ -278,79 +254,6 @@ contract L3Vault is Context {
                 ),
             "L3Vault: Not enough collateral size"
         );
-    }
-
-    function executeMarketOrder(
-        OrderContext calldata c
-    ) external returns (bytes32) {
-        bool isBuy = c._isLong == c._isIncrease;
-
-        uint256 markPrice = getMarkPrice(
-            c._indexAssetId,
-            c._sizeAbsInUsd,
-            isBuy
-        );
-
-        bytes32 key = _getPositionKey(
-            msg.sender,
-            c._isLong,
-            c._indexAssetId,
-            c._collateralAssetId
-        );
-
-        // validations
-        c._isIncrease
-            ? _validateIncreaseExecution(c)
-            : _validateDecreaseExecution(c, key, markPrice);
-
-        // update state variables
-        if (c._isIncrease) {
-            traderBalances[msg.sender][c._collateralAssetId] -= c
-                ._collateralAbsInUsd;
-            tokenReserveAmounts[c._indexAssetId] += c._sizeAbsInUsd;
-        }
-
-        // fill the order
-        fillOrder(
-            msg.sender,
-            true, // isMarketOrder
-            c._isLong,
-            c._isIncrease,
-            c._indexAssetId,
-            c._collateralAssetId,
-            c._sizeAbsInUsd,
-            c._collateralAbsInUsd,
-            markPrice
-        );
-
-        uint256 positionSizeInUsd = getPositionSizeInUsd(key);
-
-        if (!c._isIncrease && c._sizeAbsInUsd == positionSizeInUsd) {
-            // close position
-            deletePosition(key);
-        } else {
-            // partial close position
-            updatePosition(
-                key,
-                markPrice,
-                c._sizeAbsInUsd,
-                c._collateralAbsInUsd,
-                c._isIncrease, // isIncreaseInSize
-                c._isIncrease // isIncreaseInCollateral
-            );
-        }
-
-        // update global position state
-        updateGlobalPositionState(
-            c._isLong,
-            c._isIncrease,
-            c._indexAssetId,
-            c._sizeAbsInUsd,
-            c._collateralAbsInUsd,
-            markPrice
-        );
-
-        return key;
     }
 
     // ------------------------------------------- Liquidity Pool Functions -------------------------------------------

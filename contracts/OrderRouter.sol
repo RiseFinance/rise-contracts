@@ -3,19 +3,35 @@
 pragma solidity ^0.8.0;
 
 import "./common/Context.sol";
-import "./L3Vault.sol"; // TODO: change to Interface
-import "./OrderBook.sol";
+import "./interfaces/IPriceManager.sol";
+import "./interfaces/IL3Vault.sol"; // TODO: change to Interface
+import "./interfaces/IOrderBook.sol";
 
+// TODO: check - OrderRouter to inherit L3Vault?
 contract OrderRouter is Context {
-    L3Vault l3Vault;
-    OrderBook orderBook;
+    IL3Vault l3Vault;
+    IOrderBook orderBook;
+    IPriceManager priceManager;
 
-    constructor(address _l3Vault, address _orderBook) {
-        l3Vault = L3Vault(_l3Vault);
-        orderBook = OrderBook(_orderBook);
+    constructor(address _l3Vault, address _orderBook, address _priceManager) {
+        l3Vault = IL3Vault(_l3Vault);
+        orderBook = IOrderBook(_orderBook);
+        priceManager = IPriceManager(_priceManager);
     }
 
-    function _validateOrder(OrderContext calldata c) internal view {
+    function getMarkPrice(
+        uint256 _assetId,
+        uint256 _size,
+        bool _isLong
+    ) internal returns (uint256) {
+        /**
+         * // TODO: impl
+         * @dev Jae Yoon
+         */
+        return priceManager.getAverageExecutionPrice(_assetId, _size, _isLong);
+    }
+
+    function _validateOrder(IL3Vault.OrderContext calldata c) internal view {
         require(
             msg.sender != address(0),
             "OrderRouter: Invalid sender address"
@@ -40,15 +56,15 @@ contract OrderRouter is Context {
         );
     }
 
-    function placeMarketOrder(
-        OrderContext calldata c
-    ) external returns (bytes32) {
-        _validateOrder(c);
-
-        return l3Vault.executeMarketOrder(c);
+    function increaseCollateral() external {
+        // call when sizeDelta = 0 (leverage down)
     }
 
-    function placeLimitOrder(OrderContext calldata c) external {
+    function decreaseCollateral() external {
+        // call when sizeDelta = 0 (leverage up)
+    }
+
+    function placeLimitOrder(IL3Vault.OrderContext calldata c) external {
         _validateOrder(c);
         orderBook.placeLimitOrder(c);
     }
@@ -57,11 +73,90 @@ contract OrderRouter is Context {
 
     function updateLimitOrder() public {}
 
-    function increaseCollateral() external {
-        // call when sizeDelta = 0 (leverage down)
+    function placeMarketOrder(
+        IL3Vault.OrderContext calldata c
+    ) external returns (bytes32) {
+        _validateOrder(c);
+
+        return executeMarketOrder(c);
     }
 
-    function decreaseCollateral() external {
-        // call when sizeDelta = 0 (leverage up)
+    function executeMarketOrder(
+        IL3Vault.OrderContext calldata c
+    ) private returns (bytes32) {
+        bool isBuy = c._isLong == c._isIncrease;
+
+        uint256 markPrice = getMarkPrice(
+            c._indexAssetId,
+            c._sizeAbsInUsd,
+            isBuy
+        );
+
+        bytes32 key = _getPositionKey(
+            msg.sender,
+            c._isLong,
+            c._indexAssetId,
+            c._collateralAssetId
+        );
+
+        // validations
+        c._isIncrease
+            ? l3Vault.validateIncreaseExecution(c)
+            : l3Vault.validateDecreaseExecution(c, key, markPrice);
+
+        // update state variables
+        if (c._isIncrease) {
+            l3Vault.decreaseTraderBalance(
+                msg.sender,
+                c._collateralAssetId,
+                c._collateralAbsInUsd
+            );
+            l3Vault.increaseReserveAmounts(
+                c._collateralAssetId,
+                c._collateralAbsInUsd
+            );
+        }
+
+        // fill the order
+        l3Vault.fillOrder(
+            msg.sender,
+            true, // isMarketOrder
+            c._isLong,
+            c._isIncrease,
+            c._indexAssetId,
+            c._collateralAssetId,
+            c._sizeAbsInUsd,
+            c._collateralAbsInUsd,
+            markPrice
+        );
+
+        uint256 positionSizeInUsd = l3Vault.getPositionSizeInUsd(key);
+
+        if (!c._isIncrease && c._sizeAbsInUsd == positionSizeInUsd) {
+            // close position
+            l3Vault.deletePosition(key);
+        } else {
+            // partial close position
+            l3Vault.updatePosition(
+                key,
+                markPrice,
+                c._sizeAbsInUsd,
+                c._collateralAbsInUsd,
+                c._isIncrease, // isIncreaseInSize
+                c._isIncrease // isIncreaseInCollateral
+            );
+        }
+
+        // update global position state
+        l3Vault.updateGlobalPositionState(
+            c._isLong,
+            c._isIncrease,
+            c._indexAssetId,
+            c._sizeAbsInUsd,
+            c._collateralAbsInUsd,
+            markPrice
+        );
+
+        return key;
     }
 }
