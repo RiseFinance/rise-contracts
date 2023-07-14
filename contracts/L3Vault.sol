@@ -33,6 +33,7 @@ contract L3Vault {
         uint256 _limitPrice; // empty for market orders
     }
 
+    // limit
     struct OrderRequest {
         address trader;
         bool isLong;
@@ -44,6 +45,7 @@ contract L3Vault {
         uint256 limitPrice;
     }
 
+    // limit, market
     struct FilledOrder {
         bool isMarketOrder;
         bool isLong;
@@ -218,37 +220,6 @@ contract L3Vault {
         return priceManager.getAverageExecutionPrice(_assetId, _size, _isLong);
     }
 
-    // TODO: check - for short positions, should we use collateralAsset for tracking position size?
-    function updateGlobalPositionState(
-        bool _isLong,
-        bool _isIncrease,
-        uint256 _indexAssetId,
-        uint256 _sizeDelta,
-        uint256 _collateralDelta,
-        uint256 _markPrice
-    ) internal {
-        globalPositionStates[_isLong][_indexAssetId]
-            .avgPrice = _getNextAvgPrice(
-            _isIncrease,
-            globalPositionStates[_isLong][_indexAssetId].totalSizeInUsd,
-            globalPositionStates[_isLong][_indexAssetId].avgPrice,
-            _sizeDelta,
-            _markPrice
-        );
-
-        if (_isIncrease) {
-            globalPositionStates[_isLong][_indexAssetId]
-                .totalSizeInUsd += _sizeDelta;
-            globalPositionStates[_isLong][_indexAssetId]
-                .totalCollateralInUsd += _collateralDelta;
-        } else {
-            globalPositionStates[_isLong][_indexAssetId]
-                .totalSizeInUsd -= _sizeDelta;
-            globalPositionStates[_isLong][_indexAssetId]
-                .totalCollateralInUsd -= _collateralDelta;
-        }
-    }
-
     /**
      * (new avg price) * (new size) = (old avg price) * (old size) + (mark price) * (size delta)
      * */
@@ -408,6 +379,37 @@ contract L3Vault {
             : tokenPoolAmounts[USD_ID] + pnlUsdAbs;
 
         tokenReserveAmounts[_indexAssetId] -= _sizeAbsInUsd;
+    }
+
+    // TODO: check - for short positions, should we use collateralAsset for tracking position size?
+    function updateGlobalPositionState(
+        bool _isLong,
+        bool _isIncrease,
+        uint256 _indexAssetId,
+        uint256 _sizeDelta,
+        uint256 _collateralDelta,
+        uint256 _markPrice
+    ) internal {
+        globalPositionStates[_isLong][_indexAssetId]
+            .avgPrice = _getNextAvgPrice(
+            _isIncrease,
+            globalPositionStates[_isLong][_indexAssetId].totalSizeInUsd,
+            globalPositionStates[_isLong][_indexAssetId].avgPrice,
+            _sizeDelta,
+            _markPrice
+        );
+
+        if (_isIncrease) {
+            globalPositionStates[_isLong][_indexAssetId]
+                .totalSizeInUsd += _sizeDelta;
+            globalPositionStates[_isLong][_indexAssetId]
+                .totalCollateralInUsd += _collateralDelta;
+        } else {
+            globalPositionStates[_isLong][_indexAssetId]
+                .totalSizeInUsd -= _sizeDelta;
+            globalPositionStates[_isLong][_indexAssetId]
+                .totalCollateralInUsd -= _collateralDelta;
+        }
     }
 
     // --------------------------------------------- Validation Functions ---------------------------------------------
