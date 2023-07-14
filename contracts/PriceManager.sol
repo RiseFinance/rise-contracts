@@ -15,7 +15,6 @@ contract PriceManager is IPriceManager, Context {
     // uint256 public constant PRICE_BUFFER_DELTA_TO_SIZE =
     //     ((10 ** 6) * USD_PRECISION) / (PRICE_BUFFER_PRECISION / 100); // 1% price buffer per 10^6 USD
 
-    L3Vault public l3Vault;
     OrderBook public orderBook;
 
     mapping(address => bool) public isPriceKeeper;
@@ -25,9 +24,8 @@ contract PriceManager is IPriceManager, Context {
 
     event Execution(uint256 assetId, int256 price);
 
-    constructor(address _keeperAddress, address _l3VaultAddress) {
+    constructor(address _keeperAddress) {
         isPriceKeeper[_keeperAddress] = true;
-        l3Vault = L3Vault(_l3VaultAddress);
     }
 
     modifier onlyPriceKeeper() {

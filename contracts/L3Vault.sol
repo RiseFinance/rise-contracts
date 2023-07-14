@@ -66,7 +66,7 @@ contract L3Vault is Context {
         address _trader,
         uint256 _assetId,
         uint256 _amount
-    ) public {
+    ) external {
         traderBalances[_trader][_assetId] += _amount;
     }
 
@@ -74,7 +74,7 @@ contract L3Vault is Context {
         address _trader,
         uint256 _assetId,
         uint256 _amount
-    ) public {
+    ) external {
         traderBalances[_trader][_assetId] -= _amount;
     }
 
