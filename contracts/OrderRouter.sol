@@ -2,11 +2,11 @@
 
 pragma solidity ^0.8.0;
 
-import "./CommonContext.sol";
+import "./common/Context.sol";
 import "./L3Vault.sol"; // TODO: change to Interface
 import "./OrderBook.sol";
 
-contract OrderRouter is CommonContext {
+contract OrderRouter is Context {
     L3Vault l3Vault;
     OrderBook orderBook;
 

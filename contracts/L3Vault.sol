@@ -6,9 +6,9 @@ import "hardhat/console.sol"; // test-only
 import "./interfaces/IPriceManager.sol";
 import "./interfaces/IERC20.sol";
 import "./interfaces/ArbSys.sol";
-import "./CommonContext.sol";
+import "./common/Context.sol";
 
-contract L3Vault is CommonContext {
+contract L3Vault is Context {
     // ---------------------------------------------------- States ----------------------------------------------------
     IPriceManager public priceManager;
 

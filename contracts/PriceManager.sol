@@ -2,12 +2,12 @@
 
 pragma solidity ^0.8.0;
 import "./interfaces/IPriceManager.sol";
-import "./CommonContext.sol";
+import "./common/Context.sol";
 import "./OrderBook.sol";
 
 import "hardhat/console.sol";
 
-contract PriceManager is IPriceManager, CommonContext {
+contract PriceManager is IPriceManager, Context {
     // uint256 public constant PRICE_BUFFER_PRECISION = 10 ** 8;
     // uint256 public constant USD_PRECISION = 10 ** 20;
     // uint256 public constant DECAY_CONSTANT =

@@ -2,10 +2,10 @@
 
 pragma solidity ^0.8.0;
 
-import "./CommonContext.sol";
+import "./common/Context.sol";
 import "./L3Vault.sol";
 
-contract L3Gateway is CommonContext {
+contract L3Gateway is Context {
     // FIXME: token trasfers from L3Vault to L3Gateway should be done by L3Vault
     L3Vault public l3Vault;
 

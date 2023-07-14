@@ -2,9 +2,9 @@
 
 pragma solidity ^0.8.0;
 
-import "./CommonContext.sol";
+import "./common/Context.sol";
 
-contract BaseOrderBook is CommonContext {
+contract BaseOrderBook is Context {
     mapping(address => uint256) public traderOrderRequestCounts; // userAddress => orderRequestCount (limit order)
 
     mapping(address => mapping(uint256 => OrderRequest)) public pendingOrders; // userAddress => traderOrderRequestCounts => Order (pending orders by trader)
@@ -63,7 +63,10 @@ contract BaseOrderBook is CommonContext {
             uint256 buyFirst = buyFirstIndex[request.indexAssetId][
                 request.limitPrice
             ];
-            require(buyLast > buyFirst, "BaseOrderBook: buyOrderBook queue is empty");
+            require(
+                buyLast > buyFirst,
+                "BaseOrderBook: buyOrderBook queue is empty"
+            );
             delete buyOrderBook[request.indexAssetId][request.limitPrice][
                 buyFirst
             ];
