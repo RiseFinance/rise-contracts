@@ -3,6 +3,9 @@
 pragma solidity ^0.8.0;
 
 contract Constants {
+    uint256 public constant USD_ID = 0;
+    uint256 public constant ETH_ID = 1;
+
     uint256 public constant PRICE_BUFFER_PRECISION = 1e8;
     uint256 public constant USD_PRECISION = 1e20;
     uint256 public constant DECAY_CONSTANT =

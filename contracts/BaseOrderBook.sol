@@ -63,7 +63,7 @@ contract BaseOrderBook is CommonContext {
             uint256 buyFirst = buyFirstIndex[request.indexAssetId][
                 request.limitPrice
             ];
-            require(buyLast > buyFirst, "L3Vault: buyOrderBook queue is empty");
+            require(buyLast > buyFirst, "BaseOrderBook: buyOrderBook queue is empty");
             delete buyOrderBook[request.indexAssetId][request.limitPrice][
                 buyFirst
             ];
@@ -78,7 +78,7 @@ contract BaseOrderBook is CommonContext {
             ];
             require(
                 sellLast > sellFirst,
-                "L3Vault: sellOrderBook queue is empty"
+                "BaseOrderBook: sellOrderBook queue is empty"
             );
             delete sellOrderBook[request.indexAssetId][request.limitPrice][
                 sellFirst

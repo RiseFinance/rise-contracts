@@ -7,7 +7,7 @@ import "./Structs.sol";
 
 contract CommonContext is Utils, Structs {
     modifier onlyKeeper() {
-        require(true, "only keeper"); // TODO: modify
+        require(true, "only keeper"); // FIXME: implementation
         _;
     }
 }

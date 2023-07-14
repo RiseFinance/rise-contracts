@@ -31,7 +31,10 @@ contract PriceManager is IPriceManager, CommonContext {
     }
 
     modifier onlyPriceKeeper() {
-        require(isPriceKeeper[msg.sender], "Should be called by keeper");
+        require(
+            isPriceKeeper[msg.sender],
+            "PriceManager: Should be called by keeper"
+        );
         _;
     }
 
@@ -39,10 +42,10 @@ contract PriceManager is IPriceManager, CommonContext {
         uint256[] calldata _assetId,
         uint256[] calldata _price // new index price from the data source
     ) external override onlyPriceKeeper {
-        require(_assetId.length == _price.length, "Wrong input");
+        require(_assetId.length == _price.length, "PriceManager: Wrong input");
         uint256 l = _assetId.length;
         for (uint256 i = 0; i < uint256(l); i++) {
-            require(_price[i] > 0, "price has to be positive");
+            require(_price[i] > 0, "PriceManager: price has to be positive");
 
             int256 currentPriceBuffer = getPriceBuffer(_assetId[i]); // % of price shift
             int256 currentPriceBufferInUsd = (int256(_price[i]) *
@@ -123,8 +126,8 @@ contract PriceManager is IPriceManager, CommonContext {
     ) external override returns (uint256) {
         uint256 price = getMarkPrice(_assetId);
         // require first bit of _size is 0
-        require(_size < 2 ** 255, "size overflow");
-        require(price > 0, "price not set");
+        require(_size < 2 ** 255, "PriceManager: size overflow");
+        require(price > 0, "PriceManager: price not set");
         int256 intSize = _isBuy ? int256(_size) : -int256(_size);
         int256 priceBufferChange = intSize / int256(PRICE_BUFFER_DELTA_TO_SIZE);
         setPriceBuffer(_assetId, getPriceBuffer(_assetId) + priceBufferChange);
@@ -132,7 +135,7 @@ contract PriceManager is IPriceManager, CommonContext {
             (int256(price) * priceBufferChange) /
             2 /
             int256(PRICE_BUFFER_PRECISION);
-        require(averageExecutedPrice > 0, "price underflow");
+        require(averageExecutedPrice > 0, "PriceManager: price underflow");
         emit Execution(_assetId, averageExecutedPrice);
         return uint256(averageExecutedPrice);
     }

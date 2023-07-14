@@ -12,8 +12,6 @@ contract L3Vault is CommonContext {
     // ---------------------------------------------------- States ----------------------------------------------------
     IPriceManager public priceManager;
 
-    uint256 public constant USD_ID = 0;
-    uint256 public constant ETH_ID = 1;
     uint256 private constant assetIdCounter = 1; // temporary
     mapping(uint256 => uint256) public tokenDecimals; // TODO: listing restriction needed
 
@@ -22,7 +20,6 @@ contract L3Vault is CommonContext {
 
     mapping(address => mapping(uint256 => FilledOrder)) public filledOrders; // userAddress => traderOrderCount => Order (filled orders by trader)
 
-    mapping(uint256 => uint256) public balancesTracker; // assetId => balance; only used in _depositInAmount
     mapping(uint256 => uint256) public tokenPoolAmounts; // assetId => tokenCount
     mapping(uint256 => uint256) public tokenReserveAmounts; // assetId => tokenCount
     mapping(uint256 => uint256) public maxLongCapacity; // assetId => tokenCount
@@ -64,6 +61,22 @@ contract L3Vault is CommonContext {
     //     );
     //     tokenPoolAmounts[assetId] -= _amount;
     // }
+
+    function increaseTraderBalance(
+        address _trader,
+        uint256 _assetId,
+        uint256 _amount
+    ) public {
+        traderBalances[_trader][_assetId] += _amount;
+    }
+
+    function decreaseTraderBalance(
+        address _trader,
+        uint256 _assetId,
+        uint256 _amount
+    ) public {
+        traderBalances[_trader][_assetId] -= _amount;
+    }
 
     function getTraderBalance(
         address _trader,
@@ -402,7 +415,6 @@ contract L3Vault is CommonContext {
         return key;
     }
 
-    // ----------------------------------------- Deposit & Withdraw Functions -----------------------------------------
     // ------------------------------------------- Liquidity Pool Functions -------------------------------------------
     function addLiquidity(uint256 assetId, uint256 amount) external payable {
         require(msg.value >= amount, "L3Vault: insufficient amount");
