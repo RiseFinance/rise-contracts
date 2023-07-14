@@ -56,9 +56,10 @@ contract PriceManager is IPriceManager {
             bool checkBuyOrderBook = _price[i] < indexPrice[_assetId[i]];
 
             markPriceWithLimitOrderPriceImpact = l3Vault
-                .executeLimitOrdersAndGetPriceImpact(
+                .executeLimitOrdersAndGetFinalMarkPrice(
                     checkBuyOrderBook, // isBuy
                     _assetId[i],
+                    uint256(_price[i]),
                     uint256(currentMarkPrice)
                 );
 

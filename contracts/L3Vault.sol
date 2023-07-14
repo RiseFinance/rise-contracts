@@ -549,9 +549,10 @@ contract L3Vault {
      * if the order is partially filled, the order is updated with the remaining size
      *
      */
-    function executeLimitOrdersAndGetPriceImpact(
+    function executeLimitOrdersAndGetFinalMarkPrice(
         bool _isBuy,
         uint256 _indexAssetId,
+        uint256 _currentIndexPrice,
         uint256 _currentMarkPrice
     ) external onlyKeeper returns (uint256) {
         // FIXME: 주문 체결 후 호가 창 빌 때마다 maxBidPrice, minAskPrice 업데이트
@@ -614,7 +615,9 @@ contract L3Vault {
                 ]; // _fillAmount = 이번 price tick에서 체결할 주문량
 
             // 이번 price tick에서 발생할 price impact
-            uint256 _priceImpactInUsd = _interimMarkPrice *
+            // price impact is calculated based on the index price
+            // to avoid cumulative price impact
+            uint256 _priceImpactInUsd = _currentIndexPrice *
                 uint256(PRICE_BUFFER_CHANGE_CONSTANT) *
                 _fillAmount;
 
@@ -672,7 +675,7 @@ contract L3Vault {
             }
             // Note: if `isPartial = true` in this while loop,  _sizeCap will be 0 after the for loop
         }
-        return _interimMarkPrice;
+        return _interimMarkPrice; // price impact (buffer size)
     }
 
     function _fillLimitOrder(
