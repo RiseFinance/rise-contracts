@@ -21,6 +21,10 @@ interface IL3Vault {
 
     function decreaseTraderBalance(address, uint256, uint256) external;
 
+    function addLiquidity(uint256, uint256) external;
+
+    function removeLiquidity(uint256, uint256) external;
+
     function increaseReserveAmounts(uint256, uint256) external;
 
     function getPositionSizeInUsd(bytes32) external view returns (uint256);
