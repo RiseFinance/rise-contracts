@@ -6,7 +6,7 @@ import "./common/Context.sol";
 import "./interfaces/IL3Vault.sol";
 import {ArbSys} from "./interfaces/ArbSys.sol";
 
-contract L3Gateway is Context {
+contract L3Gateway_old is Context {
     // FIXME: token trasfers from L3Vault to L3Gateway should be done by L3Vault
     IL3Vault public l3Vault;
 
