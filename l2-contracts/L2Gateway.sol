@@ -41,25 +41,25 @@ contract L2Gateway is TransferHelper {
      * 2) cost of submitting and executing the retryable ticket, which is `l3CallValue + maxSubmissionCost + gasLimit * gasPriceBid`
      *    here, l3CallValue is always zero (not allowing ETH or ERC-20 token representations of traders balances to be minted in L3)
      *
-     * @param depositAmount amount of ETH to deposit
-     * @param maxSubmissionCost the maximum amount of ETH to be paid for submitting the retryable ticket
-     * @param gasLimit the maximum amount of gas used to cover L3 execution of the ticket
-     * @param gasPriceBid the gas price bid for L3 execution of the ticket
+     * @param _depositAmount amount of ETH to deposit
+     * @param _maxSubmissionCost the maximum amount of ETH to be paid for submitting the retryable ticket
+     * @param _gasLimit the maximum amount of gas used to cover L3 execution of the ticket
+     * @param _gasPriceBid the gas price bid for L3 execution of the ticket
      * @return ticketId the unique id of the retryable ticket created
      */
     function depositEthToL3(
-        uint256 depositAmount,
-        uint256 maxSubmissionCost,
-        uint256 gasLimit,
-        uint256 gasPriceBid
+        uint256 _depositAmount,
+        uint256 _maxSubmissionCost,
+        uint256 _gasLimit,
+        uint256 _gasPriceBid
     ) external payable returns (uint256) {
         require(
-            depositAmount > 0,
+            _depositAmount > 0,
             "L2Gateway: deposit amount should be positive"
         );
         require(
             msg.value >=
-                depositAmount + maxSubmissionCost + gasLimit * gasPriceBid,
+                _depositAmount + _maxSubmissionCost + _gasLimit * _gasPriceBid,
             "L2Gateway: insufficient msg.value"
         );
 
@@ -67,21 +67,21 @@ contract L2Gateway is TransferHelper {
             IL3Gateway.increaseTraderBalance.selector,
             msg.sender, // _trader
             ETH_ID, // _assetId
-            depositAmount // _amount
+            _depositAmount // _amount
         );
 
         // with no custom ArbSys withdraw function, the deposit amount must be held in L2Gateway
         // and only Ticket process fees would be sent to the Bridge via Inbox
         uint256 ticketId = inbox.createRetryableTicket{
-            value: maxSubmissionCost + gasLimit * gasPriceBid
+            value: _maxSubmissionCost + _gasLimit * _gasPriceBid
         }(
             l3GatewayAddress,
             0, // l3CallValue
-            maxSubmissionCost,
+            _maxSubmissionCost,
             msg.sender, // excessFeeRefundAddress // TODO: aggregate excess fees on a L3 admin contract (not msg.sender)
             msg.sender, // callValueRefundAddress
-            gasLimit,
-            gasPriceBid,
+            _gasLimit,
+            _gasPriceBid,
             data
         );
 
@@ -89,11 +89,42 @@ contract L2Gateway is TransferHelper {
         _transferEth(
             payable(msg.sender),
             msg.value -
-                (depositAmount + maxSubmissionCost + gasLimit * gasPriceBid)
+                (_depositAmount + _maxSubmissionCost + _gasLimit * _gasPriceBid)
         );
         // TODO: refund excess gas fee after processing the ticket
 
         // emit RetryableTicketCreated(ticketId);
+        return ticketId;
+    }
+
+    // path: L2 => Retryable => L3 withdraw => ArbSys => Outbox
+    function triggerWithdrawalFromL2(
+        uint256 _withdrawAmount,
+        uint256 _maxSubmissionCost,
+        uint256 _gasLimit,
+        uint256 _gasPriceBid
+    ) external payable returns (uint256) {
+        // minimal validation should be conducted from frontend (check L3Vault.traderBalances)
+
+        bytes memory data = abi.encodeWithSelector(
+            IL3Gateway.withdrawEthToL2.selector,
+            msg.sender, // _trader => cannot modify the recipient address
+            _withdrawAmount // _amount
+        );
+
+        uint256 ticketId = inbox.createRetryableTicket{
+            value: _maxSubmissionCost + _gasLimit * _gasPriceBid
+        }(
+            l3GatewayAddress,
+            0,
+            _maxSubmissionCost,
+            msg.sender, // excessFeeRefundAddress // TODO: aggregate excess fees on a L3 admin contract (not msg.sender)
+            msg.sender, // callValueRefundAddress
+            _gasLimit,
+            _gasPriceBid,
+            data
+        );
+
         return ticketId;
     }
 
