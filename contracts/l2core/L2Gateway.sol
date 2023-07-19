@@ -3,10 +3,11 @@
 pragma solidity ^0.8.0;
 
 import "../interfaces/l2/IInbox.sol";
+import "../interfaces/l2/IL2Gateway.sol";
 import "../interfaces/l3/IL3Gateway.sol";
 import "../l2core/TransferHelper.sol";
 
-contract L2Gateway is TransferHelper {
+contract L2Gateway is IL2Gateway, TransferHelper {
     error NotBridge(address sender); // TODO: move to errors
 
     struct InOutInfo {

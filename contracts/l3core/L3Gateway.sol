@@ -5,15 +5,16 @@ pragma solidity ^0.8.0;
 import "./common/Context.sol";
 import "../interfaces/l3/IL3Vault.sol";
 import "../interfaces/l2/IL2Gateway.sol";
+import "../interfaces/l3/IL3Gateway.sol";
 import {ArbSys} from "../interfaces/l3/ArbSys.sol";
 
-contract L3Gateway is Context {
-    address public l2GateawayAddress;
+contract L3Gateway is IL3Gateway, Context {
+    address public l2GatewayAddress;
     IL3Vault public l3Vault;
 
     constructor(address _l3Vault, address _l2Gateway) {
         l3Vault = IL3Vault(_l3Vault);
-        l2GateawayAddress = _l2Gateway;
+        l2GatewayAddress = _l2Gateway;
     }
 
     function increaseTraderBalance(
@@ -43,6 +44,7 @@ contract L3Gateway is Context {
     // Should be called via retryable tickets
     function withdrawEthToL2(address _trader, uint256 _amount) external {
         // TODO: msg.sender validation?
+        // FIXME: restrict this function call from L3 EOA
         uint256 balance = l3Vault.getTraderBalance(_trader, ETH_ID);
         require(balance >= _amount, "L3Gateway: insufficient balance");
 
@@ -53,6 +55,6 @@ contract L3Gateway is Context {
             _trader, // _dest => not allowing to designate a different recipient address
             _amount // _amount
         );
-        ArbSys(address(100)).sendTxToL1(l2GateawayAddress, data);
+        ArbSys(address(100)).sendTxToL1(l2GatewayAddress, data);
     }
 }
