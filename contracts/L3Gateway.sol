@@ -40,7 +40,7 @@ contract L3Gateway is Context {
     // -------------------- L3 -> L2 Messaging --------------------
 
     // TODO: L3 gas fee should be paid by the L2 user (or by L3 admin contract)
-    // Should be called via retyrable tickets
+    // Should be called via retryable tickets
     function withdrawEthToL2(address _trader, uint256 _amount) external {
         // TODO: msg.sender validation?
         uint256 balance = l3Vault.getTraderBalance(_trader, ETH_ID);
