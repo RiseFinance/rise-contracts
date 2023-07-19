@@ -3,8 +3,8 @@
 pragma solidity ^0.8.0;
 
 import "./BaseOrderBook.sol";
-import "./interfaces/IL3Vault.sol";
-import "./interfaces/IOrderBook.sol";
+import "../interfaces/l3/IL3Vault.sol";
+import "../interfaces/l3/IOrderBook.sol";
 
 contract OrderBook is IOrderBook, BaseOrderBook {
     IL3Vault public l3Vault;

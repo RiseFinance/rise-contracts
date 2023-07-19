@@ -3,9 +3,9 @@
 pragma solidity ^0.8.0;
 
 import "hardhat/console.sol"; // test-only
-import "./interfaces/IL3Vault.sol";
-import "./interfaces/IERC20.sol";
-import "./interfaces/ArbSys.sol";
+import "../interfaces/l3/IL3Vault.sol";
+import "../interfaces/l3/IERC20.sol";
+import "../interfaces/l3/ArbSys.sol";
 import "./common/Context.sol";
 
 // TODO: check - `override` needed for function declared in the interface `IL3Vault`?

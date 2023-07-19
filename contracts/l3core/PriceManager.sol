@@ -2,8 +2,8 @@
 
 pragma solidity ^0.8.0;
 
-import "./interfaces/IPriceManager.sol";
-import "./interfaces/IOrderBook.sol";
+import "../interfaces/l3/IPriceManager.sol";
+import "../interfaces/l3/IOrderBook.sol";
 import "./common/Context.sol";
 
 import "hardhat/console.sol";

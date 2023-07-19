@@ -3,9 +3,9 @@
 pragma solidity ^0.8.0;
 
 import "./common/Context.sol";
-import "./interfaces/IPriceManager.sol";
-import "./interfaces/IL3Vault.sol"; // TODO: change to Interface
-import "./interfaces/IOrderBook.sol";
+import "../interfaces/l3/IPriceManager.sol";
+import "../interfaces/l3/IL3Vault.sol"; // TODO: change to Interface
+import "../interfaces/l3/IOrderBook.sol";
 
 // TODO: check - OrderRouter to inherit L3Vault?
 contract OrderRouter is Context {

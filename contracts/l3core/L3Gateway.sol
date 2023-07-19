@@ -3,9 +3,9 @@
 pragma solidity ^0.8.0;
 
 import "./common/Context.sol";
-import "./interfaces/IL3Vault.sol";
-import "../l2-contracts/interfaces/IL2Gateway.sol";
-import {ArbSys} from "./interfaces/ArbSys.sol";
+import "../interfaces/l3/IL3Vault.sol";
+import "../interfaces/l2/IL2Gateway.sol";
+import {ArbSys} from "../interfaces/l3/ArbSys.sol";
 
 contract L3Gateway is Context {
     address public l2GateawayAddress;

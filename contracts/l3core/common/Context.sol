@@ -5,7 +5,7 @@ pragma solidity ^0.8.0;
 import "./Utils.sol";
 import "./Structs.sol";
 
-contract Context is Utils, Structs {
+abstract contract Context is Utils, Structs {
     modifier onlyKeeper() {
         require(true, "only keeper"); // FIXME: implementation
         _;

@@ -2,9 +2,9 @@
 
 pragma solidity ^0.8.0;
 
-import "./interfaces/IInbox.sol";
-import "../contracts/interfaces/IL3Gateway.sol";
-import "../contracts/TransferHelper.sol";
+import "../interfaces/l2/IInbox.sol";
+import "../interfaces/l3/IL3Gateway.sol";
+import "../l2core/TransferHelper.sol";
 
 contract L2Gateway is TransferHelper {
     error NotBridge(address sender); // TODO: move to errors
