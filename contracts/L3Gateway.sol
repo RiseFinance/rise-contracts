@@ -38,7 +38,7 @@ contract L3Gateway is Context {
         l3Vault.decreaseTraderBalance(msg.sender, ETH_ID, _amount);
 
         bytes memory data = abi.encodeWithSelector(
-            IL2Gateway.withdrawEthFromOutbox.selector,
+            IL2Gateway._withdrawEthFromOutbox.selector,
             msg.sender, // _dest => not allowing to designate a different recipient address
             _amount // _amount
         );

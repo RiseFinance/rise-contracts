@@ -4,9 +4,9 @@ pragma solidity ^0.8.0;
 
 import "./interfaces/IInbox.sol";
 import "../contracts/interfaces/IL3Gateway.sol";
-import "../contracts/GatewayHelper.sol";
+import "../contracts/TransferHelper.sol";
 
-contract L2Gateway is GatewayHelper {
+contract L2Gateway is TransferHelper {
     error NotBridge(address sender); // TODO: move to errors
 
     struct InOutInfo {
@@ -100,7 +100,7 @@ contract L2Gateway is GatewayHelper {
     /**
      * @notice restricted to be called by the allowed L2 Bridges
      */
-    function withdrawEthFromOutbox(
+    function _withdrawEthFromOutbox(
         address _recipient,
         uint256 _amount
     ) external {

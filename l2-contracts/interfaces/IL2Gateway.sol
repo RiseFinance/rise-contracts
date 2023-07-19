@@ -10,5 +10,5 @@ interface IL2Gateway {
         uint256
     ) external payable returns (uint256);
 
-    function withdrawEthFromOutbox(address, uint256) external;
+    function _withdrawEthFromOutbox(address, uint256) external;
 }
