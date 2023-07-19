@@ -1,7 +1,7 @@
 {
-  "name": "l3core",
-  "version": "1.0.0",
-  "description": "L3 core contracts for the Rise Finance protocol.",
+  "name": "rise-contracts",
+  "version": "0.0.1",
+  "description": "Core contracts for the Rise Finance protocol.",
   "author": "Rise Finance, Inc.",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
