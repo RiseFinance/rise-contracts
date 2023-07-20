@@ -2,7 +2,7 @@
 
 pragma solidity ^0.8.0;
 
-contract Structs {
+abstract contract Structs {
     // struct OrderContext {
     //     bool _isLong;
     //     bool _isIncrease;

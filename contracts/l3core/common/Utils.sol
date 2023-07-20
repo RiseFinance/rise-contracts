@@ -4,7 +4,7 @@ pragma solidity ^0.8.0;
 
 import "./Constants.sol";
 
-contract Utils is Constants {
+abstract contract Utils is Constants {
     function _min(uint256 a, uint256 b) public pure returns (uint256) {
         return a < b ? a : b;
     }

@@ -3,9 +3,8 @@
 pragma solidity ^0.8.0;
 
 import "hardhat/console.sol"; // test-only
-import "./interfaces/IL3Vault.sol";
-import "./interfaces/IERC20.sol";
-import "./interfaces/ArbSys.sol";
+import "../interfaces/l3/IL3Vault.sol";
+import "../interfaces/l3/ArbSys.sol";
 import "./common/Context.sol";
 
 // TODO: check - `override` needed for function declared in the interface `IL3Vault`?
@@ -32,17 +31,17 @@ contract L3Vault is IL3Vault, Context {
 
     // ---------------------------------------------- Primary Functions -----------------------------------------------
 
-    // function _increasePoolAmounts(uint256 assetId, uint256 _amount) internal {
-    //     tokenPoolAmounts[assetId] += _amount;
-    // }
+    function _increasePoolAmounts(uint256 assetId, uint256 _amount) internal {
+        tokenPoolAmounts[assetId] += _amount;
+    }
 
-    // function _decreasePoolAmounts(uint256 assetId, uint256 _amount) internal {
-    //     require(
-    //         tokenPoolAmounts[assetId] >= _amount,
-    //         "L3Vault: Not enough token pool _amount"
-    //     );
-    //     tokenPoolAmounts[assetId] -= _amount;
-    // }
+    function _decreasePoolAmounts(uint256 assetId, uint256 _amount) internal {
+        require(
+            tokenPoolAmounts[assetId] >= _amount,
+            "L3Vault: Not enough token pool _amount"
+        );
+        tokenPoolAmounts[assetId] -= _amount;
+    }
 
     function increaseTraderBalance(
         address _trader,
@@ -257,7 +256,14 @@ contract L3Vault is IL3Vault, Context {
     }
 
     // ------------------------------------------- Liquidity Pool Functions -------------------------------------------
-    function addLiquidity(uint256 assetId, uint256 amount) external payable {
+
+    /**
+     * @notice to be deprecated
+     */
+    function addLiquidityWithTokensTransfer(
+        uint256 assetId,
+        uint256 amount
+    ) external payable {
         require(msg.value >= amount, "L3Vault: insufficient amount");
         // TODO: check - how to mint the LP token?
         tokenPoolAmounts[assetId] += amount;
@@ -266,9 +272,24 @@ contract L3Vault is IL3Vault, Context {
         } // refund
     }
 
-    function removeLiquidity(uint256 assetId, uint256 amount) external {
+    /**
+     * @notice to be deprecated
+     */
+    function removeLiquidityWithTokensTransfer(
+        uint256 assetId,
+        uint256 amount
+    ) external {
         tokenPoolAmounts[assetId] -= amount;
         payable(msg.sender).transfer(amount);
+    }
+
+    // TODO: check how to determine the Liquidity Provider
+    function addLiquidity(uint256 assetId, uint256 amount) external {
+        _increasePoolAmounts(assetId, amount);
+    }
+
+    function removeLiquidity(uint256 assetId, uint256 amount) external {
+        _decreasePoolAmounts(assetId, amount);
     }
 }
 // ---------------------------------------------------- Events ----------------------------------------------------
