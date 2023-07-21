@@ -18,7 +18,8 @@ contract PriceManager is IPriceManager, Context {
 
     event Execution(uint256 assetId, int256 price);
 
-    constructor(address _keeperAddress) {
+    constructor(address _orderBook, address _keeperAddress) {
+        orderBook = IOrderBook(_orderBook);
         isPriceKeeper[_keeperAddress] = true;
     }
 
