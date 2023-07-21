@@ -37,7 +37,7 @@ contract OrderBook is IOrderBook, OrderBookBase {
         l3Vault = IL3Vault(_l3Vault);
     }
 
-    function placeLimitOrder(IL3Vault.OrderContext calldata c) external {
+    function placeLimitOrder(IL3Vault.OrderContext calldata c) external returns (uint256) {
         // FIXME: orderSizeForPriceTick 업데이트
 
         OrderRequest memory orderRequest = OrderRequest(
@@ -70,7 +70,8 @@ contract OrderBook is IOrderBook, OrderBookBase {
                 minAskPrice[c._indexAssetId] = c._limitPrice;
             }
         }
-        enqueueOrderBook(orderRequest, _isBuy); // TODO: check - limit price should have validations for tick sizes
+        // return order index
+        return enqueueOrderBook(orderRequest, _isBuy); // TODO: check - limit price should have validations for tick sizes
     }
 
     /**
