@@ -2,10 +2,14 @@
 
 pragma solidity ^0.8.0;
 
+import "../../l3core/common/Structs.sol";
 import "./IL3Vault.sol";
 
 interface IOrderBook {
-    function placeLimitOrder(IL3Vault.OrderContext calldata) external returns (uint256);
+
+    function getOrderRequest(bool, uint256, uint256, uint256) external view returns (Structs.OrderRequest memory);
+
+    function placeLimitOrder(IL3Vault.OrderContext calldata) external;
 
     function executeLimitOrdersAndGetFinalMarkPrice(
         bool,

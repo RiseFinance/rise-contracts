@@ -10,9 +10,9 @@ abstract contract OrderBookBase is Context {
     mapping(address => mapping(uint256 => OrderRequest)) public pendingOrders; // userAddress => traderOrderRequestCounts => Order (pending orders by trader)
 
     mapping(uint256 => mapping(uint256 => mapping(uint256 => OrderRequest)))
-        public buyOrderBook; // indexAssetId => price => queue index => OrderRequest (Global Queue)
+        internal buyOrderBook; // indexAssetId => price => queue index => OrderRequest (Global Queue)
     mapping(uint256 => mapping(uint256 => mapping(uint256 => OrderRequest)))
-        public sellOrderBook; // indexAssetId => price => queue index => OrderRequest (Global Queue)
+        internal sellOrderBook; // indexAssetId => price => queue index => OrderRequest (Global Queue)
 
     mapping(uint256 => uint256) public maxBidPrice; // indexAssetId => price
     mapping(uint256 => uint256) public minAskPrice; // indexAssetId => price
@@ -34,23 +34,7 @@ abstract contract OrderBookBase is Context {
     // uint256 sellFirst = 1;
     // uint256 sellLast = 0;
 
-    function getOrder(bool _isBuy, uint256 _indexAssetId, uint256 _price)
-        public
-        view
-        returns (OrderRequest memory)
-    {
-        if (_isBuy) {
-            return buyOrderBook[_indexAssetId][_price][
-                buyFirstIndex[_indexAssetId][_price]
-            ];
-        } else {
-            return sellOrderBook[_indexAssetId][_price][
-                sellFirstIndex[_indexAssetId][_price]
-            ];
-        }
-    }
-
-    function enqueueOrderBook(OrderRequest memory request, bool isBuy) public returns (uint256){
+    function enqueueOrderBook(OrderRequest memory request, bool isBuy) public {
         if (isBuy) {
             // buyLastIndex[request.indexAssetId][request.limitPrice]++;
             uint256 buyLast = ++buyLastIndex[request.indexAssetId][
@@ -61,7 +45,6 @@ abstract contract OrderBookBase is Context {
                 buyLast
             ] = request;
 
-            return buyLast;
         } else {
             // sellLastIndex[request.indexAssetId][request.limitPrice]++;
             uint256 sellLast = ++sellLastIndex[request.indexAssetId][
@@ -71,7 +54,6 @@ abstract contract OrderBookBase is Context {
                 sellLast
             ] = request;
 
-            return sellLast;
         }
 
     }

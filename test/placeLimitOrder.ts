@@ -67,7 +67,9 @@ describe("Place Limit Order", function() {
 
         await orderRouter.connect(trader).placeLimitOrder(orderContext);
 
-        const orderRequest = await orderBook.buyOrderBook(ETH_ID, 1950, 1); // orderbook reader 필요?
+        const isBuy = true;
+        const orderRequest = await orderBook.getOrderRequest(isBuy, ETH_ID, 1950, 1); // how to get order index?
+        
         // 존재하는지부터 확인 필요
         expect(orderRequest.trader).to.equal(trader.address);
         expect(orderRequest.isLong).to.equal(true);
