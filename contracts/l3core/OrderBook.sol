@@ -2,11 +2,11 @@
 
 pragma solidity ^0.8.0;
 
-import "./BaseOrderBook.sol";
+import "./OrderBookBase.sol";
 import "../interfaces/l3/IL3Vault.sol";
 import "../interfaces/l3/IOrderBook.sol";
 
-contract OrderBook is IOrderBook, BaseOrderBook {
+contract OrderBook is IOrderBook, OrderBookBase {
     IL3Vault public l3Vault;
 
     struct IterationContext {
