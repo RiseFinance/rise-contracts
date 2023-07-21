@@ -92,8 +92,8 @@ contract PriceManager is IPriceManager, Context {
         }
     }
 
-    function setPriceBuffer(uint256 _assetId, int256 value) internal {
-        lastPriceBuffer[_assetId] = value;
+    function setPriceBuffer(uint256 _assetId, int256 _value) internal {
+        lastPriceBuffer[_assetId] = _value;
         priceBufferUpdatedTime[_assetId] = block.timestamp;
     }
 

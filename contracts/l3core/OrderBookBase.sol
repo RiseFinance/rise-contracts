@@ -34,63 +34,63 @@ abstract contract OrderBookBase is Context {
     // uint256 sellFirst = 1;
     // uint256 sellLast = 0;
 
-    function enqueueOrderBook(OrderRequest memory request, bool isBuy) public {
-        if (isBuy) {
-            // buyLastIndex[request.indexAssetId][request.limitPrice]++;
-            uint256 buyLast = ++buyLastIndex[request.indexAssetId][
-                request.limitPrice
+    function enqueueOrderBook(OrderRequest memory _request, bool _isBuy) public {
+        if (_isBuy) {
+            // buyLastIndex[_request.indexAssetId][_request.limitPrice]++;
+            uint256 buyLast = ++buyLastIndex[_request.indexAssetId][
+                _request.limitPrice
             ];
 
-            buyOrderBook[request.indexAssetId][request.limitPrice][
+            buyOrderBook[_request.indexAssetId][_request.limitPrice][
                 buyLast
-            ] = request;
+            ] = _request;
 
         } else {
-            // sellLastIndex[request.indexAssetId][request.limitPrice]++;
-            uint256 sellLast = ++sellLastIndex[request.indexAssetId][
-                request.limitPrice
+            // sellLastIndex[_request.indexAssetId][_request.limitPrice]++;
+            uint256 sellLast = ++sellLastIndex[_request.indexAssetId][
+                _request.limitPrice
             ];
-            sellOrderBook[request.indexAssetId][request.limitPrice][
+            sellOrderBook[_request.indexAssetId][_request.limitPrice][
                 sellLast
-            ] = request;
+            ] = _request;
 
         }
 
     }
 
-    function dequeueOrderBook(OrderRequest memory request, bool isBuy) public {
-        if (isBuy) {
-            uint256 buyLast = buyLastIndex[request.indexAssetId][
-                request.limitPrice
+    function dequeueOrderBook(OrderRequest memory _request, bool _isBuy) public {
+        if (_isBuy) {
+            uint256 buyLast = buyLastIndex[_request.indexAssetId][
+                _request.limitPrice
             ];
-            uint256 buyFirst = buyFirstIndex[request.indexAssetId][
-                request.limitPrice
+            uint256 buyFirst = buyFirstIndex[_request.indexAssetId][
+                _request.limitPrice
             ];
             require(
                 buyLast > buyFirst,
                 "BaseOrderBook: buyOrderBook queue is empty"
             );
-            delete buyOrderBook[request.indexAssetId][request.limitPrice][
+            delete buyOrderBook[_request.indexAssetId][_request.limitPrice][
                 buyFirst
             ];
 
-            buyFirstIndex[request.indexAssetId][request.limitPrice]++;
+            buyFirstIndex[_request.indexAssetId][_request.limitPrice]++;
         } else {
-            uint256 sellLast = sellLastIndex[request.indexAssetId][
-                request.limitPrice
+            uint256 sellLast = sellLastIndex[_request.indexAssetId][
+                _request.limitPrice
             ];
-            uint256 sellFirst = sellFirstIndex[request.indexAssetId][
-                request.limitPrice
+            uint256 sellFirst = sellFirstIndex[_request.indexAssetId][
+                _request.limitPrice
             ];
             require(
                 sellLast > sellFirst,
                 "BaseOrderBook: sellOrderBook queue is empty"
             );
-            delete sellOrderBook[request.indexAssetId][request.limitPrice][
+            delete sellOrderBook[_request.indexAssetId][_request.limitPrice][
                 sellFirst
             ];
 
-            sellFirstIndex[request.indexAssetId][request.limitPrice]++;
+            sellFirstIndex[_request.indexAssetId][_request.limitPrice]++;
         }
     }
 }
