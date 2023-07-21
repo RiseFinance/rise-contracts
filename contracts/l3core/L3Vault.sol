@@ -11,7 +11,7 @@ import "./common/Context.sol";
 contract L3Vault is IL3Vault, Context {
     // ---------------------------------------------------- States ----------------------------------------------------
 
-    uint256 private constant assetIdCounter = 1; // temporary
+    uint256 private assetIdCounter = 1; // temporary
     mapping(uint256 => uint256) public tokenDecimals; // TODO: listing restriction needed
 
     mapping(address => mapping(uint256 => uint256)) public traderBalances; // userAddress => assetId => Balance
@@ -31,6 +31,12 @@ contract L3Vault is IL3Vault, Context {
 
     // ---------------------------------------------- Primary Functions -----------------------------------------------
 
+    // related to listing new assets (temporary)
+    function setAssetIdCounter(uint256 count) external {
+        // onlyAdmin
+        assetIdCounter = count;
+    }
+    
     function _increasePoolAmounts(uint256 assetId, uint256 _amount) internal {
         tokenPoolAmounts[assetId] += _amount;
     }
@@ -206,7 +212,7 @@ contract L3Vault is IL3Vault, Context {
 
     // --------------------------------------------- Validation Functions ---------------------------------------------
 
-    function isAssetIdValid(uint256 _assetId) external pure returns (bool) {
+    function isAssetIdValid(uint256 _assetId) external view returns (bool) {
         // TODO: deal with delisting assets
         return _assetId < assetIdCounter;
     }

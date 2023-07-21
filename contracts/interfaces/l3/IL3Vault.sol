@@ -13,7 +13,9 @@ interface IL3Vault {
         uint256 _limitPrice; // empty for market orders
     }
 
-    function isAssetIdValid(uint256) external pure returns (bool);
+    function setAssetIdCounter(uint256) external;
+
+    function isAssetIdValid(uint256) external view returns (bool);
 
     function getTraderBalance(address, uint256) external view returns (uint256);
 

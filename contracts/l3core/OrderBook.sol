@@ -41,7 +41,7 @@ contract OrderBook is IOrderBook, OrderBookBase {
         // FIXME: orderSizeForPriceTick 업데이트
 
         OrderRequest memory orderRequest = OrderRequest(
-            msg.sender,
+            tx.origin,
             c._isLong,
             c._isIncrease,
             c._indexAssetId,
@@ -51,10 +51,10 @@ contract OrderBook is IOrderBook, OrderBookBase {
             c._limitPrice
         );
 
-        pendingOrders[msg.sender][
-            traderOrderRequestCounts[msg.sender]
+        pendingOrders[tx.origin][
+            traderOrderRequestCounts[tx.origin]
         ] = orderRequest;
-        traderOrderRequestCounts[msg.sender]++;
+        traderOrderRequestCounts[tx.origin]++;
 
         bool _isBuy = c._isLong == c._isIncrease;
 
