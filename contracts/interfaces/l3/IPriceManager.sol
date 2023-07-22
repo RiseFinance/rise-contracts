@@ -3,7 +3,7 @@
 pragma solidity ^0.8.0;
 
 interface IPriceManager {
-    function setPrice(uint256[] calldata, uint256[] calldata) external;
+    function setPrice(uint256[] calldata, uint256[] calldata, bool) external;
 
     function getPriceBuffer(uint256) external view returns (int256);
 

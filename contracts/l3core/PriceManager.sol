@@ -33,14 +33,19 @@ contract PriceManager is IPriceManager, Context {
 
     function setPrice(
         uint256[] calldata _assetId,
-        uint256[] calldata _price // new index price from the data source
+        uint256[] calldata _price, // new index price from the data source
+        bool _isInitialize
     ) external override onlyPriceKeeper {
+        
         require(_assetId.length == _price.length, "PriceManager: Wrong input");
         uint256 l = _assetId.length;
+
         for (uint256 i = 0; i < uint256(l); i++) {
+
             require(_price[i] > 0, "PriceManager: price has to be positive");
 
             int256 currentPriceBuffer = getPriceBuffer(_assetId[i]); // % of price shift
+
             int256 currentPriceBufferInUsd = (int256(_price[i]) *
                 currentPriceBuffer) / int256(PRICE_BUFFER_PRECISION);
 
@@ -54,19 +59,24 @@ contract PriceManager is IPriceManager, Context {
 
             bool checkBuyOrderBook = _price[i] < indexPrice[_assetId[i]];
 
-            markPriceWithLimitOrderPriceImpact = orderBook
-                .executeLimitOrdersAndGetFinalMarkPrice(
-                    checkBuyOrderBook, // isBuy
-                    _assetId[i],
-                    uint256(_price[i]),
-                    uint256(currentMarkPrice)
-                );
+            if (_isInitialize) {
+                markPriceWithLimitOrderPriceImpact = currentMarkPrice;
+            } else {
+                markPriceWithLimitOrderPriceImpact = orderBook
+                    .executeLimitOrdersAndGetFinalMarkPrice(
+                        checkBuyOrderBook, // isBuy
+                        _assetId[i],
+                        uint256(_price[i]),
+                        uint256(currentMarkPrice)
+                    );
+            }
 
             // TODO: set price with markPriceWithLimitOrderPriceImpact
             int256 newPriceBuffer = ((int256(
                 markPriceWithLimitOrderPriceImpact
             ) - int256(_price[i])) * int256(PRICE_BUFFER_PRECISION)) /
                 int256(_price[i]);
+
             setPriceBuffer(_assetId[i], newPriceBuffer);
             indexPrice[_assetId[i]] = _price[i];
         }

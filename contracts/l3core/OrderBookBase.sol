@@ -34,7 +34,28 @@ abstract contract OrderBookBase is Context {
     // uint256 sellFirst = 1;
     // uint256 sellLast = 0;
 
-    function enqueueOrderBook(OrderRequest memory _request, bool _isBuy) public {
+    // FIXME: temporary
+    function initializeIndices(uint256 _priceTick) public {
+        buyFirstIndex[ETH_ID][_priceTick] = 1;
+        buyLastIndex[ETH_ID][_priceTick] = 0;
+        sellFirstIndex[ETH_ID][_priceTick] = 1;
+        sellLastIndex[ETH_ID][_priceTick] = 0;
+    }
+
+    // FIXME: temporary
+    function setMaxBidPrice(uint256 _indexAssetId, uint256 _price) public {
+        maxBidPrice[_indexAssetId] = _price;
+    }
+
+    // FIXME: temporary
+    function setMinAskPrice(uint256 _indexAssetId, uint256 _price) public {
+        minAskPrice[_indexAssetId] = _price;
+    }
+
+    function enqueueOrderBook(
+        OrderRequest memory _request,
+        bool _isBuy
+    ) public {
         if (_isBuy) {
             // buyLastIndex[_request.indexAssetId][_request.limitPrice]++;
             uint256 buyLast = ++buyLastIndex[_request.indexAssetId][
@@ -44,7 +65,6 @@ abstract contract OrderBookBase is Context {
             buyOrderBook[_request.indexAssetId][_request.limitPrice][
                 buyLast
             ] = _request;
-
         } else {
             // sellLastIndex[_request.indexAssetId][_request.limitPrice]++;
             uint256 sellLast = ++sellLastIndex[_request.indexAssetId][
@@ -53,12 +73,16 @@ abstract contract OrderBookBase is Context {
             sellOrderBook[_request.indexAssetId][_request.limitPrice][
                 sellLast
             ] = _request;
-
         }
-
+        orderSizeInUsdForPriceTick[_request.indexAssetId][
+            _request.limitPrice
+        ] += _request.sizeAbsInUsd;
     }
 
-    function dequeueOrderBook(OrderRequest memory _request, bool _isBuy) public {
+    function dequeueOrderBook(
+        OrderRequest memory _request,
+        bool _isBuy
+    ) public {
         if (_isBuy) {
             uint256 buyLast = buyLastIndex[_request.indexAssetId][
                 _request.limitPrice
