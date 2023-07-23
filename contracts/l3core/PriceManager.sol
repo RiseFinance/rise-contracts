@@ -36,12 +36,10 @@ contract PriceManager is IPriceManager, Context {
         uint256[] calldata _price, // new index price from the data source
         bool _isInitialize
     ) external override onlyPriceKeeper {
-        
         require(_assetId.length == _price.length, "PriceManager: Wrong input");
         uint256 l = _assetId.length;
 
         for (uint256 i = 0; i < uint256(l); i++) {
-
             require(_price[i] > 0, "PriceManager: price has to be positive");
 
             int256 currentPriceBuffer = getPriceBuffer(_assetId[i]); // % of price shift
@@ -71,6 +69,11 @@ contract PriceManager is IPriceManager, Context {
                     );
             }
 
+            console.log(
+                "PriceManager: markPriceWithLimitOrderPriceImpact: ",
+                markPriceWithLimitOrderPriceImpact
+            );
+
             // TODO: set price with markPriceWithLimitOrderPriceImpact
             int256 newPriceBuffer = ((int256(
                 markPriceWithLimitOrderPriceImpact
@@ -78,6 +81,12 @@ contract PriceManager is IPriceManager, Context {
                 int256(_price[i]);
 
             setPriceBuffer(_assetId[i], newPriceBuffer);
+            console.log(
+                "PriceManager: newPriceBuffer: ",
+                uint256(newPriceBuffer)
+            );
+            console.log("PriceManager: _price[i]: ", _price[i]);
+            console.log("\n");
             indexPrice[_assetId[i]] = _price[i];
         }
     }

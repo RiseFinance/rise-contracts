@@ -3,6 +3,7 @@
 pragma solidity ^0.8.0;
 
 import "./common/Context.sol";
+import "hardhat/console.sol";
 
 abstract contract OrderBookBase is Context {
     mapping(address => uint256) public traderOrderRequestCounts; // userAddress => orderRequestCount (limit order)
@@ -36,9 +37,9 @@ abstract contract OrderBookBase is Context {
 
     // FIXME: temporary
     function initializeIndices(uint256 _priceTick) public {
-        buyFirstIndex[ETH_ID][_priceTick] = 1;
+        buyFirstIndex[ETH_ID][_priceTick] = 0;
         buyLastIndex[ETH_ID][_priceTick] = 0;
-        sellFirstIndex[ETH_ID][_priceTick] = 1;
+        sellFirstIndex[ETH_ID][_priceTick] = 0;
         sellLastIndex[ETH_ID][_priceTick] = 0;
     }
 
@@ -52,12 +53,25 @@ abstract contract OrderBookBase is Context {
         minAskPrice[_indexAssetId] = _price;
     }
 
+    // FIXME: temporary
+    function setPriceTickSize(
+        uint256 _indexAssetId,
+        uint256 _tickSizeInUsd
+    ) public {
+        priceTickSizes[_indexAssetId] = _tickSizeInUsd;
+    }
+
     function enqueueOrderBook(
         OrderRequest memory _request,
         bool _isBuy
     ) public {
         if (_isBuy) {
-            // buyLastIndex[_request.indexAssetId][_request.limitPrice]++;
+            // If it is the first order added in the queue, set the first index to 1
+            // for the last index, added below
+            if (buyLastIndex[_request.indexAssetId][_request.limitPrice] == 0) {
+                buyFirstIndex[_request.indexAssetId][_request.limitPrice] = 1;
+            }
+
             uint256 buyLast = ++buyLastIndex[_request.indexAssetId][
                 _request.limitPrice
             ];
@@ -66,7 +80,14 @@ abstract contract OrderBookBase is Context {
                 buyLast
             ] = _request;
         } else {
-            // sellLastIndex[_request.indexAssetId][_request.limitPrice]++;
+            // If it is the first order added in the queue, set the first index to 1
+            // for the last index, added below
+            if (
+                sellLastIndex[_request.indexAssetId][_request.limitPrice] == 0
+            ) {
+                sellFirstIndex[_request.indexAssetId][_request.limitPrice] = 1;
+            }
+
             uint256 sellLast = ++sellLastIndex[_request.indexAssetId][
                 _request.limitPrice
             ];
@@ -90,15 +111,26 @@ abstract contract OrderBookBase is Context {
             uint256 buyFirst = buyFirstIndex[_request.indexAssetId][
                 _request.limitPrice
             ];
+
             require(
-                buyLast > buyFirst,
+                buyLast > 0 && buyFirst > 0,
                 "BaseOrderBook: buyOrderBook queue is empty"
             );
             delete buyOrderBook[_request.indexAssetId][_request.limitPrice][
                 buyFirst
             ];
 
-            buyFirstIndex[_request.indexAssetId][_request.limitPrice]++;
+            // If the queue is empty after the deletion, set the first & last index to 0
+            // for the next order added
+            if (
+                buyLastIndex[_request.indexAssetId][_request.limitPrice] ==
+                buyFirstIndex[_request.indexAssetId][_request.limitPrice]
+            ) {
+                buyLastIndex[_request.indexAssetId][_request.limitPrice] = 0;
+                buyFirstIndex[_request.indexAssetId][_request.limitPrice] = 0;
+            } else {
+                buyFirstIndex[_request.indexAssetId][_request.limitPrice]++;
+            }
         } else {
             uint256 sellLast = sellLastIndex[_request.indexAssetId][
                 _request.limitPrice
@@ -107,14 +139,24 @@ abstract contract OrderBookBase is Context {
                 _request.limitPrice
             ];
             require(
-                sellLast > sellFirst,
+                sellLast > 0 && sellFirst > 0,
                 "BaseOrderBook: sellOrderBook queue is empty"
             );
             delete sellOrderBook[_request.indexAssetId][_request.limitPrice][
                 sellFirst
             ];
 
-            sellFirstIndex[_request.indexAssetId][_request.limitPrice]++;
+            // If the queue is empty after the deletion, set the first & last index to 0
+            // for the next order added
+            if (
+                sellLastIndex[_request.indexAssetId][_request.limitPrice] ==
+                sellFirstIndex[_request.indexAssetId][_request.limitPrice]
+            ) {
+                sellLastIndex[_request.indexAssetId][_request.limitPrice] = 0;
+                sellFirstIndex[_request.indexAssetId][_request.limitPrice] = 0;
+            } else {
+                sellFirstIndex[_request.indexAssetId][_request.limitPrice]++;
+            }
         }
     }
 }
