@@ -142,9 +142,6 @@ describe("Place Limit Order and Execute", function () {
     await configureL3Vault(l3Vault);
     await depositToTraderAccount(l3Vault, trader);
 
-    // FIXME: just temporary
-    await orderBook.initializeIndices(USD(1950));
-
     const orderContext = {
       _isLong: true,
       _isIncrease: true,

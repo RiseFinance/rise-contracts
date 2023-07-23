@@ -140,6 +140,9 @@ contract OrderBook is IOrderBook, OrderBookBase {
 
             // PBC = PRICE_BUFFER_CHANGE_CONSTANT
             // _interimMarkPrice * PBC * (sizeCap) = (price shift) = (_limitPriceIterator - _interimMarkPrice)
+            console.log("\n>>> >>> >>> While loop");
+            console.log("maxBidPrice: ", maxBidPrice[_indexAssetId]);
+            console.log("minAskPrice: ", minAskPrice[_indexAssetId]);
 
             PriceTickIterationContext memory ptc;
 
@@ -245,13 +248,32 @@ contract OrderBook is IOrderBook, OrderBookBase {
                 }
             }
 
+            if (ptc._isPartialForThePriceTick) {
+                console.log(">>> Exit: Partial Order");
+                break;
+            } else {
+                // If `isPartial = false` and all the orders in the price tick are filled (empty order book for the price tick),
+                // update the maxBidPrice or minAskPrice
+                if (
+                    buyFirstIndex[_indexAssetId][ic.limitPriceIterator] == 0 ||
+                    buyLastIndex[_indexAssetId][ic.limitPriceIterator] == 0
+                ) {
+                    if (_isBuy) {
+                        maxBidPrice[_indexAssetId] =
+                            ic.limitPriceIterator -
+                            priceTickSizes[_indexAssetId];
+                    } else {
+                        minAskPrice[_indexAssetId] =
+                            ic.limitPriceIterator +
+                            priceTickSizes[_indexAssetId];
+                    }
+                }
+            }
+            // Note: if `isPartial = true` in this while loop,  _sizeCap will be 0 after the for loop
+
             ic.interimMarkPrice = _isBuy
                 ? ic.interimMarkPrice + ptc._priceImpactInUsd
                 : ic.interimMarkPrice - ptc._priceImpactInUsd; // 이번 price tick 주문 iteration 이후 Price Impact를 interimPrice에 적용
-
-            // _sizeCap -= orderSizeInUsdForPriceTick[_indexAssetId][
-            //     _limitPriceIterator
-            // ];
 
             ic.limitPriceIterator = _isBuy
                 ? ic.limitPriceIterator - priceTickSizes[_indexAssetId]
@@ -268,12 +290,6 @@ contract OrderBook is IOrderBook, OrderBookBase {
             );
             console.log("+++++++++ interimMarkPrice: ", ic.interimMarkPrice);
             console.log("+++++++++ updated loopCondition: ", ic.loopCondition);
-
-            if (ptc._isPartialForThePriceTick) {
-                console.log(">>> Exit: Partial Order");
-                break;
-            }
-            // Note: if `isPartial = true` in this while loop,  _sizeCap will be 0 after the for loop
         }
         return ic.interimMarkPrice; // price impact (buffer size)
     }
