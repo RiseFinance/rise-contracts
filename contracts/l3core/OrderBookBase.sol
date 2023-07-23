@@ -19,7 +19,7 @@ abstract contract OrderBookBase is Context {
     mapping(uint256 => uint256) public minAskPrice; // indexAssetId => price
 
     mapping(uint256 => mapping(uint256 => uint256))
-        public orderSizeInUsdForPriceTick; // indexAssetId => price => sum(sizeDeltaAbs) // TODO: 일단 USD 단위로 기록
+        public orderSizeInUsdForPriceTick; // indexAssetId => price => sum(sizeDeltaAbs)
 
     mapping(uint256 => uint256) public priceTickSizes; // indexAssetId => priceTickSize (in USD, 10^8 decimals)
 
@@ -29,18 +29,12 @@ abstract contract OrderBookBase is Context {
     mapping(uint256 => mapping(uint256 => uint256)) public sellFirstIndex; // indexAssetId => price => queue index
     mapping(uint256 => mapping(uint256 => uint256)) public sellLastIndex; // indexAssetId => price => queue index
 
-    // FIXME: 맵핑 방식에서도 초기화 필요 (특정 자산Id, 인덱스에 처음 추가 시 초기화 필요)
-    // uint256 buyFirst = 1;
-    // uint256 buyLast = 0;
-    // uint256 sellFirst = 1;
-    // uint256 sellLast = 0;
-
-    // FIXME: temporary
-    function initializeIndices(uint256 _priceTick) public {
-        buyFirstIndex[ETH_ID][_priceTick] = 0;
-        buyLastIndex[ETH_ID][_priceTick] = 0;
-        sellFirstIndex[ETH_ID][_priceTick] = 0;
-        sellLastIndex[ETH_ID][_priceTick] = 0;
+    function setPriceTickSize(
+        uint256 _indexAssetId,
+        uint256 _tickSizeInUsd
+    ) public {
+        // TODO: only owner
+        priceTickSizes[_indexAssetId] = _tickSizeInUsd;
     }
 
     // FIXME: temporary
@@ -51,14 +45,6 @@ abstract contract OrderBookBase is Context {
     // FIXME: temporary
     function setMinAskPrice(uint256 _indexAssetId, uint256 _price) public {
         minAskPrice[_indexAssetId] = _price;
-    }
-
-    // FIXME: temporary
-    function setPriceTickSize(
-        uint256 _indexAssetId,
-        uint256 _tickSizeInUsd
-    ) public {
-        priceTickSizes[_indexAssetId] = _tickSizeInUsd;
     }
 
     function enqueueOrderBook(

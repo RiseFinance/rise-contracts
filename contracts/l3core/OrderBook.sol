@@ -74,6 +74,7 @@ contract OrderBook is IOrderBook, OrderBookBase {
         bool _isBuy = c._isLong == c._isIncrease;
 
         if (_isBuy) {
+            // TODO: do not update if outlier
             if (c._limitPrice > maxBidPrice[c._indexAssetId]) {
                 maxBidPrice[c._indexAssetId] = c._limitPrice;
             }

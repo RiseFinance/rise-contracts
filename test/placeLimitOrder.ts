@@ -197,12 +197,12 @@ describe("Place Limit Order and Execute", function () {
       ethers.utils.formatUnits(initialMarkPrice, USD_DECIMALS)
     );
 
-    // FIXME: just temporary
-    await orderBook.initializeIndices(USD(1945));
-    await orderBook.initializeIndices(USD(1946));
-    await orderBook.initializeIndices(USD(1947));
-    await orderBook.initializeIndices(USD(1948));
-    await orderBook.initializeIndices(USD(1949));
+    // FIXME: just temporary => no need (automatically initialized to 0)
+    // await orderBook.initializeIndices(USD(1945));
+    // await orderBook.initializeIndices(USD(1946));
+    // await orderBook.initializeIndices(USD(1947));
+    // await orderBook.initializeIndices(USD(1948));
+    // await orderBook.initializeIndices(USD(1949));
 
     // FIXME: just temporary
     await orderBook.setPriceTickSize(ETH_ID, USD(1));
