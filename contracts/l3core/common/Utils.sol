@@ -2,6 +2,7 @@
 
 pragma solidity ^0.8.0;
 
+import "hardhat/console.sol"; // test-only
 import "./Constants.sol";
 
 abstract contract Utils is Constants {
@@ -40,7 +41,10 @@ abstract contract Utils is Constants {
         uint256 _sizeDeltaInUsd,
         uint256 _markPrice
     ) public pure returns (uint256) {
-        uint256 _prevSizeInTokens = (_prevSizeInUsd / _prevAvgPrice);
+        uint256 _prevSizeInTokens = _prevAvgPrice == 0
+            ? 0
+            : (_prevSizeInUsd / _prevAvgPrice);
+
         uint256 _sizeDeltaInTokens = (_sizeDeltaInUsd / _markPrice);
 
         if (_isIncreaseInSize) {

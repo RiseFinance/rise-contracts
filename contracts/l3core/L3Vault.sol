@@ -36,7 +36,7 @@ contract L3Vault is IL3Vault, Context {
         // onlyAdmin
         assetIdCounter = _count;
     }
-    
+
     function _increasePoolAmounts(uint256 _assetId, uint256 _amount) internal {
         tokenPoolAmounts[_assetId] += _amount;
     }
@@ -72,15 +72,22 @@ contract L3Vault is IL3Vault, Context {
         return traderBalances[_trader][_assetId];
     }
 
-    function increaseReserveAmounts(uint256 _assetId, uint256 _amount) external {
+    function increaseReserveAmounts(
+        uint256 _assetId,
+        uint256 _amount
+    ) external {
         require(
-            tokenPoolAmounts[_assetId] >= tokenReserveAmounts[_assetId] + _amount,
+            tokenPoolAmounts[_assetId] >=
+                tokenReserveAmounts[_assetId] + _amount,
             "L3Vault: Not enough token pool amount"
         );
         tokenReserveAmounts[_assetId] += _amount;
     }
 
-    function decreaseReserveAmounts(uint256 _assetId, uint256 _amount) external {
+    function decreaseReserveAmounts(
+        uint256 _assetId,
+        uint256 _amount
+    ) external {
         require(
             tokenReserveAmounts[_assetId] >= _amount,
             "L3Vault: Not enough token reserve amount"
@@ -88,7 +95,9 @@ contract L3Vault is IL3Vault, Context {
         tokenReserveAmounts[_assetId] -= _amount;
     }
 
-    function getPositionSizeInUsd(bytes32 _key) external view returns (uint256) {
+    function getPositionSizeInUsd(
+        bytes32 _key
+    ) external view returns (uint256) {
         return positions[_key].sizeInUsd;
     }
 

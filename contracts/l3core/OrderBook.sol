@@ -125,16 +125,11 @@ contract OrderBook is IOrderBook, OrderBookBase {
         ic.loopCondition = _isBuy
             ? ic.limitPriceIterator >= ic.interimMarkPrice
             : ic.limitPriceIterator < ic.interimMarkPrice;
-        console.log("*** ic.interimMarkPrice: ", ic.interimMarkPrice);
-        console.log("*** ic.limitPriceIterator: ", ic.limitPriceIterator);
 
         // TODO: maxBidPrice에 이상치가 있을 경우 처리
         // check - for the case the two values are equal?
 
-        console.log(">>> chkpt 1");
         while (ic.loopCondition) {
-            console.log(">>> chkpt while loop");
-
             // check amounts of orders that can be filled in this price tick
             // if `_sizeCap` amount of orders are filled, the mark price will reach `_limitPriceIterator`.
             // i.e. _interimMarkPrice + (price buffer) => _limitPriceIterator
@@ -152,7 +147,6 @@ contract OrderBook is IOrderBook, OrderBookBase {
                     ic.limitPriceIterator
                 ] == 0
             ) {
-                console.log(">>> chkpt 2");
                 // no order to execute for this limit price tick
                 ic.limitPriceIterator = _isBuy
                     ? ic.limitPriceIterator + priceTickSizes[_indexAssetId]
@@ -168,52 +162,6 @@ contract OrderBook is IOrderBook, OrderBookBase {
             // note: this is the right place for the variable `_sizeCap` declaration
             // `_sizeCap` maintains its context within the while loop
 
-            console.log("---------------------------------------------------");
-            console.log("ic.limitPriceIterator: ", ic.limitPriceIterator);
-            console.log("ic.interimMarkPrice: ", ic.interimMarkPrice);
-            // console.log(
-            //     "PRICE_BUFFER_DELTA_TO_SIZE: ",
-            //     uint256(PRICE_BUFFER_DELTA_TO_SIZE)
-            // );
-
-            // console.log(
-            //     "Boonza: ",
-            //     _abs(
-            //         int256(ic.limitPriceIterator) - int256(ic.interimMarkPrice)
-            //     )
-            // );
-            // console.log(
-            //     "Boonmo: ",
-            //     ((ic.interimMarkPrice * uint256(PRICE_BUFFER_DELTA_TO_SIZE)))
-            // );
-            // console.log(
-            //     "Boonmo: ",
-            //     ((ic.interimMarkPrice * uint256(PRICE_BUFFER_DELTA_TO_SIZE)) /
-            //         PRICE_BUFFER_PRECISION)
-            // );
-            // console.log(
-            //     "uint256(PRICE_BUFFER_DELTA_TO_SIZE))",
-            //     uint256(PRICE_BUFFER_DELTA_TO_SIZE)
-            // );
-            // console.log("PRICE_BUFFER_PRECISION: ", PRICE_BUFFER_PRECISION);
-
-            console.log("---------------------------------------------------");
-            // ptc._sizeCap =
-            //     _abs(
-            //         int256(ic.limitPriceIterator) - int256(ic.interimMarkPrice)
-            //     ) /
-            //     ((ic.interimMarkPrice * uint256(PRICE_BUFFER_DELTA_TO_SIZE)) /
-            //         PRICE_BUFFER_PRECISION); // TODO: decimals 확인
-
-            // modified sizeCap calculation
-            // ptc._sizeCap =
-            //     (_abs(
-            //         int256(ic.limitPriceIterator) - int256(ic.interimMarkPrice)
-            //     ) / (ic.interimMarkPrice)) *
-            //     100000 * // 100000 USD per
-            //     100 * // 1% price buffer
-            //     1e20;
-
             ptc._sizeCap =
                 (_abs(
                     int256(ic.limitPriceIterator) - int256(ic.interimMarkPrice)
@@ -223,13 +171,19 @@ contract OrderBook is IOrderBook, OrderBookBase {
                     1e20) / // 100000 USD per // 1% price buffer
                 (ic.interimMarkPrice);
 
-            console.log(">>>>>>>> sizeCap: ", ptc._sizeCap / 1e20, " USD");
+            console.log(
+                "\n>>> Enter Price Tick Iteration / sizeCap: ",
+                ptc._sizeCap / 1e20,
+                "USD"
+            );
+            console.log("Price: ", ic.limitPriceIterator / 1e20, "USD\n");
 
             ptc._isPartialForThePriceTick =
                 ptc._sizeCap <
                 orderSizeInUsdForPriceTick[_indexAssetId][
                     ic.limitPriceIterator
                 ];
+            console.log(">>> isPartial:", ptc._isPartialForThePriceTick);
 
             ptc._fillAmount = ptc._isPartialForThePriceTick
                 ? ptc._sizeCap // _sizeCap 남아있는만큼 체결하고 종료
@@ -241,9 +195,10 @@ contract OrderBook is IOrderBook, OrderBookBase {
             // price impact is calculated based on the index price
             // to avoid cumulative price impact
             ptc._priceImpactInUsd =
-                _currentIndexPrice *
-                uint256(PRICE_BUFFER_DELTA_TO_SIZE) *
-                ptc._fillAmount;
+                (_currentIndexPrice * ptc._fillAmount) /
+                (100000 * 100 * 1e20);
+
+            console.log(">>> ptc._priceImpactInUsd: ", ptc._priceImpactInUsd);
 
             ptc._avgExecutionPrice = _getAvgExecutionPrice(
                 ic.interimMarkPrice,
@@ -265,8 +220,12 @@ contract OrderBook is IOrderBook, OrderBookBase {
                 ? buyLastIndex[_indexAssetId][ic.limitPriceIterator]
                 : sellLastIndex[_indexAssetId][ic.limitPriceIterator];
 
+            // console.log("^^^^^ ptc._firstIdx: ", ptc._firstIdx); // FIXME:
+            // console.log("^^^^^ ptc._lastIdx: ", ptc._lastIdx);
+
             for (uint256 i = ptc._firstIdx; i <= ptc._lastIdx; i++) {
-                console.log(">>> chkpt 3");
+                // console.log(">>> chkpt 3");
+                // console.log(">>> i: ", i);
 
                 // TODO: pendingOrders에서 제거 - 필요한 기능인지 점검
                 // TODO: validateExecution here (increase, decrease)
@@ -292,6 +251,7 @@ contract OrderBook is IOrderBook, OrderBookBase {
             // _sizeCap -= orderSizeInUsdForPriceTick[_indexAssetId][
             //     _limitPriceIterator
             // ];
+
             ic.limitPriceIterator = _isBuy
                 ? ic.limitPriceIterator - priceTickSizes[_indexAssetId]
                 : ic.limitPriceIterator + priceTickSizes[_indexAssetId]; // next iteration; decrease for buy
@@ -300,7 +260,13 @@ contract OrderBook is IOrderBook, OrderBookBase {
             ic.loopCondition = _isBuy
                 ? ic.limitPriceIterator >= ic.interimMarkPrice
                 : ic.limitPriceIterator < ic.interimMarkPrice;
-            console.log(">>> loopCondition updated: ", ic.loopCondition);
+
+            console.log(
+                "+++++++++ limitPriceIterator: ",
+                ic.limitPriceIterator
+            );
+            console.log("+++++++++ interimMarkPrice: ", ic.interimMarkPrice);
+            console.log("+++++++++ updated loopCondition: ", ic.loopCondition);
 
             if (ptc._isPartialForThePriceTick) {
                 console.log(">>> Exit: Partial Order");
@@ -308,7 +274,6 @@ contract OrderBook is IOrderBook, OrderBookBase {
             }
             // Note: if `isPartial = true` in this while loop,  _sizeCap will be 0 after the for loop
         }
-        console.log(">>> Exited While loop");
         return ic.interimMarkPrice; // price impact (buffer size)
     }
 
@@ -319,8 +284,6 @@ contract OrderBook is IOrderBook, OrderBookBase {
         bool _isBuy // bool _isPartial
     ) internal {
         FillLimitOrderContext memory floc;
-
-        console.log("=====> limit order filled");
 
         floc._isPartial = _request.sizeAbsInUsd > _sizeCap;
         floc._partialRatio = floc._isPartial
@@ -349,20 +312,6 @@ contract OrderBook is IOrderBook, OrderBookBase {
             floc._collateralAbsInUsd,
             _avgExecutionPrice
         );
-
-        // filledOrders[_request.trader][
-        //     traderFilledOrderCounts[_request.trader]
-        // ] = FilledOrder(
-        //     false,
-        //     _request.isLong,
-        //     _request.isIncrease,
-        //     _request.indexAssetId,
-        //     _request.collateralAssetId,
-        //     _sizeAbsInUsd,
-        //     _collateralAbsInUsd,
-        //     _avgExecutionPrice
-        // );
-        // traderFilledOrderCounts[_request.trader] += 1;
 
         // update position
         bytes32 key = _getPositionKey(

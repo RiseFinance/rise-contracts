@@ -28,7 +28,7 @@ function USD(amount: number) {
   return ethers.utils.parseUnits(amount.toString(), 20);
 }
 
-describe("Place Limit Order", function () {
+describe("Place Limit Order and Execute", function () {
   const USD_ID = 0;
   const ETH_ID = 1;
 
@@ -78,7 +78,7 @@ describe("Place Limit Order", function () {
     const bidPrices = [1945, 1946, 1947, 1948, 1949];
 
     for (let price of bidPrices) {
-      console.log(">> filling orderbook with price: ", price);
+      //   console.log(">> filling orderbook with price: ", price);
       // place 10 orders per price tick
       for (let i = 0; i < 10; i++) {
         const orderContext = {
@@ -86,7 +86,7 @@ describe("Place Limit Order", function () {
           _isIncrease: true,
           _indexAssetId: ETH_ID,
           _collateralAssetId: USD_ID,
-          _sizeAbsInUsd: ethers.utils.parseUnits("650", USD_DECIMALS), // x10 leverage
+          _sizeAbsInUsd: ethers.utils.parseUnits("450", USD_DECIMALS), // x10 leverage
           _collateralAbsInUsd: ethers.utils.parseUnits("150", USD_DECIMALS),
           _limitPrice: USD(price),
         };
@@ -103,7 +103,7 @@ describe("Place Limit Order", function () {
         USD(price)
       );
       console.log(
-        `>> price: ${price} | size: ${ethers.utils.formatUnits(
+        `>>> orderbook filled | price: ${price} | size: ${ethers.utils.formatUnits(
           size,
           USD_DECIMALS
         )} USD`
@@ -142,14 +142,17 @@ describe("Place Limit Order", function () {
     await configureL3Vault(l3Vault);
     await depositToTraderAccount(l3Vault, trader);
 
+    // FIXME: just temporary
+    await orderBook.initializeIndices(USD(1950));
+
     const orderContext = {
       _isLong: true,
       _isIncrease: true,
       _indexAssetId: ETH_ID,
       _collateralAssetId: USD_ID,
-      _sizeAbsInUsd: ethers.utils.parseUnits("16000", USD_DECIMALS),
-      _collateralAbsInUsd: ethers.utils.parseUnits("2000", USD_DECIMALS), // x8 leverage
-      _limitPrice: 1950,
+      _sizeAbsInUsd: USD(16000),
+      _collateralAbsInUsd: USD(2000), // x8 leverage
+      _limitPrice: USD(1950),
     };
 
     await orderRouter.connect(trader).placeLimitOrder(orderContext);
@@ -158,7 +161,7 @@ describe("Place Limit Order", function () {
     const orderRequest = await orderBook.getOrderRequest(
       isBuy,
       ETH_ID,
-      1950,
+      USD(1950),
       1
     ); // how to get order index?
 
@@ -168,24 +171,10 @@ describe("Place Limit Order", function () {
     expect(orderRequest.isIncrease).to.equal(true);
     expect(orderRequest.indexAssetId).to.equal(ETH_ID);
     expect(orderRequest.collateralAssetId).to.equal(USD_ID);
-    expect(orderRequest.sizeAbsInUsd).to.equal(
-      ethers.utils.parseUnits("16000", USD_DECIMALS)
-    );
-    expect(orderRequest.collateralAbsInUsd).to.equal(
-      ethers.utils.parseUnits("2000", USD_DECIMALS)
-    );
-    expect(orderRequest.limitPrice).to.equal(1950);
+    expect(orderRequest.sizeAbsInUsd).to.equal(USD(16000));
+    expect(orderRequest.collateralAbsInUsd).to.equal(USD(2000));
+    expect(orderRequest.limitPrice).to.equal(USD(1950));
   });
-
-  // it("Fill Orderbook", async function(){
-  //     const { deployer, trader, l3Vault, orderBook, priceManager, orderRouter } = await loadFixture(deployContracts);
-  //     await configureL3Vault(l3Vault);
-  //     await depositToTraderAccount(l3Vault, trader);
-  //     await fillBuyOrderBookForTest(orderBook);
-  //     console.log(">>> buy Orderbook Filled.")
-
-  //     await printOrderBook(orderBook);
-  // });
 
   it("Should execute limit orders and apply price impact", async function () {
     const {
@@ -208,6 +197,16 @@ describe("Place Limit Order", function () {
       ethers.utils.formatUnits(initialMarkPrice, USD_DECIMALS)
     );
 
+    // FIXME: just temporary
+    await orderBook.initializeIndices(USD(1945));
+    await orderBook.initializeIndices(USD(1946));
+    await orderBook.initializeIndices(USD(1947));
+    await orderBook.initializeIndices(USD(1948));
+    await orderBook.initializeIndices(USD(1949));
+
+    // FIXME: just temporary
+    await orderBook.setPriceTickSize(ETH_ID, USD(1));
+
     // fill orderbook
     await configureL3Vault(l3Vault);
     await depositToTraderAccount(l3Vault, trader);
@@ -219,14 +218,10 @@ describe("Place Limit Order", function () {
     await orderBook.setMaxBidPrice(ETH_ID, USD(1949));
     await orderBook.setMinAskPrice(ETH_ID, USD(1950));
 
-    // FIXME: just temporary
-    await orderBook.initializeIndices(USD(1945));
-    await orderBook.initializeIndices(USD(1946));
-    await orderBook.initializeIndices(USD(1947));
-    await orderBook.initializeIndices(USD(1948));
-    await orderBook.initializeIndices(USD(1949));
-
     // secondary setPrice (execute filled limit orders)
+    console.log(
+      "\n\n-------------------- setPrice & execute limit orders --------------------\n\n"
+    );
     await priceManager
       .connect(priceKeeper)
       .setPrice([ETH_ID], [USD(1947)], false);
