@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: BUSL-1.1
 
 pragma solidity ^0.8.0;
 
@@ -6,8 +6,12 @@ import "../../l3core/common/Structs.sol";
 import "./IL3Vault.sol";
 
 interface IOrderBook {
-
-    function getOrderRequest(bool, uint256, uint256, uint256) external view returns (Structs.OrderRequest memory);
+    function getOrderRequest(
+        bool,
+        uint256,
+        uint256,
+        uint256
+    ) external view returns (Structs.OrderRequest memory);
 
     function placeLimitOrder(IL3Vault.OrderContext calldata) external;
 
