@@ -69,7 +69,7 @@ contract OrderRouter is Context {
         orderBook.placeLimitOrder(c);
     }
 
-    function cancleLimitOrder() public {}
+    function cancelLimitOrder() public {}
 
     function updateLimitOrder() public {}
 
