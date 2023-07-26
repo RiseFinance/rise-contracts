@@ -72,8 +72,6 @@ describe("Place Limit Order and Execute", function () {
       .increaseTraderBalance(trader.address, USD_ID, depositAmount);
   }
 
-  async function checkTraderAccountBalance() {}
-
   async function fillBuyOrderBookForTest(orderBook: any) {
     const bidPrices = [1945, 1946, 1947, 1948, 1949];
 
