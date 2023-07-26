@@ -3,13 +3,13 @@
 pragma solidity ^0.8.0;
 
 import "./OrderBookBase.sol";
-import "../interfaces/l3/IL3Vault.sol";
+import "../interfaces/l3/ITraderVault.sol";
 import "../interfaces/l3/IOrderBook.sol";
 
 import "hardhat/console.sol";
 
 contract OrderBook is IOrderBook, OrderBookBase {
-    IL3Vault public l3Vault;
+    ITraderVault public traderVault;
 
     struct IterationContext {
         uint256 interimMarkPrice;
@@ -35,8 +35,8 @@ contract OrderBook is IOrderBook, OrderBookBase {
         uint256 _positionSizeInUsd;
     }
 
-    constructor(address _l3Vault) {
-        l3Vault = IL3Vault(_l3Vault);
+    constructor(address _traderVault) {
+        traderVault = ITraderVault(_traderVault);
     }
 
     function getOrderRequest(
@@ -52,7 +52,7 @@ contract OrderBook is IOrderBook, OrderBookBase {
         }
     }
 
-    function placeLimitOrder(IL3Vault.OrderContext calldata c) external {
+    function placeLimitOrder(ITraderVault.OrderContext calldata c) external {
         // FIXME: orderSizeForPriceTick 업데이트
 
         OrderRequest memory orderRequest = OrderRequest(
@@ -318,7 +318,7 @@ contract OrderBook is IOrderBook, OrderBookBase {
             : _request.collateralAbsInUsd;
 
         // update filledOrders
-        l3Vault.fillOrder(
+        traderVault.fillOrder(
             _request.trader,
             false, // isMarketOrder
             _request.isLong,
@@ -339,7 +339,7 @@ contract OrderBook is IOrderBook, OrderBookBase {
         );
         // Position {size, collateralSizeInUsd, avgOpenPrice, lastUpdatedTime}
         if (_request.isIncrease) {
-            l3Vault.updatePosition(
+            traderVault.updatePosition(
                 key,
                 _avgExecutionPrice,
                 floc._sizeAbsInUsd,
@@ -352,7 +352,7 @@ contract OrderBook is IOrderBook, OrderBookBase {
             // PnL 계산, trader balance, poolAmounts, reservedAmounts 업데이트
             // position 삭제 검사
 
-            l3Vault.settlePnL(
+            traderVault.settlePnL(
                 key,
                 _request.isLong,
                 _avgExecutionPrice,
@@ -362,12 +362,12 @@ contract OrderBook is IOrderBook, OrderBookBase {
                 floc._collateralAbsInUsd
             );
 
-            floc._positionSizeInUsd = l3Vault.getPositionSizeInUsd(key);
+            floc._positionSizeInUsd = traderVault.getPositionSizeInUsd(key);
 
             if (floc._sizeAbsInUsd == floc._positionSizeInUsd) {
-                l3Vault.deletePosition(key);
+                traderVault.deletePosition(key);
             } else {
-                l3Vault.updatePosition(
+                traderVault.updatePosition(
                     key,
                     _avgExecutionPrice,
                     floc._sizeAbsInUsd,
@@ -378,7 +378,7 @@ contract OrderBook is IOrderBook, OrderBookBase {
             }
         }
 
-        l3Vault.updateGlobalPositionState(
+        traderVault.updateGlobalPositionState(
             _request.isLong,
             _request.isIncrease,
             _request.indexAssetId,

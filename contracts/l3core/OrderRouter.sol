@@ -4,17 +4,21 @@ pragma solidity ^0.8.0;
 
 import "./common/Context.sol";
 import "../interfaces/l3/IPriceManager.sol";
-import "../interfaces/l3/IL3Vault.sol"; // TODO: change to Interface
+import "../interfaces/l3/ITraderVault.sol"; // TODO: change to Interface
 import "../interfaces/l3/IOrderBook.sol";
 
-// TODO: check - OrderRouter to inherit L3Vault?
+// TODO: check - OrderRouter to inherit TraderVault?
 contract OrderRouter is Context {
-    IL3Vault l3Vault;
+    ITraderVault traderVault;
     IOrderBook orderBook;
     IPriceManager priceManager;
 
-    constructor(address _l3Vault, address _orderBook, address _priceManager) {
-        l3Vault = IL3Vault(_l3Vault);
+    constructor(
+        address _traderVault,
+        address _orderBook,
+        address _priceManager
+    ) {
+        traderVault = ITraderVault(_traderVault);
         orderBook = IOrderBook(_orderBook);
         priceManager = IPriceManager(_priceManager);
     }
@@ -31,7 +35,9 @@ contract OrderRouter is Context {
         return priceManager.getAverageExecutionPrice(_assetId, _size, _isLong);
     }
 
-    function _validateOrder(IL3Vault.OrderContext calldata c) internal view {
+    function _validateOrder(
+        ITraderVault.OrderContext calldata c
+    ) internal view {
         require(
             msg.sender != address(0),
             "OrderRouter: Invalid sender address"
@@ -41,11 +47,11 @@ contract OrderRouter is Context {
             "OrderRouter: Invalid sender address (contract)"
         );
         require(
-            l3Vault.isAssetIdValid(c._indexAssetId),
+            traderVault.isAssetIdValid(c._indexAssetId),
             "OrderRouter: Invalid index asset id"
         );
         require(
-            l3Vault.getTraderBalance(msg.sender, c._collateralAssetId) >=
+            traderVault.getTraderBalance(msg.sender, c._collateralAssetId) >=
                 c._collateralAbsInUsd,
             "OrderRouter: Not enough balance"
         );
@@ -64,7 +70,7 @@ contract OrderRouter is Context {
         // call when sizeDelta = 0 (leverage up)
     }
 
-    function placeLimitOrder(IL3Vault.OrderContext calldata c) external {
+    function placeLimitOrder(ITraderVault.OrderContext calldata c) external {
         _validateOrder(c);
         orderBook.placeLimitOrder(c);
     }
@@ -74,7 +80,7 @@ contract OrderRouter is Context {
     function updateLimitOrder() public {}
 
     function placeMarketOrder(
-        IL3Vault.OrderContext calldata c
+        ITraderVault.OrderContext calldata c
     ) external returns (bytes32) {
         _validateOrder(c);
 
@@ -82,7 +88,7 @@ contract OrderRouter is Context {
     }
 
     function executeMarketOrder(
-        IL3Vault.OrderContext calldata c
+        ITraderVault.OrderContext calldata c
     ) private returns (bytes32) {
         bool isBuy = c._isLong == c._isIncrease;
 
@@ -101,24 +107,24 @@ contract OrderRouter is Context {
 
         // validations
         c._isIncrease
-            ? l3Vault.validateIncreaseExecution(c)
-            : l3Vault.validateDecreaseExecution(c, key, markPrice);
+            ? traderVault.validateIncreaseExecution(c)
+            : traderVault.validateDecreaseExecution(c, key, markPrice);
 
         // update state variables
         if (c._isIncrease) {
-            l3Vault.decreaseTraderBalance(
+            traderVault.decreaseTraderBalance(
                 msg.sender,
                 c._collateralAssetId,
                 c._collateralAbsInUsd
             );
-            l3Vault.increaseReserveAmounts(
+            traderVault.increaseReserveAmounts(
                 c._collateralAssetId,
                 c._collateralAbsInUsd
             );
         }
 
         // fill the order
-        l3Vault.fillOrder(
+        traderVault.fillOrder(
             msg.sender,
             true, // isMarketOrder
             c._isLong,
@@ -130,14 +136,14 @@ contract OrderRouter is Context {
             markPrice
         );
 
-        uint256 positionSizeInUsd = l3Vault.getPositionSizeInUsd(key);
+        uint256 positionSizeInUsd = traderVault.getPositionSizeInUsd(key);
 
         if (!c._isIncrease && c._sizeAbsInUsd == positionSizeInUsd) {
             // close position
-            l3Vault.deletePosition(key);
+            traderVault.deletePosition(key);
         } else {
             // partial close position
-            l3Vault.updatePosition(
+            traderVault.updatePosition(
                 key,
                 markPrice,
                 c._sizeAbsInUsd,
@@ -148,7 +154,7 @@ contract OrderRouter is Context {
         }
 
         // update global position state
-        l3Vault.updateGlobalPositionState(
+        traderVault.updateGlobalPositionState(
             c._isLong,
             c._isIncrease,
             c._indexAssetId,

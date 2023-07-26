@@ -3,17 +3,17 @@
 pragma solidity ^0.8.0;
 
 import "./common/Context.sol";
-import "../interfaces/l3/IL3Vault.sol";
+import "../interfaces/l3/ITraderVault.sol";
 import "../interfaces/l2/IL2Gateway.sol";
 import "../interfaces/l3/IL3Gateway.sol";
 import {ArbSys} from "../interfaces/l3/ArbSys.sol";
 
 contract L3Gateway is IL3Gateway, Context {
     address public l2GatewayAddress;
-    IL3Vault public l3Vault;
+    ITraderVault public traderVault;
 
-    constructor(address _l3Vault, address _l2Gateway) {
-        l3Vault = IL3Vault(_l3Vault);
+    constructor(address _traderVault, address _l2Gateway) {
+        traderVault = ITraderVault(_traderVault);
         l2GatewayAddress = _l2Gateway;
     }
 
@@ -23,7 +23,7 @@ contract L3Gateway is IL3Gateway, Context {
         uint256 _amount
     ) external {
         // TODO: msg.sender validation?
-        l3Vault.increaseTraderBalance(_trader, _assetId, _amount);
+        traderVault.increaseTraderBalance(_trader, _assetId, _amount);
     }
 
     // function decreaseTraderBalance(
@@ -31,11 +31,11 @@ contract L3Gateway is IL3Gateway, Context {
     //     uint256 _assetId,
     //     uint256 _amount
     // ) external {
-    //     l3Vault.decreaseTraderBalance(_trader, _assetId, _amount);
+    //     traderVault.decreaseTraderBalance(_trader, _assetId, _amount);
     // }
 
     function addLiquidity(uint256 _assetId, uint256 _amount) external {
-        l3Vault.addLiquidity(_assetId, _amount);
+        traderVault.addLiquidity(_assetId, _amount);
     }
 
     // -------------------- L3 -> L2 Messaging --------------------
@@ -45,10 +45,10 @@ contract L3Gateway is IL3Gateway, Context {
     function withdrawEthToL2(address _trader, uint256 _amount) external {
         // TODO: msg.sender validation?
         // FIXME: restrict this function call from L3 EOA
-        uint256 balance = l3Vault.getTraderBalance(_trader, ETH_ID);
+        uint256 balance = traderVault.getTraderBalance(_trader, ETH_ID);
         require(balance >= _amount, "L3Gateway: insufficient balance");
 
-        l3Vault.decreaseTraderBalance(_trader, ETH_ID, _amount);
+        traderVault.decreaseTraderBalance(_trader, ETH_ID, _amount);
 
         bytes memory data = abi.encodeWithSelector(
             IL2Gateway._withdrawEthFromOutbox.selector,

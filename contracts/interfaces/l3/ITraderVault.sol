@@ -2,7 +2,7 @@
 
 pragma solidity ^0.8.0;
 
-interface IL3Vault {
+interface ITraderVault {
     struct OrderContext {
         bool _isLong;
         bool _isIncrease;
