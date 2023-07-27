@@ -2,20 +2,12 @@
 
 pragma solidity ^0.8.0;
 
-interface IL3Vault {
-    struct OrderContext {
-        bool _isLong;
-        bool _isIncrease;
-        uint256 _indexAssetId;
-        uint256 _collateralAssetId;
-        uint256 _sizeAbsInUsd;
-        uint256 _collateralAbsInUsd;
-        uint256 _limitPrice; // empty for market orders
-    }
+interface ITraderVault {
+    // onlyOrderHistory
+    function getTraderFilledOrderCount(address) external view returns (uint256);
 
-    function setAssetIdCounter(uint256) external;
-
-    function isAssetIdValid(uint256) external view returns (bool);
+    // onlyOrderHistory
+    function setTraderFilledOrderCount(address, uint256) external;
 
     function getTraderBalance(address, uint256) external view returns (uint256);
 
@@ -72,12 +64,4 @@ interface IL3Vault {
         uint256,
         uint256
     ) external;
-
-    function validateIncreaseExecution(OrderContext calldata) external view;
-
-    function validateDecreaseExecution(
-        OrderContext calldata,
-        bytes32,
-        uint256
-    ) external view;
 }

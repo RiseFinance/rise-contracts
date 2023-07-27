@@ -2,21 +2,37 @@
 
 pragma solidity ^0.8.0;
 
-import "./common/Context.sol";
+import "../common/Context.sol";
 import "../interfaces/l3/IPriceManager.sol";
-import "../interfaces/l3/IL3Vault.sol"; // TODO: change to Interface
+import "../interfaces/l3/ITraderVault.sol"; // TODO: change to Interface
 import "../interfaces/l3/IOrderBook.sol";
+import "../account/TraderVault.sol";
+import "../global/GlobalState.sol";
+import "./OrderValidator.sol";
+import "../orderbook/OrderBook.sol";
+import "../oracle/PriceManager.sol";
+import "./OrderHistory.sol";
+import "../position/PositionVault.sol";
 
-// TODO: check - OrderRouter to inherit L3Vault?
+// TODO: check - OrderRouter to inherit TraderVault?
 contract OrderRouter is Context {
-    IL3Vault l3Vault;
-    IOrderBook orderBook;
-    IPriceManager priceManager;
+    TraderVault traderVault;
+    OrderBook orderBook;
+    PriceManager priceManager;
+    GlobalState globalState;
+    RisePool risePool;
+    OrderValidator orderValidator;
+    OrderHistory orderHistory;
+    PositionVault positionVault;
 
-    constructor(address _l3Vault, address _orderBook, address _priceManager) {
-        l3Vault = IL3Vault(_l3Vault);
-        orderBook = IOrderBook(_orderBook);
-        priceManager = IPriceManager(_priceManager);
+    constructor(
+        address _traderVault,
+        address _orderBook,
+        address _priceManager
+    ) {
+        traderVault = TraderVault(_traderVault);
+        orderBook = OrderBook(_orderBook);
+        priceManager = PriceManager(_priceManager);
     }
 
     function getMarkPrice(
@@ -31,7 +47,7 @@ contract OrderRouter is Context {
         return priceManager.getAverageExecutionPrice(_assetId, _size, _isLong);
     }
 
-    function _validateOrder(IL3Vault.OrderContext calldata c) internal view {
+    function _validateOrder(OrderContext calldata c) internal view {
         require(
             msg.sender != address(0),
             "OrderRouter: Invalid sender address"
@@ -41,11 +57,11 @@ contract OrderRouter is Context {
             "OrderRouter: Invalid sender address (contract)"
         );
         require(
-            l3Vault.isAssetIdValid(c._indexAssetId),
+            risePool.isAssetIdValid(c._indexAssetId),
             "OrderRouter: Invalid index asset id"
         );
         require(
-            l3Vault.getTraderBalance(msg.sender, c._collateralAssetId) >=
+            traderVault.getTraderBalance(msg.sender, c._collateralAssetId) >=
                 c._collateralAbsInUsd,
             "OrderRouter: Not enough balance"
         );
@@ -64,7 +80,7 @@ contract OrderRouter is Context {
         // call when sizeDelta = 0 (leverage up)
     }
 
-    function placeLimitOrder(IL3Vault.OrderContext calldata c) external {
+    function placeLimitOrder(OrderContext calldata c) external {
         _validateOrder(c);
         orderBook.placeLimitOrder(c);
     }
@@ -74,7 +90,7 @@ contract OrderRouter is Context {
     function updateLimitOrder() public {}
 
     function placeMarketOrder(
-        IL3Vault.OrderContext calldata c
+        OrderContext calldata c
     ) external returns (bytes32) {
         _validateOrder(c);
 
@@ -82,8 +98,9 @@ contract OrderRouter is Context {
     }
 
     function executeMarketOrder(
-        IL3Vault.OrderContext calldata c
+        OrderContext calldata c
     ) private returns (bytes32) {
+        // TODO: settlePnL
         bool isBuy = c._isLong == c._isIncrease;
 
         uint256 markPrice = getMarkPrice(
@@ -101,24 +118,24 @@ contract OrderRouter is Context {
 
         // validations
         c._isIncrease
-            ? l3Vault.validateIncreaseExecution(c)
-            : l3Vault.validateDecreaseExecution(c, key, markPrice);
+            ? orderValidator.validateIncreaseExecution(c)
+            : orderValidator.validateDecreaseExecution(c, key, markPrice);
 
         // update state variables
         if (c._isIncrease) {
-            l3Vault.decreaseTraderBalance(
+            traderVault.decreaseTraderBalance(
                 msg.sender,
                 c._collateralAssetId,
                 c._collateralAbsInUsd
             );
-            l3Vault.increaseReserveAmounts(
+            risePool.increaseReserveAmounts(
                 c._collateralAssetId,
                 c._collateralAbsInUsd
             );
         }
 
         // fill the order
-        l3Vault.fillOrder(
+        orderHistory.fillOrder(
             msg.sender,
             true, // isMarketOrder
             c._isLong,
@@ -130,14 +147,14 @@ contract OrderRouter is Context {
             markPrice
         );
 
-        uint256 positionSizeInUsd = l3Vault.getPositionSizeInUsd(key);
+        uint256 positionSizeInUsd = positionVault.getPositionSizeInUsd(key);
 
         if (!c._isIncrease && c._sizeAbsInUsd == positionSizeInUsd) {
             // close position
-            l3Vault.deletePosition(key);
+            positionVault.deletePosition(key);
         } else {
             // partial close position
-            l3Vault.updatePosition(
+            positionVault.updatePosition(
                 key,
                 markPrice,
                 c._sizeAbsInUsd,
@@ -148,7 +165,7 @@ contract OrderRouter is Context {
         }
 
         // update global position state
-        l3Vault.updateGlobalPositionState(
+        globalState.updateGlobalPositionState(
             c._isLong,
             c._isIncrease,
             c._indexAssetId,

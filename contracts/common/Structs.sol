@@ -3,15 +3,15 @@
 pragma solidity ^0.8.0;
 
 abstract contract Structs {
-    // struct OrderContext {
-    //     bool _isLong;
-    //     bool _isIncrease;
-    //     uint256 _indexAssetId;
-    //     uint256 _collateralAssetId;
-    //     uint256 _sizeAbsInUsd;
-    //     uint256 _collateralAbsInUsd;
-    //     uint256 _limitPrice; // empty for market orders
-    // }
+    struct OrderContext {
+        bool _isLong;
+        bool _isIncrease;
+        uint256 _indexAssetId;
+        uint256 _collateralAssetId;
+        uint256 _sizeAbsInUsd;
+        uint256 _collateralAbsInUsd;
+        uint256 _limitPrice; // empty for market orders
+    }
 
     // limit
     struct OrderRequest {
