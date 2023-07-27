@@ -15,13 +15,13 @@ contract GlobalState is Context {
         return globalPositionStates[_isLong][_indexAssetId];
     }
 
-    // TODO: check - for short positions, should we use collateralAsset for tracking position size?
+    // TODO: check - for short positions, should we use marginAsset for tracking position size?
     function updateGlobalPositionState(
         bool _isLong,
         bool _isIncrease,
         uint256 _indexAssetId,
         uint256 _sizeDelta,
-        uint256 _collateralDelta,
+        uint256 _marginDelta,
         uint256 _markPrice
     ) external {
         globalPositionStates[_isLong][_indexAssetId]
@@ -37,12 +37,12 @@ contract GlobalState is Context {
             globalPositionStates[_isLong][_indexAssetId]
                 .totalSizeInUsd += _sizeDelta;
             globalPositionStates[_isLong][_indexAssetId]
-                .totalCollateralInUsd += _collateralDelta;
+                .totalMarginInUsd += _marginDelta;
         } else {
             globalPositionStates[_isLong][_indexAssetId]
                 .totalSizeInUsd -= _sizeDelta;
             globalPositionStates[_isLong][_indexAssetId]
-                .totalCollateralInUsd -= _collateralDelta;
+                .totalMarginInUsd -= _marginDelta;
         }
     }
 }

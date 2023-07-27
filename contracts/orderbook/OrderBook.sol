@@ -35,7 +35,7 @@ contract OrderBook is IOrderBook, OrderBookBase {
         bool _isPartial;
         uint256 _partialRatio;
         uint256 _sizeAbsInUsd;
-        uint256 _collateralAbsInUsd;
+        uint256 _marginAbsInUsd;
         uint256 _positionSizeInUsd;
     }
 
@@ -64,9 +64,9 @@ contract OrderBook is IOrderBook, OrderBookBase {
             c._isLong,
             c._isIncrease,
             c._indexAssetId,
-            c._collateralAssetId,
+            c._marginAssetId,
             c._sizeAbsInUsd,
-            c._collateralAbsInUsd,
+            c._marginAbsInUsd,
             c._limitPrice
         );
 
@@ -319,10 +319,10 @@ contract OrderBook is IOrderBook, OrderBookBase {
 
         floc._sizeAbsInUsd = floc._isPartial ? _sizeCap : _request.sizeAbsInUsd;
 
-        floc._collateralAbsInUsd = floc._isPartial
-            ? (_request.collateralAbsInUsd * floc._partialRatio) /
+        floc._marginAbsInUsd = floc._isPartial
+            ? (_request.marginAbsInUsd * floc._partialRatio) /
                 PARTIAL_RATIO_PRECISION
-            : _request.collateralAbsInUsd;
+            : _request.marginAbsInUsd;
 
         // update filledOrders
         traderVault.fillOrder(
@@ -331,9 +331,9 @@ contract OrderBook is IOrderBook, OrderBookBase {
             _request.isLong,
             _request.isIncrease,
             _request.indexAssetId,
-            _request.collateralAssetId,
+            _request.marginAssetId,
             floc._sizeAbsInUsd,
-            floc._collateralAbsInUsd,
+            floc._marginAbsInUsd,
             _avgExecutionPrice
         );
 
@@ -342,17 +342,17 @@ contract OrderBook is IOrderBook, OrderBookBase {
             _request.trader,
             _request.isLong,
             _request.indexAssetId,
-            _request.collateralAssetId
+            _request.marginAssetId
         );
-        // Position {size, collateralSizeInUsd, avgOpenPrice, lastUpdatedTime}
+        // Position {size, marginSizeInUsd, avgOpenPrice, lastUpdatedTime}
         if (_request.isIncrease) {
             traderVault.updatePosition(
                 key,
                 _avgExecutionPrice,
                 floc._sizeAbsInUsd,
-                floc._collateralAbsInUsd,
+                floc._marginAbsInUsd,
                 true, // isIncreaseInSize
-                true // isIncreaseInCollateral
+                true // isIncreaseInMargin
             );
         } else {
             // position 업데이트
@@ -364,9 +364,9 @@ contract OrderBook is IOrderBook, OrderBookBase {
                 _request.isLong,
                 _avgExecutionPrice,
                 _request.indexAssetId,
-                _request.collateralAssetId,
+                _request.marginAssetId,
                 floc._sizeAbsInUsd,
-                floc._collateralAbsInUsd
+                floc._marginAbsInUsd
             );
 
             floc._positionSizeInUsd = traderVault.getPositionSizeInUsd(key);
@@ -378,7 +378,7 @@ contract OrderBook is IOrderBook, OrderBookBase {
                     key,
                     _avgExecutionPrice,
                     floc._sizeAbsInUsd,
-                    floc._collateralAbsInUsd,
+                    floc._marginAbsInUsd,
                     false,
                     false
                 );
@@ -390,7 +390,7 @@ contract OrderBook is IOrderBook, OrderBookBase {
             _request.isIncrease,
             _request.indexAssetId,
             floc._sizeAbsInUsd,
-            floc._collateralAbsInUsd,
+            floc._marginAbsInUsd,
             _avgExecutionPrice
         );
 
@@ -399,7 +399,7 @@ contract OrderBook is IOrderBook, OrderBookBase {
         // delete or update (isPartial) limit order
         if (floc._isPartial) {
             _request.sizeAbsInUsd -= floc._sizeAbsInUsd;
-            _request.collateralAbsInUsd -= floc._collateralAbsInUsd;
+            _request.marginAbsInUsd -= floc._marginAbsInUsd;
         } else {
             dequeueOrderBook(_request, _isBuy); // TODO: check - if the target order is the first one in the queue
         }

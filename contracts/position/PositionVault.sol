@@ -25,9 +25,9 @@ contract PositionVault is Context {
         bytes32 _key,
         uint256 _markPrice,
         uint256 _sizeDeltaAbsInUsd,
-        uint256 _collateralDeltaAbsInUsd,
+        uint256 _marginDeltaAbsInUsd,
         bool _isIncreaseInSize,
-        bool _isIncreaseInCollateral
+        bool _isIncreaseInMargin
     ) external {
         Position storage _position = positions[_key];
         if (_sizeDeltaAbsInUsd > 0 && _isIncreaseInSize) {
@@ -43,9 +43,9 @@ contract PositionVault is Context {
             ? _position.sizeInUsd + _sizeDeltaAbsInUsd
             : _position.sizeInUsd - _sizeDeltaAbsInUsd;
 
-        _position.collateralInUsd = _isIncreaseInCollateral
-            ? _position.collateralInUsd + _collateralDeltaAbsInUsd
-            : _position.collateralInUsd - _collateralDeltaAbsInUsd;
+        _position.marginInUsd = _isIncreaseInMargin
+            ? _position.marginInUsd + _marginDeltaAbsInUsd
+            : _position.marginInUsd - _marginDeltaAbsInUsd;
 
         _position.lastUpdatedTime = block.timestamp;
     }

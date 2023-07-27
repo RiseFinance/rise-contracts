@@ -18,7 +18,7 @@ abstract contract Utils is Constants {
         address _account,
         bool _isLong,
         uint256 _indexAssetId,
-        uint256 _collateralAssetId
+        uint256 _marginAssetId
     ) public pure returns (bytes32) {
         return
             keccak256(
@@ -26,7 +26,7 @@ abstract contract Utils is Constants {
                     _account,
                     _isLong,
                     _indexAssetId,
-                    _collateralAssetId
+                    _marginAssetId
                 )
             );
     }

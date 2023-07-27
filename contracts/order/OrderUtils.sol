@@ -17,9 +17,9 @@ contract OrderUtils is Context {
         bool _isLong,
         uint256 _markPrice,
         uint256 _indexAssetId,
-        uint256 _collateralAssetId,
+        uint256 _marginAssetId,
         uint256 _sizeAbsInUsd,
-        uint256 _collateralAbsInUsd
+        uint256 _marginAbsInUsd
     ) external {
         // Position memory position = positions[_key];
         Position memory position = positionVault.getPosition(_key);
@@ -32,26 +32,26 @@ contract OrderUtils is Context {
 
         traderVault.increaseTraderBalance(
             msg.sender,
-            _collateralAssetId,
-            _collateralAbsInUsd
+            _marginAssetId,
+            _marginAbsInUsd
         ); // TODO: check - is it `msg.sender`?
 
         if (traderHasProfit) {
             traderVault.increaseTraderBalance(
                 msg.sender,
-                _collateralAssetId,
+                _marginAssetId,
                 pnlUsdAbs
             );
             risePool.decreasePoolAmounts(USD_ID, pnlUsdAbs); // TODO: check - USD or token?
         } else {
             traderVault.decreaseTraderBalance(
                 msg.sender,
-                _collateralAssetId,
+                _marginAssetId,
                 pnlUsdAbs
             );
             risePool.increasePoolAmounts(USD_ID, pnlUsdAbs);
         }
-        // TODO: check - PnL includes collateral?
+        // TODO: check - PnL includes margin?
 
         risePool.decreaseReserveAmounts(_indexAssetId, _sizeAbsInUsd);
     }

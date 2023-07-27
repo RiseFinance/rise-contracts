@@ -37,18 +37,18 @@ async function main() {
     // open a position
 
     const _account = "0x601844915087a902930D8f8c1F6635eD22e1dAeD";
-    const _collateralAssetId = 0; // ETH
+    const _marginAssetId = 0; // ETH
     const _indexAssetId = 0; // ETH
     const _size = 225; // 225 ETH
-    const _collateralSize = 45; // 45 ETH, x5 leverage
+    const _marginSize = 45; // 45 ETH, x5 leverage
     const _isLong = true;
 
     const positionKey = await contract.openPosition(
       _account,
-      _collateralAssetId,
+      _marginAssetId,
       _indexAssetId,
       _size,
-      _collateralSize,
+      _marginSize,
       _isLong,
       {
         gasLimit: 1000000,

@@ -61,22 +61,19 @@ contract OrderRouter is Context {
             "OrderRouter: Invalid index asset id"
         );
         require(
-            traderVault.getTraderBalance(msg.sender, c._collateralAssetId) >=
-                c._collateralAbsInUsd,
+            traderVault.getTraderBalance(msg.sender, c._marginAssetId) >=
+                c._marginAbsInUsd,
             "OrderRouter: Not enough balance"
         );
         require(c._sizeAbsInUsd >= 0, "OrderRouter: Invalid size");
-        require(
-            c._collateralAbsInUsd >= 0,
-            "OrderRouter: Invalid collateral size"
-        );
+        require(c._marginAbsInUsd >= 0, "OrderRouter: Invalid margin size");
     }
 
-    function increaseCollateral() external {
+    function increaseMargin() external {
         // call when sizeDelta = 0 (leverage down)
     }
 
-    function decreaseCollateral() external {
+    function decreaseMargin() external {
         // call when sizeDelta = 0 (leverage up)
     }
 
@@ -113,7 +110,7 @@ contract OrderRouter is Context {
             msg.sender,
             c._isLong,
             c._indexAssetId,
-            c._collateralAssetId
+            c._marginAssetId
         );
 
         // validations
@@ -125,12 +122,12 @@ contract OrderRouter is Context {
         if (c._isIncrease) {
             traderVault.decreaseTraderBalance(
                 msg.sender,
-                c._collateralAssetId,
-                c._collateralAbsInUsd
+                c._marginAssetId,
+                c._marginAbsInUsd
             );
             risePool.increaseReserveAmounts(
-                c._collateralAssetId,
-                c._collateralAbsInUsd
+                c._marginAssetId,
+                c._marginAbsInUsd
             );
         }
 
@@ -141,9 +138,9 @@ contract OrderRouter is Context {
             c._isLong,
             c._isIncrease,
             c._indexAssetId,
-            c._collateralAssetId,
+            c._marginAssetId,
             c._sizeAbsInUsd,
-            c._collateralAbsInUsd,
+            c._marginAbsInUsd,
             markPrice
         );
 
@@ -158,9 +155,9 @@ contract OrderRouter is Context {
                 key,
                 markPrice,
                 c._sizeAbsInUsd,
-                c._collateralAbsInUsd,
+                c._marginAbsInUsd,
                 c._isIncrease, // isIncreaseInSize
-                c._isIncrease // isIncreaseInCollateral
+                c._isIncrease // isIncreaseInMargin
             );
         }
 
@@ -170,7 +167,7 @@ contract OrderRouter is Context {
             c._isIncrease,
             c._indexAssetId,
             c._sizeAbsInUsd,
-            c._collateralAbsInUsd,
+            c._marginAbsInUsd,
             markPrice
         );
 

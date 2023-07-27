@@ -60,13 +60,13 @@ contract OrderValidator is Context {
             "L3Vault: Not enough position size"
         );
         require(
-            position.collateralInUsd >=
+            position.marginInUsd >=
                 _tokenToUsd(
-                    c._collateralAbsInUsd,
+                    c._marginAbsInUsd,
                     _markPrice,
-                    tokenInfo.tokenDecimals(c._collateralAssetId)
+                    tokenInfo.tokenDecimals(c._marginAssetId)
                 ),
-            "L3Vault: Not enough collateral size"
+            "L3Vault: Not enough margin size"
         );
     }
 }

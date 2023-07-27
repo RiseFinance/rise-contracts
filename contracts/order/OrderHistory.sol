@@ -20,9 +20,9 @@ contract OrderHistory is Context {
         bool _isLong,
         bool _isIncrease,
         uint256 _indexAssetId,
-        uint256 _collateralAssetId,
+        uint256 _marginAssetId,
         uint256 _sizeAbsInUsd,
-        uint256 _collateralAbsInUsd,
+        uint256 _marginAbsInUsd,
         uint256 _executionPrice
     ) external {
         uint256 traderFilledOrderCount = traderVault.getTraderFilledOrderCount(
@@ -34,9 +34,9 @@ contract OrderHistory is Context {
             _isLong,
             _isIncrease,
             _indexAssetId,
-            _collateralAssetId,
+            _marginAssetId,
             _sizeAbsInUsd,
-            _collateralAbsInUsd,
+            _marginAbsInUsd,
             _executionPrice
         );
         traderVault.setTraderFilledOrderCount(
