@@ -6,12 +6,14 @@ import "./OrderBookBase.sol";
 import "../interfaces/l3/ITraderVault.sol";
 import "../interfaces/l3/IOrderBook.sol";
 import "../global/GlobalState.sol";
+import "../market/Market.sol";
 
 import "hardhat/console.sol";
 
 contract OrderBook is IOrderBook, OrderBookBase {
     ITraderVault public traderVault;
     GlobalState public globalState;
+    Market public market;
 
     struct IterationContext {
         uint256 interimMarkPrice;
@@ -155,8 +157,10 @@ contract OrderBook is IOrderBook, OrderBookBase {
             ) {
                 // no order to execute for this limit price tick
                 ic.limitPriceIterator = _isBuy
-                    ? ic.limitPriceIterator + priceTickSizes[_indexAssetId]
-                    : ic.limitPriceIterator - priceTickSizes[_indexAssetId]; // decrease for buy
+                    ? ic.limitPriceIterator +
+                        market.getPriceTickSize(_indexAssetId)
+                    : ic.limitPriceIterator -
+                        market.getPriceTickSize(_indexAssetId); // decrease for buy
                 continue;
                 // break;
             }
@@ -263,11 +267,11 @@ contract OrderBook is IOrderBook, OrderBookBase {
                     if (_isBuy) {
                         maxBidPrice[_indexAssetId] =
                             ic.limitPriceIterator -
-                            priceTickSizes[_indexAssetId];
+                            market.getPriceTickSize(_indexAssetId);
                     } else {
                         minAskPrice[_indexAssetId] =
                             ic.limitPriceIterator +
-                            priceTickSizes[_indexAssetId];
+                            market.getPriceTickSize(_indexAssetId);
                     }
                 }
             }
@@ -278,8 +282,9 @@ contract OrderBook is IOrderBook, OrderBookBase {
                 : ic.interimMarkPrice - ptc._priceImpactInUsd; // 이번 price tick 주문 iteration 이후 Price Impact를 interimPrice에 적용
 
             ic.limitPriceIterator = _isBuy
-                ? ic.limitPriceIterator - priceTickSizes[_indexAssetId]
-                : ic.limitPriceIterator + priceTickSizes[_indexAssetId]; // next iteration; decrease for buy
+                ? ic.limitPriceIterator - market.getPriceTickSize(_indexAssetId)
+                : ic.limitPriceIterator +
+                    market.getPriceTickSize(_indexAssetId); // next iteration; decrease for buy
 
             // update while loop condition for the next iteration
             ic.loopCondition = _isBuy

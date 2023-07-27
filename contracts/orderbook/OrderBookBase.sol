@@ -21,21 +21,11 @@ abstract contract OrderBookBase is Context {
     mapping(uint256 => mapping(uint256 => uint256))
         public orderSizeInUsdForPriceTick; // indexAssetId => price => sum(sizeDeltaAbs)
 
-    mapping(uint256 => uint256) public priceTickSizes; // indexAssetId => priceTickSize (in USD, 10^8 decimals)
-
     // ------------------------------------------- Orderbook Queue Data Type ------------------------------------------
     mapping(uint256 => mapping(uint256 => uint256)) public buyFirstIndex; // indexAssetId => price => queue index
     mapping(uint256 => mapping(uint256 => uint256)) public buyLastIndex; // indexAssetId => price => queue index
     mapping(uint256 => mapping(uint256 => uint256)) public sellFirstIndex; // indexAssetId => price => queue index
     mapping(uint256 => mapping(uint256 => uint256)) public sellLastIndex; // indexAssetId => price => queue index
-
-    function setPriceTickSize(
-        uint256 _indexAssetId,
-        uint256 _tickSizeInUsd
-    ) public {
-        // TODO: only owner
-        priceTickSizes[_indexAssetId] = _tickSizeInUsd;
-    }
 
     // FIXME: temporary
     function setMaxBidPrice(uint256 _indexAssetId, uint256 _price) public {
