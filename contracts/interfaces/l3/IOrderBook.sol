@@ -2,7 +2,7 @@
 
 pragma solidity ^0.8.0;
 
-import "../../l3core/common/Structs.sol";
+import "../../common/Structs.sol";
 import "./ITraderVault.sol";
 
 interface IOrderBook {
@@ -13,7 +13,7 @@ interface IOrderBook {
         uint256
     ) external view returns (Structs.OrderRequest memory);
 
-    function placeLimitOrder(ITraderVault.OrderContext calldata) external;
+    // function placeLimitOrder(ITraderVault.OrderContext calldata) external;
 
     function executeLimitOrdersAndGetFinalMarkPrice(
         bool,

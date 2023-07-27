@@ -2,7 +2,7 @@
 
 pragma solidity ^0.8.0;
 
-import "./common/Context.sol";
+import "../common/Context.sol";
 import "../interfaces/l3/ITraderVault.sol";
 import "../interfaces/l2/IL2Gateway.sol";
 import "../interfaces/l3/IL3Gateway.sol";

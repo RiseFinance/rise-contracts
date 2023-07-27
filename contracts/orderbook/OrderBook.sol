@@ -5,11 +5,13 @@ pragma solidity ^0.8.0;
 import "./OrderBookBase.sol";
 import "../interfaces/l3/ITraderVault.sol";
 import "../interfaces/l3/IOrderBook.sol";
+import "../global/GlobalState.sol";
 
 import "hardhat/console.sol";
 
 contract OrderBook is IOrderBook, OrderBookBase {
     ITraderVault public traderVault;
+    GlobalState public globalState;
 
     struct IterationContext {
         uint256 interimMarkPrice;
@@ -52,7 +54,7 @@ contract OrderBook is IOrderBook, OrderBookBase {
         }
     }
 
-    function placeLimitOrder(ITraderVault.OrderContext calldata c) external {
+    function placeLimitOrder(OrderContext calldata c) external {
         // FIXME: orderSizeForPriceTick 업데이트
 
         OrderRequest memory orderRequest = OrderRequest(
@@ -163,7 +165,7 @@ contract OrderBook is IOrderBook, OrderBookBase {
             // i.e. price impact가 발생하여 interimMarkPrice가 limitPriceIterator에 도달하는 경우
             // 하나의 price tick 안의 다 requests를 처리하고나면 _sizeCap -= orderSizeInUsdForPriceTick[_indexAssetId][_limitPriceIterator]
 
-            // note: this is the right place for the variable `_sizeCap` declaration
+            // note: this is the right place for the variable `_sizeCap` declaration +
             // `_sizeCap` maintains its context within the while loop
 
             ptc._sizeCap =
@@ -378,7 +380,7 @@ contract OrderBook is IOrderBook, OrderBookBase {
             }
         }
 
-        traderVault.updateGlobalPositionState(
+        globalState.updateGlobalPositionState(
             _request.isLong,
             _request.isIncrease,
             _request.indexAssetId,
