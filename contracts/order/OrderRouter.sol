@@ -3,27 +3,29 @@
 pragma solidity ^0.8.0;
 
 import "../common/Context.sol";
-import "../interfaces/l3/IPriceManager.sol";
-import "../interfaces/l3/ITraderVault.sol"; // TODO: change to Interface
-import "../interfaces/l3/IOrderBook.sol";
 import "../account/TraderVault.sol";
 import "../global/GlobalState.sol";
 import "./OrderValidator.sol";
 import "../orderbook/OrderBook.sol";
 import "../oracle/PriceManager.sol";
 import "./OrderHistory.sol";
+import "./OrderUtils.sol";
 import "../position/PositionVault.sol";
+import "../market/TokenInfo.sol";
+import "../market/Market.sol";
 
-// TODO: check - OrderRouter to inherit TraderVault?
 contract OrderRouter is Context {
-    TraderVault traderVault;
-    OrderBook orderBook;
-    PriceManager priceManager;
-    GlobalState globalState;
-    RisePool risePool;
     OrderValidator orderValidator;
-    OrderHistory orderHistory;
     PositionVault positionVault;
+    PriceManager priceManager;
+    OrderHistory orderHistory;
+    GlobalState globalState;
+    TraderVault traderVault;
+    OrderUtils orderUtils;
+    OrderBook orderBook;
+    TokenInfo tokenInfo;
+    RisePool risePool;
+    Market market;
 
     constructor(
         address _traderVault,
@@ -56,27 +58,24 @@ contract OrderRouter is Context {
             msg.sender == tx.origin,
             "OrderRouter: Invalid sender address (contract)"
         );
-        require(
-            risePool.isAssetIdValid(c._indexAssetId),
-            "OrderRouter: Invalid index asset id"
-        );
-        require(
-            traderVault.getTraderBalance(msg.sender, c._collateralAssetId) >=
-                c._collateralAbsInUsd,
-            "OrderRouter: Not enough balance"
-        );
-        require(c._sizeAbsInUsd >= 0, "OrderRouter: Invalid size");
-        require(
-            c._collateralAbsInUsd >= 0,
-            "OrderRouter: Invalid collateral size"
-        );
+        // require(
+        //     risePool.isMarketIdValid(c._marketId),
+        //     "OrderRouter: Invalid index asset id"
+        // );
+        // require(
+        //     traderVault.getTraderBalance(msg.sender, c._marginAssetId) >=
+        //         c._marginAbsInUsd,
+        //     "OrderRouter: Not enough balance"
+        // );
+        require(c._sizeAbs >= 0, "OrderRouter: Invalid size");
+        require(c._marginAbs >= 0, "OrderRouter: Invalid margin size");
     }
 
-    function increaseCollateral() external {
+    function increaseMargin() external {
         // call when sizeDelta = 0 (leverage down)
     }
 
-    function decreaseCollateral() external {
+    function decreaseMargin() external {
         // call when sizeDelta = 0 (leverage up)
     }
 
@@ -100,37 +99,44 @@ contract OrderRouter is Context {
     function executeMarketOrder(
         OrderContext calldata c
     ) private returns (bytes32) {
-        // TODO: settlePnL
+        Market.MarketInfo memory marketInfo = market.getMarketInfo(c._marketId);
+
         bool isBuy = c._isLong == c._isIncrease;
 
-        uint256 markPrice = getMarkPrice(
-            c._indexAssetId,
-            c._sizeAbsInUsd,
-            isBuy
-        );
+        uint256 markPrice = getMarkPrice(c._marketId, c._sizeAbs, isBuy);
 
-        bytes32 key = _getPositionKey(
-            msg.sender,
-            c._isLong,
-            c._indexAssetId,
-            c._collateralAssetId
-        );
+        bytes32 key = _getPositionKey(msg.sender, c._isLong, c._marketId);
 
         // validations
         c._isIncrease
             ? orderValidator.validateIncreaseExecution(c)
-            : orderValidator.validateDecreaseExecution(c, key, markPrice);
+            : orderValidator.validateDecreaseExecution(c, key);
 
         // update state variables
         if (c._isIncrease) {
             traderVault.decreaseTraderBalance(
                 msg.sender,
-                c._collateralAssetId,
-                c._collateralAbsInUsd
+                marketInfo.marginAssetId,
+                c._marginAbs
             );
-            risePool.increaseReserveAmounts(
-                c._collateralAssetId,
-                c._collateralAbsInUsd
+            c._isLong
+                ? risePool.increaseLongReserveAmount(
+                    marketInfo.marginAssetId,
+                    c._sizeAbs
+                )
+                : risePool.increaseShortReserveAmount(
+                    marketInfo.marginAssetId,
+                    c._sizeAbs
+                );
+        } else {
+            // PnL settlement
+            orderUtils.settlePnL(
+                key,
+                c._isLong,
+                markPrice,
+                c._marketId,
+                c._sizeAbs,
+                c._marginAbs
             );
         }
 
@@ -140,16 +146,15 @@ contract OrderRouter is Context {
             true, // isMarketOrder
             c._isLong,
             c._isIncrease,
-            c._indexAssetId,
-            c._collateralAssetId,
-            c._sizeAbsInUsd,
-            c._collateralAbsInUsd,
+            c._marketId,
+            c._sizeAbs,
+            c._marginAbs,
             markPrice
         );
 
-        uint256 positionSizeInUsd = positionVault.getPositionSizeInUsd(key);
+        uint256 positionSize = positionVault.getPositionSize(key);
 
-        if (!c._isIncrease && c._sizeAbsInUsd == positionSizeInUsd) {
+        if (!c._isIncrease && c._sizeAbs == positionSize) {
             // close position
             positionVault.deletePosition(key);
         } else {
@@ -157,22 +162,32 @@ contract OrderRouter is Context {
             positionVault.updatePosition(
                 key,
                 markPrice,
-                c._sizeAbsInUsd,
-                c._collateralAbsInUsd,
+                c._sizeAbs,
+                c._marginAbs,
                 c._isIncrease, // isIncreaseInSize
-                c._isIncrease // isIncreaseInCollateral
+                c._isIncrease // isIncreaseInMargin
             );
         }
 
         // update global position state
-        globalState.updateGlobalPositionState(
-            c._isLong,
-            c._isIncrease,
-            c._indexAssetId,
-            c._sizeAbsInUsd,
-            c._collateralAbsInUsd,
-            markPrice
-        );
+
+        if (c._isLong) {
+            globalState.updateGlobalLongPositionState(
+                c._isIncrease,
+                c._marketId,
+                c._sizeAbs,
+                c._marginAbs,
+                markPrice
+            );
+        } else {
+            globalState.updateGlobalShortPositionState(
+                c._isIncrease,
+                c._marketId,
+                c._sizeAbs,
+                c._marginAbs,
+                markPrice
+            );
+        }
 
         return key;
     }

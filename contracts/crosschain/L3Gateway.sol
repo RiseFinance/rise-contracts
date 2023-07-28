@@ -3,17 +3,19 @@
 pragma solidity ^0.8.0;
 
 import "../common/Context.sol";
-import "../interfaces/l3/ITraderVault.sol";
+import "../account/TraderVault.sol";
+import "../risepool/RisePool.sol";
 import "../interfaces/l2/IL2Gateway.sol";
 import "../interfaces/l3/IL3Gateway.sol";
 import {ArbSys} from "../interfaces/l3/ArbSys.sol";
 
 contract L3Gateway is IL3Gateway, Context {
     address public l2GatewayAddress;
-    ITraderVault public traderVault;
+    TraderVault public traderVault;
+    RisePool public risePool;
 
     constructor(address _traderVault, address _l2Gateway) {
-        traderVault = ITraderVault(_traderVault);
+        traderVault = TraderVault(_traderVault);
         l2GatewayAddress = _l2Gateway;
     }
 
@@ -34,9 +36,9 @@ contract L3Gateway is IL3Gateway, Context {
     //     traderVault.decreaseTraderBalance(_trader, _assetId, _amount);
     // }
 
-    function addLiquidity(uint256 _assetId, uint256 _amount) external {
-        traderVault.addLiquidity(_assetId, _amount);
-    }
+    // function addLiquidity(uint256 _marketId, uint256 _amount) external {
+    //     risePool.addLiquidity(_marketId, _amount);
+    // }
 
     // -------------------- L3 -> L2 Messaging --------------------
 

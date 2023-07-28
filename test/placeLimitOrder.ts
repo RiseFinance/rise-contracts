@@ -6,9 +6,9 @@ import { ethers } from "hardhat";
     bool _isLong;
     bool _isIncrease;
     uint256 _indexAssetId;
-    uint256 _collateralAssetId;
+    uint256 _marginAssetId;
     uint256 _sizeAbsInUsd;
-    uint256 _collateralAbsInUsd;
+    uint256 _marginAbsInUsd;
     uint256 _limitPrice; // empty for market orders
 }
 
@@ -17,9 +17,9 @@ import { ethers } from "hardhat";
     bool isLong;
     bool isIncrease;
     uint256 indexAssetId; // redundant?
-    uint256 collateralAssetId;
+    uint256 marginAssetId;
     uint256 sizeAbsInUsd;
-    uint256 collateralAbsInUsd;
+    uint256 marginAbsInUsd;
     uint256 limitPrice;
 }
 */
@@ -83,9 +83,9 @@ describe("Place Limit Order and Execute", function () {
           _isLong: true,
           _isIncrease: true,
           _indexAssetId: ETH_ID,
-          _collateralAssetId: USD_ID,
+          _marginAssetId: USD_ID,
           _sizeAbsInUsd: ethers.utils.parseUnits("450", USD_DECIMALS), // x10 leverage
-          _collateralAbsInUsd: ethers.utils.parseUnits("150", USD_DECIMALS),
+          _marginAbsInUsd: ethers.utils.parseUnits("150", USD_DECIMALS),
           _limitPrice: USD(price),
         };
         await orderBook.placeLimitOrder(orderContext);
@@ -144,9 +144,9 @@ describe("Place Limit Order and Execute", function () {
       _isLong: true,
       _isIncrease: true,
       _indexAssetId: ETH_ID,
-      _collateralAssetId: USD_ID,
+      _marginAssetId: USD_ID,
       _sizeAbsInUsd: USD(16000),
-      _collateralAbsInUsd: USD(2000), // x8 leverage
+      _marginAbsInUsd: USD(2000), // x8 leverage
       _limitPrice: USD(1950),
     };
 
@@ -165,9 +165,9 @@ describe("Place Limit Order and Execute", function () {
     expect(orderRequest.isLong).to.equal(true);
     expect(orderRequest.isIncrease).to.equal(true);
     expect(orderRequest.indexAssetId).to.equal(ETH_ID);
-    expect(orderRequest.collateralAssetId).to.equal(USD_ID);
+    expect(orderRequest.marginAssetId).to.equal(USD_ID);
     expect(orderRequest.sizeAbsInUsd).to.equal(USD(16000));
-    expect(orderRequest.collateralAbsInUsd).to.equal(USD(2000));
+    expect(orderRequest.marginAbsInUsd).to.equal(USD(2000));
     expect(orderRequest.limitPrice).to.equal(USD(1950));
   });
 
