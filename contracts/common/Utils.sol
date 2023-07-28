@@ -81,14 +81,14 @@ abstract contract Utils is Constants {
     }
 
     function _calculatePnL(
-        uint256 _sizeInUsd,
+        uint256 _size,
         uint256 _averagePrice,
         uint256 _markPrice,
         bool _isLong
     ) public pure returns (uint256, bool) {
         uint256 pnlAbs = _markPrice >= _averagePrice
-            ? (_sizeInUsd * (_markPrice - _averagePrice)) / USD_PRECISION
-            : (_sizeInUsd * (_averagePrice - _markPrice)) / USD_PRECISION;
+            ? (_size * (_markPrice - _averagePrice)) / USD_PRECISION
+            : (_size * (_averagePrice - _markPrice)) / USD_PRECISION;
         bool hasProfit = _markPrice >= _averagePrice ? _isLong : !_isLong;
         return (pnlAbs, hasProfit);
     }

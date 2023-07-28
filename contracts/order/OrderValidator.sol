@@ -50,9 +50,9 @@ contract OrderValidator is Context {
 
     function validateDecreaseExecution(
         OrderContext calldata c,
-        bytes32 _key,
-        uint256 _markPrice
-    ) external view {
+        bytes32 _key
+    ) external view // uint256 _markPrice
+    {
         Position memory position = positionVault.getPosition(_key);
 
         require(

@@ -24,45 +24,51 @@ contract OrderUtils is Context {
         uint256 _sizeAbs,
         uint256 _marginAbs
     ) external {
-        // Position memory position = positions[_key];
         Position memory position = positionVault.getPosition(_key);
+        Market.MarketInfo memory marketInfo = market.getMarketInfo(_marketId);
 
-        uint256 sizeInUsd = _tokenToUsd(
-            position.size,
-            _executionPrice,
-            tokenInfo.tokenDecimals(market.getMarketInfo(_marketId).baseAssetId)
-        );
+        // uint256 sizeInUsd = _tokenToUsd(
+        //     position.size,
+        //     _executionPrice,
+        //     tokenInfo.tokenDecimals(market.getMarketInfo(_marketId).baseAssetId)
+        // );
 
         (uint256 pnlUsdAbs, bool traderHasProfit) = _calculatePnL(
-            sizeInUsd,
+            _sizeAbs,
             position.avgOpenPrice,
             _executionPrice,
             _isLong
         );
-        // FIXME: TODO: Impl.
-        // traderVault.increaseTraderBalance(
-        //     msg.sender,
-        //     _marginAssetId,
-        //     _marginAbsInUsd
-        // ); // TODO: check - is it `msg.sender`?
 
-        // if (traderHasProfit) {
-        //     traderVault.increaseTraderBalance(
-        //         msg.sender,
-        //         _marginAssetId,
-        //         pnlUsdAbs
-        //     );
-        //     risePool.decreasePoolAmounts(USD_ID, pnlUsdAbs); // TODO: check - USD or token?
-        // } else {
-        //     traderVault.decreaseTraderBalance(
-        //         msg.sender,
-        //         _marginAssetId,
-        //         pnlUsdAbs
-        //     );
-        //     risePool.increasePoolAmounts(USD_ID, pnlUsdAbs);
-        // }
-        // // TODO: check - PnL includes margin?
+        traderVault.increaseTraderBalance(
+            position.trader,
+            marketInfo.marginAssetId,
+            _marginAbs
+        );
 
-        // risePool.decreaseReserveAmounts(_indexAssetId, _sizeAbsInUsd);
+        if (traderHasProfit) {
+            traderVault.increaseTraderBalance(
+                position.trader,
+                marketInfo.marginAssetId,
+                pnlUsdAbs
+            );
+            _isLong
+                ? risePool.decreaseLongPoolAmount(_marketId, pnlUsdAbs)
+                : risePool.decreaseShortPoolAmount(_marketId, pnlUsdAbs);
+        } else {
+            traderVault.decreaseTraderBalance(
+                position.trader,
+                marketInfo.marginAssetId,
+                pnlUsdAbs
+            );
+            _isLong
+                ? risePool.increaseLongPoolAmount(_marketId, pnlUsdAbs)
+                : risePool.increaseShortPoolAmount(_marketId, pnlUsdAbs);
+        }
+
+        // TODO: check - PnL includes margin?
+        _isLong
+            ? risePool.decreaseLongReserveAmount(_marketId, _sizeAbs)
+            : risePool.decreaseShortReserveAmount(_marketId, _sizeAbs);
     }
 }

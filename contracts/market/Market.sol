@@ -9,6 +9,7 @@ contract Market {
         uint256 quoteAssetId; // synthetic
         uint256 longReserveAssetId; // real liquidity
         uint256 shortReserveAssetId; // real liquidity
+        uint256 marginAssetId;
     }
 
     mapping(uint256 => MarketInfo) public markets; // marketId => MarketInfo

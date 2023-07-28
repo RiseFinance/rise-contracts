@@ -9,21 +9,22 @@ import "./OrderValidator.sol";
 import "../orderbook/OrderBook.sol";
 import "../oracle/PriceManager.sol";
 import "./OrderHistory.sol";
+import "./OrderUtils.sol";
 import "../position/PositionVault.sol";
 import "../market/TokenInfo.sol";
 import "../market/Market.sol";
 
-// TODO: check - OrderRouter to inherit TraderVault?
 contract OrderRouter is Context {
-    TraderVault traderVault;
-    OrderBook orderBook;
-    PriceManager priceManager;
-    GlobalState globalState;
-    RisePool risePool;
     OrderValidator orderValidator;
-    OrderHistory orderHistory;
     PositionVault positionVault;
+    PriceManager priceManager;
+    OrderHistory orderHistory;
+    GlobalState globalState;
+    TraderVault traderVault;
+    OrderUtils orderUtils;
+    OrderBook orderBook;
     TokenInfo tokenInfo;
+    RisePool risePool;
     Market market;
 
     constructor(
@@ -98,38 +99,46 @@ contract OrderRouter is Context {
     function executeMarketOrder(
         OrderContext calldata c
     ) private returns (bytes32) {
-        // FIXME: TODO: settlePnL
+        Market.MarketInfo memory marketInfo = market.getMarketInfo(c._marketId);
+
         bool isBuy = c._isLong == c._isIncrease;
 
-        uint256 markPrice = getMarkPrice(c._marketId, c._sizeAbs, isBuy); // FIXME: sizeAbsInUsd 처리 (PriceManager와 함께 수정)
-        uint256 sizeInUsd = _tokenToUsd(
-            c._sizeAbs,
-            markPrice,
-            tokenInfo.tokenDecimals(
-                market.getMarketInfo(c._marketId).baseAssetId
-            )
-        );
+        uint256 markPrice = getMarkPrice(c._marketId, c._sizeAbs, isBuy);
 
         bytes32 key = _getPositionKey(msg.sender, c._isLong, c._marketId);
 
         // validations
         c._isIncrease
             ? orderValidator.validateIncreaseExecution(c)
-            : orderValidator.validateDecreaseExecution(c, key, markPrice);
+            : orderValidator.validateDecreaseExecution(c, key);
 
         // update state variables
-        // FIXME: TODO: impl.
-        // if (c._isIncrease) {
-        //     traderVault.decreaseTraderBalance(
-        //         msg.sender,
-        //         c._marginAssetId,
-        //         c._marginAbsInUsd
-        //     );
-        //     risePool.increaseReserveAmounts(
-        //         c._marginAssetId,
-        //         c._marginAbsInUsd
-        //     );
-        // }
+        if (c._isIncrease) {
+            traderVault.decreaseTraderBalance(
+                msg.sender,
+                marketInfo.marginAssetId,
+                c._marginAbs
+            );
+            c._isLong
+                ? risePool.increaseLongReserveAmount(
+                    marketInfo.marginAssetId,
+                    c._sizeAbs
+                )
+                : risePool.increaseShortReserveAmount(
+                    marketInfo.marginAssetId,
+                    c._sizeAbs
+                );
+        } else {
+            // PnL settlement
+            orderUtils.settlePnL(
+                key,
+                c._isLong,
+                markPrice,
+                c._marketId,
+                c._sizeAbs,
+                c._marginAbs
+            );
+        }
 
         // fill the order
         orderHistory.fillOrder(

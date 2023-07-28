@@ -35,6 +35,7 @@ contract Structs {
     }
 
     struct Position {
+        address trader;
         uint256 size; // Token Counts
         uint256 margin; // Token Counts
         uint256 avgOpenPrice; // TODO: check - should be coupled w/ positions link logic

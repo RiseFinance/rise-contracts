@@ -67,6 +67,7 @@ contract OrderBook is OrderBookBase {
     function placeLimitOrder(OrderContext calldata c) external {
         // FIXME: orderSizeForPriceTick 업데이트
         // TODO: max cap 등 validation?
+        // FIXME: TODO: Limit Order place or fill 할 때 traderBalance, poolAmount, reserveAmount 업데이트 필요
 
         OrderRequest memory orderRequest = OrderRequest(
             tx.origin,
