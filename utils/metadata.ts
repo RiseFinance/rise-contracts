@@ -1,6 +1,0 @@
-export class Metadata {
-  rpcUrl = "http://127.0.0.1:7545";
-
-  L3VAULT_CONTRACT_NAME = "L3Vault";
-  L3VAULT_CONTRACT_ADDRESS = "0x935fce773324E8108F7e0f27c61d0F57479F3534";
-}
