@@ -8,44 +8,42 @@ contract PositionVault is Context {
     // TODO: open <> close 사이의 position을 하나로 연결하여 기록
     mapping(bytes32 => Position) public positions; // positionHash => Position
 
-    mapping(uint256 => uint256) public maxLongCapacity; // assetId => tokenCount
-    mapping(uint256 => uint256) public maxShortCapacity; // assetId => tokenCount // TODO: check - is it for stablecoins?
+    mapping(uint256 => uint256) public maxLongCapacity; // marketId => tokenCount
+    mapping(uint256 => uint256) public maxShortCapacity; // marketId => tokenCount // TODO: check - is it for stablecoins?
 
     function getPosition(bytes32 _key) external view returns (Position memory) {
         return positions[_key];
     }
 
-    function getPositionSizeInUsd(
-        bytes32 _key
-    ) external view returns (uint256) {
-        return positions[_key].sizeInUsd;
+    function getPositionSize(bytes32 _key) external view returns (uint256) {
+        return positions[_key].size;
     }
 
     function updatePosition(
         bytes32 _key,
-        uint256 _markPrice,
-        uint256 _sizeDeltaAbsInUsd,
-        uint256 _marginDeltaAbsInUsd,
+        uint256 _executionPrice,
+        uint256 _sizeDeltaAbs,
+        uint256 _marginDeltaAbs,
         bool _isIncreaseInSize,
         bool _isIncreaseInMargin
     ) external {
         Position storage _position = positions[_key];
-        if (_sizeDeltaAbsInUsd > 0 && _isIncreaseInSize) {
+        if (_sizeDeltaAbs > 0 && _isIncreaseInSize) {
             _position.avgOpenPrice = _getNextAvgPrice(
                 _isIncreaseInSize,
-                _position.sizeInUsd,
+                _position.size,
                 _position.avgOpenPrice,
-                _sizeDeltaAbsInUsd,
-                _markPrice
+                _sizeDeltaAbs,
+                _executionPrice
             );
         }
-        _position.sizeInUsd = _isIncreaseInSize
-            ? _position.sizeInUsd + _sizeDeltaAbsInUsd
-            : _position.sizeInUsd - _sizeDeltaAbsInUsd;
+        _position.size = _isIncreaseInSize
+            ? _position.size + _sizeDeltaAbs
+            : _position.size - _sizeDeltaAbs;
 
-        _position.marginInUsd = _isIncreaseInMargin
-            ? _position.marginInUsd + _marginDeltaAbsInUsd
-            : _position.marginInUsd - _marginDeltaAbsInUsd;
+        _position.margin = _isIncreaseInMargin
+            ? _position.margin + _marginDeltaAbs
+            : _position.margin - _marginDeltaAbs;
 
         _position.lastUpdatedTime = block.timestamp;
     }

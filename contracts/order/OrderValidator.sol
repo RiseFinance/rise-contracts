@@ -15,35 +15,35 @@ contract OrderValidator is Context {
     GlobalState public globalState;
 
     function validateIncreaseExecution(OrderContext calldata c) external view {
-        uint256 tokenPoolAmount = risePool.tokenPoolAmounts(c._indexAssetId);
-        uint256 tokenReserveAmount = risePool.tokenReserveAmounts(
-            c._indexAssetId
-        );
-        uint256 maxLongCapacity = positionVault.maxLongCapacity(
-            c._indexAssetId
-        );
-        uint256 maxShortCapacity = positionVault.maxShortCapacity(
-            c._indexAssetId
-        );
+        uint256 poolAmount = c._isLong
+            ? risePool.getLongPoolAmount(c._marketId)
+            : risePool.getShortPoolAmount(c._marketId);
+
+        uint256 reserveAmount = c._isLong
+            ? risePool.getLongReserveAmount(c._marketId)
+            : risePool.getShortReserveAmount(c._marketId);
+
+        uint256 maxLongCapacity = positionVault.maxLongCapacity(c._marketId);
+        uint256 maxShortCapacity = positionVault.maxShortCapacity(c._marketId);
 
         require(
-            tokenPoolAmount >= tokenReserveAmount + c._sizeAbsInUsd,
-            "L3Vault: Not enough token pool amount"
+            poolAmount >= reserveAmount + c._sizeAbs,
+            "OrderValidator: Not enough token pool amount"
         );
 
-        uint256 totalSizeInUsd = globalState
-            .getGlobalPositionState(c._isLong, c._indexAssetId)
-            .totalSizeInUsd;
+        uint256 totalSize = c._isLong
+            ? globalState.getGlobalLongPositionState(c._marketId).totalSize
+            : globalState.getGlobalShortPositionState(c._marketId).totalSize;
 
         if (c._isLong) {
             require(
-                maxLongCapacity >= totalSizeInUsd + c._sizeAbsInUsd,
-                "L3Vault: Exceeds max long capacity"
+                maxLongCapacity >= totalSize + c._sizeAbs,
+                "OrderValidator: Exceeds max long capacity"
             );
         } else {
             require(
-                maxShortCapacity >= totalSizeInUsd + c._sizeAbsInUsd,
-                "L3Vault: Exceeds max short capacity"
+                maxShortCapacity >= totalSize + c._sizeAbs,
+                "OrderValidator: Exceeds max short capacity"
             );
         }
     }
@@ -56,17 +56,12 @@ contract OrderValidator is Context {
         Position memory position = positionVault.getPosition(_key);
 
         require(
-            position.sizeInUsd >= c._sizeAbsInUsd,
-            "L3Vault: Not enough position size"
+            position.size >= c._sizeAbs,
+            "OrderValidator: Not enough position size"
         );
         require(
-            position.marginInUsd >=
-                _tokenToUsd(
-                    c._marginAbsInUsd,
-                    _markPrice,
-                    tokenInfo.tokenDecimals(c._marginAssetId)
-                ),
-            "L3Vault: Not enough margin size"
+            position.margin >= c._marginAbs,
+            "OrderValidator: Not enough margin size"
         );
     }
 }

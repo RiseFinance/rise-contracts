@@ -3,97 +3,147 @@
 pragma solidity ^0.8.0;
 
 contract RisePool {
-    uint256 private assetIdCounter = 1; // temporary
+    mapping(uint256 => uint256) private longPoolAmounts; // marketId => tokenCount
+    mapping(uint256 => uint256) private shortPoolAmounts; // marketId => tokenCount
 
-    mapping(uint256 => uint256) public tokenPoolAmounts; // assetId => tokenCount
-    mapping(uint256 => uint256) public tokenReserveAmounts; // assetId => tokenCount
+    mapping(uint256 => uint256) private longReserveAmounts; // marketId => tokenCount
+    mapping(uint256 => uint256) private shortReserveAmounts; // marketId => tokenCount
 
-    // related to listing new assets (temporary)
-    function setAssetIdCounter(uint256 _count) external {
-        // onlyAdmin
-        assetIdCounter = _count;
-    }
-
-    function isAssetIdValid(uint256 _assetId) external view returns (bool) {
-        // TODO: deal with delisting assets
-        return _assetId < assetIdCounter;
-    }
-
-    // function getTokenPoolAmounts(
-    //     uint256 _assetId
-    // ) external view returns (uint256) {
-    //     return tokenPoolAmounts[_assetId];
+    // function isMarketIdValid(uint256 _marketId) external view returns (bool) {
+    //     // TODO: handle delisting assets
+    //     return true;
     // }
 
-    // TODO: onlyManager
-    function increasePoolAmounts(uint256 _assetId, uint256 _amount) public {
-        tokenPoolAmounts[_assetId] += _amount;
+    // function getPoolAmount(
+    //     uint256 _marketId,
+    //     bool _isLong
+    // ) external view returns (uint256) {
+    //     return
+    //         _isLong ? longPoolAmounts[_marketId] : shortPoolAmounts[_marketId];
+    // }
+
+    /// getters
+
+    function getLongPoolAmount(
+        uint256 _marketId
+    ) external view returns (uint256) {
+        return longPoolAmounts[_marketId];
     }
 
-    // TODO: onlyManager
-    function decreasePoolAmounts(uint256 _assetId, uint256 _amount) public {
-        require(
-            tokenPoolAmounts[_assetId] >= _amount,
-            "L3Vault: Not enough token pool _amount"
-        );
-        tokenPoolAmounts[_assetId] -= _amount;
+    function getShortPoolAmount(
+        uint256 _marketId
+    ) external view returns (uint256) {
+        return shortPoolAmounts[_marketId];
     }
 
-    function increaseReserveAmounts(
-        uint256 _assetId,
+    function getLongReserveAmount(
+        uint256 _marketId
+    ) external view returns (uint256) {
+        return longReserveAmounts[_marketId];
+    }
+
+    function getShortReserveAmount(
+        uint256 _marketId
+    ) external view returns (uint256) {
+        return shortReserveAmounts[_marketId];
+    }
+
+    /// setters
+    // TODO: onlyManager for the following functions
+    function increaseLongPoolAmount(uint256 _marketId, uint256 _amount) public {
+        longPoolAmounts[_marketId] += _amount;
+    }
+
+    function increaseShortPoolAmount(
+        uint256 _marketId,
         uint256 _amount
-    ) external {
+    ) public {
+        shortPoolAmounts[_marketId] += _amount;
+    }
+
+    function decreaseLongPoolAmount(uint256 _marketId, uint256 _amount) public {
         require(
-            tokenPoolAmounts[_assetId] >=
-                tokenReserveAmounts[_assetId] + _amount,
-            "L3Vault: Not enough token pool amount"
+            longPoolAmounts[_marketId] >= _amount,
+            "RisePool: Not enough token pool _amount"
         );
-        tokenReserveAmounts[_assetId] += _amount;
+        longPoolAmounts[_marketId] -= _amount;
     }
 
-    function decreaseReserveAmounts(
-        uint256 _assetId,
+    function decreaseShortPoolAmount(
+        uint256 _marketId,
         uint256 _amount
-    ) external {
+    ) public {
         require(
-            tokenReserveAmounts[_assetId] >= _amount,
-            "L3Vault: Not enough token reserve amount"
+            shortPoolAmounts[_marketId] >= _amount,
+            "RisePool: Not enough token pool _amount"
         );
-        tokenReserveAmounts[_assetId] -= _amount;
+        shortPoolAmounts[_marketId] -= _amount;
     }
 
-    /**
-     * @notice to be deprecated
-     */
-    function addLiquidityWithTokensTransfer(
-        uint256 assetId,
-        uint256 amount
-    ) external payable {
-        require(msg.value >= amount, "L3Vault: insufficient amount");
-        // TODO: check - how to mint the LP token?
-        tokenPoolAmounts[assetId] += amount;
-        if (msg.value > amount) {
-            payable(msg.sender).transfer(msg.value - amount);
-        } // refund
-    }
-
-    /**
-     * @notice to be deprecated
-     */
-    function removeLiquidityWithTokensTransfer(
-        uint256 _assetId,
+    function increaseLongReserveAmount(
+        uint256 _marketId,
         uint256 _amount
-    ) external {
-        tokenPoolAmounts[_assetId] -= _amount;
-        payable(msg.sender).transfer(_amount);
+    ) public {
+        require(
+            longPoolAmounts[_marketId] >=
+                longReserveAmounts[_marketId] + _amount,
+            "RisePool: Not enough token pool amount"
+        );
+        longReserveAmounts[_marketId] += _amount;
+    }
+
+    function increaseShortReserveAmount(
+        uint256 _marketId,
+        uint256 _amount
+    ) public {
+        require(
+            shortPoolAmounts[_marketId] >=
+                shortReserveAmounts[_marketId] + _amount,
+            "RisePool: Not enough token pool amount"
+        );
+        shortReserveAmounts[_marketId] += _amount;
+    }
+
+    function decreaseLongReserveAmount(
+        uint256 _marketId,
+        uint256 _amount
+    ) public {
+        require(
+            longReserveAmounts[_marketId] >= _amount,
+            "RisePool: Not enough token reserve amount"
+        );
+        longReserveAmounts[_marketId] -= _amount;
+    }
+
+    function decreaseShortReserveAmount(
+        uint256 _marketId,
+        uint256 _amount
+    ) public {
+        require(
+            shortReserveAmounts[_marketId] >= _amount,
+            "RisePool: Not enough token reserve amount"
+        );
+        shortReserveAmounts[_marketId] -= _amount;
     }
 
     // TODO: check how to determine the Liquidity Provider
-    function addLiquidity(uint256 _assetId, uint256 _amount) external {
-        increasePoolAmounts(_assetId, _amount);
+    function addLiquidity(
+        uint256 _marketId,
+        bool _isLong,
+        uint256 _amount
+    ) external {
+        _isLong
+            ? increaseLongPoolAmount(_marketId, _amount)
+            : increaseShortPoolAmount(_marketId, _amount);
     }
 
-    function removeLiquidity(uint256 _assetId, uint256 _amount) external {
-        decreasePoolAmounts(_assetId, _amount);
+    function removeLiquidity(
+        uint256 _marketId,
+        bool _isLong,
+        uint256 _amount
+    ) external {
+        _isLong
+            ? decreaseLongPoolAmount(_marketId, _amount)
+            : decreaseShortPoolAmount(_marketId, _amount);
     }
 }

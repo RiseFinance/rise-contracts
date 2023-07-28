@@ -13,6 +13,8 @@ import "../orderbook/OrderBook.sol";
 import "../oracle/PriceManager.sol";
 import "./OrderHistory.sol";
 import "../position/PositionVault.sol";
+import "../market/TokenInfo.sol";
+import "../market/Market.sol";
 
 // TODO: check - OrderRouter to inherit TraderVault?
 contract OrderRouter is Context {
@@ -24,6 +26,8 @@ contract OrderRouter is Context {
     OrderValidator orderValidator;
     OrderHistory orderHistory;
     PositionVault positionVault;
+    TokenInfo tokenInfo;
+    Market market;
 
     constructor(
         address _traderVault,
@@ -56,17 +60,17 @@ contract OrderRouter is Context {
             msg.sender == tx.origin,
             "OrderRouter: Invalid sender address (contract)"
         );
-        require(
-            risePool.isAssetIdValid(c._indexAssetId),
-            "OrderRouter: Invalid index asset id"
-        );
-        require(
-            traderVault.getTraderBalance(msg.sender, c._marginAssetId) >=
-                c._marginAbsInUsd,
-            "OrderRouter: Not enough balance"
-        );
-        require(c._sizeAbsInUsd >= 0, "OrderRouter: Invalid size");
-        require(c._marginAbsInUsd >= 0, "OrderRouter: Invalid margin size");
+        // require(
+        //     risePool.isMarketIdValid(c._marketId),
+        //     "OrderRouter: Invalid index asset id"
+        // );
+        // require(
+        //     traderVault.getTraderBalance(msg.sender, c._marginAssetId) >=
+        //         c._marginAbsInUsd,
+        //     "OrderRouter: Not enough balance"
+        // );
+        require(c._sizeAbs >= 0, "OrderRouter: Invalid size");
+        require(c._marginAbs >= 0, "OrderRouter: Invalid margin size");
     }
 
     function increaseMargin() external {
@@ -97,21 +101,19 @@ contract OrderRouter is Context {
     function executeMarketOrder(
         OrderContext calldata c
     ) private returns (bytes32) {
-        // TODO: settlePnL
+        // FIXME: TODO: settlePnL
         bool isBuy = c._isLong == c._isIncrease;
 
-        uint256 markPrice = getMarkPrice(
-            c._indexAssetId,
-            c._sizeAbsInUsd,
-            isBuy
+        uint256 markPrice = getMarkPrice(c._marketId, c._sizeAbs, isBuy); // FIXME: sizeAbsInUsd 처리 (PriceManager와 함께 수정)
+        uint256 sizeInUsd = _tokenToUsd(
+            c._sizeAbs,
+            markPrice,
+            tokenInfo.tokenDecimals(
+                market.getMarketInfo(c._marketId).baseAssetId
+            )
         );
 
-        bytes32 key = _getPositionKey(
-            msg.sender,
-            c._isLong,
-            c._indexAssetId,
-            c._marginAssetId
-        );
+        bytes32 key = _getPositionKey(msg.sender, c._isLong, c._marketId);
 
         // validations
         c._isIncrease
@@ -119,17 +121,18 @@ contract OrderRouter is Context {
             : orderValidator.validateDecreaseExecution(c, key, markPrice);
 
         // update state variables
-        if (c._isIncrease) {
-            traderVault.decreaseTraderBalance(
-                msg.sender,
-                c._marginAssetId,
-                c._marginAbsInUsd
-            );
-            risePool.increaseReserveAmounts(
-                c._marginAssetId,
-                c._marginAbsInUsd
-            );
-        }
+        // FIXME: TODO: impl.
+        // if (c._isIncrease) {
+        //     traderVault.decreaseTraderBalance(
+        //         msg.sender,
+        //         c._marginAssetId,
+        //         c._marginAbsInUsd
+        //     );
+        //     risePool.increaseReserveAmounts(
+        //         c._marginAssetId,
+        //         c._marginAbsInUsd
+        //     );
+        // }
 
         // fill the order
         orderHistory.fillOrder(
@@ -137,16 +140,15 @@ contract OrderRouter is Context {
             true, // isMarketOrder
             c._isLong,
             c._isIncrease,
-            c._indexAssetId,
-            c._marginAssetId,
-            c._sizeAbsInUsd,
-            c._marginAbsInUsd,
+            c._marketId,
+            c._sizeAbs,
+            c._marginAbs,
             markPrice
         );
 
-        uint256 positionSizeInUsd = positionVault.getPositionSizeInUsd(key);
+        uint256 positionSize = positionVault.getPositionSize(key);
 
-        if (!c._isIncrease && c._sizeAbsInUsd == positionSizeInUsd) {
+        if (!c._isIncrease && c._sizeAbs == positionSize) {
             // close position
             positionVault.deletePosition(key);
         } else {
@@ -154,22 +156,32 @@ contract OrderRouter is Context {
             positionVault.updatePosition(
                 key,
                 markPrice,
-                c._sizeAbsInUsd,
-                c._marginAbsInUsd,
+                c._sizeAbs,
+                c._marginAbs,
                 c._isIncrease, // isIncreaseInSize
                 c._isIncrease // isIncreaseInMargin
             );
         }
 
         // update global position state
-        globalState.updateGlobalPositionState(
-            c._isLong,
-            c._isIncrease,
-            c._indexAssetId,
-            c._sizeAbsInUsd,
-            c._marginAbsInUsd,
-            markPrice
-        );
+
+        if (c._isLong) {
+            globalState.updateGlobalLongPositionState(
+                c._isIncrease,
+                c._marketId,
+                c._sizeAbs,
+                c._marginAbs,
+                markPrice
+            );
+        } else {
+            globalState.updateGlobalShortPositionState(
+                c._isIncrease,
+                c._marketId,
+                c._sizeAbs,
+                c._marginAbs,
+                markPrice
+            );
+        }
 
         return key;
     }

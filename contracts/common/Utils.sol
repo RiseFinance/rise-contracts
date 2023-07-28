@@ -14,21 +14,13 @@ abstract contract Utils is Constants {
         return x >= 0 ? uint256(x) : uint256(-x);
     }
 
+    // FIXME: use `marketId` instead of `indexAssetId`, `marginAssetId`
     function _getPositionKey(
         address _account,
         bool _isLong,
-        uint256 _indexAssetId,
-        uint256 _marginAssetId
+        uint256 _marketId
     ) public pure returns (bytes32) {
-        return
-            keccak256(
-                abi.encodePacked(
-                    _account,
-                    _isLong,
-                    _indexAssetId,
-                    _marginAssetId
-                )
-            );
+        return keccak256(abi.encodePacked(_account, _isLong, _marketId));
     }
 
     /**
@@ -36,35 +28,25 @@ abstract contract Utils is Constants {
      * */
     function _getNextAvgPrice(
         bool _isIncreaseInSize,
-        uint256 _prevSizeInUsd,
+        uint256 _prevSize,
         uint256 _prevAvgPrice,
-        uint256 _sizeDeltaInUsd,
+        uint256 _sizeDeltaAbs,
         uint256 _markPrice
     ) public pure returns (uint256) {
-        uint256 _prevSizeInTokens = _prevAvgPrice == 0
-            ? 0
-            : (_prevSizeInUsd / _prevAvgPrice);
-
-        uint256 _sizeDeltaInTokens = (_sizeDeltaInUsd / _markPrice);
-
         if (_isIncreaseInSize) {
-            uint256 newSize = _prevSizeInTokens + _sizeDeltaInTokens;
+            uint256 newSize = _prevSize + _sizeDeltaAbs;
             uint256 nextAvgPrice = newSize == 0
                 ? 0
-                : (_prevAvgPrice *
-                    _prevSizeInTokens +
-                    _markPrice *
-                    _sizeDeltaInTokens) / newSize;
+                : (_prevAvgPrice * _prevSize + _markPrice * _sizeDeltaAbs) /
+                    newSize;
             return nextAvgPrice;
         } else {
             // TODO: check - this logic needed?
-            uint256 newSize = _prevSizeInTokens - _sizeDeltaInTokens;
+            uint256 newSize = _prevSize - _sizeDeltaAbs;
             uint256 nextAvgPrice = newSize == 0
                 ? 0
-                : (_prevAvgPrice *
-                    _prevSizeInTokens -
-                    _markPrice *
-                    _sizeDeltaInTokens) / newSize;
+                : (_prevAvgPrice * _prevSize - _markPrice * _sizeDeltaAbs) /
+                    newSize;
             return nextAvgPrice;
         }
     }
