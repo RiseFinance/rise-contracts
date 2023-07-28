@@ -3,7 +3,7 @@
 pragma solidity ^0.8.0;
 
 import "hardhat/console.sol"; // test-only
-import "../interfaces/l3/ArbSys.sol";
+import "../crosschain/interfaces/l3/ArbSys.sol";
 import "../common/Context.sol";
 import "../position/PositionVault.sol";
 import "../risepool/RisePool.sol";

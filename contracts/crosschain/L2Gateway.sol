@@ -2,9 +2,9 @@
 
 pragma solidity ^0.8.0;
 
-import "../interfaces/l2/IInbox.sol";
-import "../interfaces/l2/IL2Gateway.sol";
-import "../interfaces/l3/IL3Gateway.sol";
+import "./interfaces/l2/IInbox.sol";
+import "./interfaces/l2/IL2Gateway.sol";
+import "./interfaces/l3/IL3Gateway.sol";
 import "./TransferHelper.sol";
 
 contract L2Gateway is IL2Gateway, TransferHelper {
@@ -35,6 +35,12 @@ contract L2Gateway is IL2Gateway, TransferHelper {
         );
         l3GatewayAddress = _l3GatewayAddress;
     }
+
+    // -------------------- L2 -> L3 Messaging --------------------
+    // Inflow
+    // Deposit & Add Liquidity
+    // TODO: deposit & withdraw ERC-20 (SafeERC20)
+    // TODO: gas fee calculation & L3 gas fee funding
 
     /**
      * @dev `msg.value` should include
@@ -98,7 +104,59 @@ contract L2Gateway is IL2Gateway, TransferHelper {
         return ticketId;
     }
 
+    // TODO: mint $RLP tokens
+    // TODO: liquidity - ETH & ERC20
+    // TODO: integration test
+    function addEthLiquidityToL3(
+        uint256 _marketId,
+        bool _isLong, // LongReserveToken or ShortReserveToken
+        uint256 _addAmount,
+        uint256 _maxSubmissionCost,
+        uint256 _gasLimit,
+        uint256 _gasPriceBid
+    ) external payable returns (uint256) {
+        require(_addAmount > 0, "L2Gateway: deposit amount should be positive");
+        require(
+            msg.value >=
+                _addAmount + _maxSubmissionCost + _gasLimit * _gasPriceBid,
+            "L2Gateway: insufficient msg.value"
+        );
+
+        bytes memory data = abi.encodeWithSelector(
+            IL3Gateway.addLiquidity.selector,
+            _marketId,
+            _isLong,
+            _addAmount
+        );
+
+        uint256 ticketId = inbox.createRetryableTicket{
+            value: _maxSubmissionCost + _gasLimit * _gasPriceBid
+        }(
+            l3GatewayAddress,
+            0, // l3CallValue
+            _maxSubmissionCost,
+            msg.sender, // excessFeeRefundAddress // TODO: aggregate excess fees on a L3 admin contract (not msg.sender)
+            msg.sender, // callValueRefundAddress
+            _gasLimit,
+            _gasPriceBid,
+            data
+        );
+
+        // refund excess ETH
+        _transferEth(
+            payable(msg.sender),
+            msg.value -
+                (_addAmount + _maxSubmissionCost + _gasLimit * _gasPriceBid)
+        );
+
+        return ticketId;
+    }
+
+    // -------------------- L2 -> L3 -> L2 Messaging --------------------
     // path: L2 => Retryable => L3 withdraw => ArbSys => Outbox
+    // Outflow
+    // Withdraw & Remove Liquidity
+
     function triggerWithdrawalFromL2(
         uint256 _withdrawAmount,
         uint256 _maxSubmissionCost,

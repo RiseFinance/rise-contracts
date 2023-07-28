@@ -5,9 +5,9 @@ pragma solidity ^0.8.0;
 import "../common/Context.sol";
 import "../account/TraderVault.sol";
 import "../risepool/RisePool.sol";
-import "../interfaces/l2/IL2Gateway.sol";
-import "../interfaces/l3/IL3Gateway.sol";
-import {ArbSys} from "../interfaces/l3/ArbSys.sol";
+import "./interfaces/l2/IL2Gateway.sol";
+import "./interfaces/l3/IL3Gateway.sol";
+import {ArbSys} from "./interfaces/l3/ArbSys.sol";
 
 contract L3Gateway is IL3Gateway, Context {
     address public l2GatewayAddress;
@@ -19,6 +19,8 @@ contract L3Gateway is IL3Gateway, Context {
         l2GatewayAddress = _l2Gateway;
     }
 
+    // -------------------- Call L3 Contracts --------------------
+
     function increaseTraderBalance(
         address _trader,
         uint256 _assetId,
@@ -28,17 +30,13 @@ contract L3Gateway is IL3Gateway, Context {
         traderVault.increaseTraderBalance(_trader, _assetId, _amount);
     }
 
-    // function decreaseTraderBalance(
-    //     address _trader,
-    //     uint256 _assetId,
-    //     uint256 _amount
-    // ) external {
-    //     traderVault.decreaseTraderBalance(_trader, _assetId, _amount);
-    // }
-
-    // function addLiquidity(uint256 _marketId, uint256 _amount) external {
-    //     risePool.addLiquidity(_marketId, _amount);
-    // }
+    function addLiquidity(
+        uint256 _marketId,
+        bool _isLong,
+        uint256 _amount
+    ) external {
+        risePool.addLiquidity(_marketId, _isLong, _amount);
+    }
 
     // -------------------- L3 -> L2 Messaging --------------------
 
