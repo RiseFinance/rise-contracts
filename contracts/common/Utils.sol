@@ -14,7 +14,6 @@ abstract contract Utils is Constants {
         return x >= 0 ? uint256(x) : uint256(-x);
     }
 
-    // FIXME: use `marketId` instead of `indexAssetId`, `marginAssetId`
     function _getPositionKey(
         address _account,
         bool _isLong,

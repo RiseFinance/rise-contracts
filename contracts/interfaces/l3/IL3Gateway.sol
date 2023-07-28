@@ -7,7 +7,7 @@ interface IL3Gateway {
 
     // function decreaseTraderBalance(address, uint256, uint256) external;
 
-    function addLiquidity(uint256, uint256) external;
+    // function addLiquidity(uint256, uint256) external;
 
     function withdrawEthToL2(address, uint256) external;
 }

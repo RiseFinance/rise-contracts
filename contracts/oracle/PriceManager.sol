@@ -2,14 +2,12 @@
 
 pragma solidity ^0.8.0;
 
-import "../interfaces/l3/IPriceManager.sol";
-import "../interfaces/l3/IOrderBook.sol";
 import "../common/Context.sol";
-
+import "../orderbook/OrderBook.sol";
 import "hardhat/console.sol";
 
-contract PriceManager is IPriceManager, Context {
-    IOrderBook public orderBook;
+contract PriceManager is Context {
+    OrderBook public orderBook;
 
     mapping(address => bool) public isPriceKeeper;
     mapping(uint256 => uint256) public indexPrice;
@@ -19,7 +17,7 @@ contract PriceManager is IPriceManager, Context {
     event Execution(uint256 marketId, int256 price);
 
     constructor(address _orderBook, address _keeperAddress) {
-        orderBook = IOrderBook(_orderBook);
+        orderBook = OrderBook(_orderBook);
         isPriceKeeper[_keeperAddress] = true;
     }
 
@@ -35,7 +33,7 @@ contract PriceManager is IPriceManager, Context {
         uint256[] calldata _marketId,
         uint256[] calldata _price, // new index price from the data source
         bool _isInitialize
-    ) external override onlyPriceKeeper {
+    ) external onlyPriceKeeper {
         require(_marketId.length == _price.length, "PriceManager: Wrong input");
         uint256 l = _marketId.length;
 
@@ -91,9 +89,7 @@ contract PriceManager is IPriceManager, Context {
         }
     }
 
-    function getPriceBuffer(
-        uint256 _marketId
-    ) public view override returns (int256) {
+    function getPriceBuffer(uint256 _marketId) public view returns (int256) {
         int256 elapsedTime = int256(
             block.timestamp - priceBufferUpdatedTime[_marketId]
         );
@@ -116,15 +112,11 @@ contract PriceManager is IPriceManager, Context {
         priceBufferUpdatedTime[_marketId] = block.timestamp;
     }
 
-    function getIndexPrice(
-        uint256 _marketId
-    ) external view override returns (uint256) {
+    function getIndexPrice(uint256 _marketId) external view returns (uint256) {
         return indexPrice[_marketId];
     }
 
-    function getMarkPrice(
-        uint256 _marketId
-    ) public view override returns (uint256) {
+    function getMarkPrice(uint256 _marketId) public view returns (uint256) {
         int256 newPriceBuffer = getPriceBuffer(_marketId);
         int256 newPriceBufferInUsd = (int256(indexPrice[_marketId]) *
             newPriceBuffer) / int256(PRICE_BUFFER_PRECISION);
@@ -135,7 +127,7 @@ contract PriceManager is IPriceManager, Context {
         uint256 _marketId,
         uint256 _sizeInUsd,
         bool _isBuy
-    ) external override returns (uint256) {
+    ) external returns (uint256) {
         uint256 price = getMarkPrice(_marketId);
         // require first bit of _size is 0
         require(_sizeInUsd < 2 ** 255, "PriceManager: size overflow");

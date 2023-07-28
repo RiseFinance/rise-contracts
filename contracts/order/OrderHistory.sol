@@ -2,16 +2,16 @@
 
 pragma solidity ^0.8.0;
 
-import "..//common/Context.sol";
-import "../interfaces/l3/ITraderVault.sol";
+import "../common/Context.sol";
+import "../account/TraderVault.sol";
 
 contract OrderHistory is Context {
-    ITraderVault public traderVault; // TODO: check - the pattern?
+    TraderVault public traderVault; // TODO: check - the pattern?
 
     mapping(address => mapping(uint256 => FilledOrder)) public filledOrders; // userAddress => traderOrderCount => Order (filled orders by trader)
 
     constructor(address _traderVault) {
-        traderVault = ITraderVault(_traderVault);
+        traderVault = TraderVault(_traderVault);
     }
 
     function fillOrder(

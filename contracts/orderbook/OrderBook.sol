@@ -3,8 +3,7 @@
 pragma solidity ^0.8.0;
 
 import "./OrderBookBase.sol";
-import "../interfaces/l3/ITraderVault.sol";
-import "../interfaces/l3/IOrderBook.sol";
+import "../account/TraderVault.sol";
 import "../global/GlobalState.sol";
 import "../market/TokenInfo.sol";
 import "../market/Market.sol";
@@ -14,8 +13,8 @@ import "../position/PositionVault.sol";
 
 import "hardhat/console.sol";
 
-contract OrderBook is IOrderBook, OrderBookBase {
-    ITraderVault public traderVault;
+contract OrderBook is OrderBookBase {
+    TraderVault public traderVault;
     GlobalState public globalState;
     TokenInfo public tokenInfo;
     Market public market;
@@ -49,7 +48,7 @@ contract OrderBook is IOrderBook, OrderBookBase {
     }
 
     constructor(address _traderVault) {
-        traderVault = ITraderVault(_traderVault);
+        traderVault = TraderVault(_traderVault);
     }
 
     function getOrderRequest(
@@ -376,9 +375,9 @@ contract OrderBook is IOrderBook, OrderBookBase {
             floc._positionSize = positionVault.getPositionSize(key);
 
             if (floc._sizeAbs == floc._positionSize) {
-                traderVault.deletePosition(key);
+                positionVault.deletePosition(key);
             } else {
-                traderVault.updatePosition(
+                positionVault.updatePosition(
                     key,
                     _avgExecutionPrice,
                     floc._sizeAbs,

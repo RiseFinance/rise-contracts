@@ -3,9 +3,6 @@
 pragma solidity ^0.8.0;
 
 import "../common/Context.sol";
-import "../interfaces/l3/IPriceManager.sol";
-import "../interfaces/l3/ITraderVault.sol"; // TODO: change to Interface
-import "../interfaces/l3/IOrderBook.sol";
 import "../account/TraderVault.sol";
 import "../global/GlobalState.sol";
 import "./OrderValidator.sol";
