@@ -195,7 +195,7 @@ contract L2Gateway is IL2Gateway, TransferHelper {
         uint256 _amount
     ) external {
         // call: L3 ArbSys.sendTxToL1 => Oubox.executeTransaction => Bridge.executeCall => L2Gateway.withdrawEthFromOutbox
-        // Not allowed to be directly called
+        // Not allowed to called directly
 
         // require(tx.origin == _recipient); // cannot delegate the execution to keepers with this condition
 
