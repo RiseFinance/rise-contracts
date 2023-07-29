@@ -21,6 +21,7 @@ contract L3Gateway is IL3Gateway, Constants {
 
     // -------------------- Call L3 Contracts --------------------
 
+    // Deposit
     function increaseTraderBalance(
         address _trader,
         uint256 _assetId,
@@ -30,6 +31,7 @@ contract L3Gateway is IL3Gateway, Constants {
         traderVault.increaseTraderBalance(_trader, _assetId, _amount);
     }
 
+    // Add Liquidity
     function addLiquidity(
         uint256 _marketId,
         bool _isLong,
@@ -40,8 +42,9 @@ contract L3Gateway is IL3Gateway, Constants {
 
     // -------------------- L3 -> L2 Messaging --------------------
 
-    // TODO: L3 gas fee should be paid by the L2 user (or by L3 admin contract)
+    // Withdraw
     // Should be called via retryable tickets
+    // TODO: L3 gas fee should be paid by the L2 user (or by L3 admin contract)
     function withdrawEthToL2(address _trader, uint256 _amount) external {
         // TODO: msg.sender validation?
         // FIXME: restrict this function call from L3 EOA

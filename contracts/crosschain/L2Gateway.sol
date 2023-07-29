@@ -204,4 +204,17 @@ contract L2Gateway is IL2Gateway, TransferHelper {
 
         _transferEth(payable(_recipient), _amount);
     }
+
+    /**
+     * @notice restricted to be called by the allowed L2 Bridges
+     */
+    function _removeEthLiquidityFromOutbox(
+        address _recipient,
+        uint256 _amount
+    ) external {
+        if (!allowedBridgesMap[msg.sender].allowed)
+            revert NotBridge(msg.sender);
+
+        _transferEth(payable(_recipient), _amount);
+    }
 }

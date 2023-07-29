@@ -9,11 +9,6 @@ contract RisePool {
     mapping(uint256 => uint256) private longReserveAmounts; // marketId => tokenCount
     mapping(uint256 => uint256) private shortReserveAmounts; // marketId => tokenCount
 
-    // function isMarketIdValid(uint256 _marketId) external view returns (bool) {
-    //     // TODO: handle delisting assets
-    //     return true;
-    // }
-
     // function getPoolAmount(
     //     uint256 _marketId,
     //     bool _isLong
