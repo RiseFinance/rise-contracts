@@ -16,8 +16,8 @@ import "../common/MathUtils.sol";
 import "hardhat/console.sol";
 
 contract OrderBook is OrderBookBase, Modifiers, MathUtils {
-    GlobalState public globalState;
     OrderHistory public orderHistory;
+    GlobalState public globalState;
     OrderUtils public orderUtils;
 
     struct IterationContext {

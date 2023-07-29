@@ -8,10 +8,10 @@ import "../position/PositionVault.sol";
 import "../global/GlobalState.sol";
 
 contract OrderValidator {
-    RisePool public risePool;
-    TokenInfo public tokenInfo;
     PositionVault public positionVault;
     GlobalState public globalState;
+    TokenInfo public tokenInfo;
+    RisePool public risePool;
 
     function validateIncreaseExecution(OrderContext calldata c) external view {
         uint256 poolAmount = c._isLong

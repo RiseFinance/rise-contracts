@@ -10,10 +10,10 @@ import "../market/TokenInfo.sol";
 import "../market/Market.sol";
 
 contract OrderUtils is Constants {
-    RisePool public risePool;
-    TraderVault public traderVault;
     PositionVault public positionVault;
+    TraderVault public traderVault;
     TokenInfo public tokenInfo;
+    RisePool public risePool;
     Market public market;
 
     function _usdToToken(

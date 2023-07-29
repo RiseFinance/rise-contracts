@@ -5,9 +5,16 @@ pragma solidity ^0.8.0;
 import "./interfaces/l2/IInbox.sol";
 import "./interfaces/l2/IL2Gateway.sol";
 import "./interfaces/l3/IL3Gateway.sol";
+import "../market/TokenInfo.sol";
+import "../market/Market.sol";
 import "./TransferHelper.sol";
 
 contract L2Gateway is IL2Gateway, TransferHelper {
+    address public l3GatewayAddress;
+    TokenInfo public tokenInfo;
+    Market public market;
+    IInbox public inbox;
+
     error NotBridge(address sender); // TODO: move to errors
 
     struct InOutInfo {
@@ -16,9 +23,6 @@ contract L2Gateway is IL2Gateway, TransferHelper {
     }
 
     mapping(address => InOutInfo) private allowedBridgesMap;
-
-    address public l3GatewayAddress;
-    IInbox public inbox;
 
     uint256 public constant ETH_ID = 1; // TODO: move to constants
 
@@ -104,6 +108,55 @@ contract L2Gateway is IL2Gateway, TransferHelper {
         return ticketId;
     }
 
+    function depositERC20ToL3(
+        address _token,
+        uint256 _depositAmount,
+        uint256 _maxSubmissionCost,
+        uint256 _gasLimit,
+        uint256 _gasPriceBid
+    ) external payable returns (uint256) {
+        require(
+            _depositAmount > 0,
+            "L2Gateway: deposit amount should be positive"
+        );
+        require(
+            msg.value >= _maxSubmissionCost + _gasLimit * _gasPriceBid,
+            "L2Gateway: insufficient msg.value"
+        );
+
+        _transferIn(msg.sender, _token, _depositAmount);
+
+        uint256 tokenId = tokenInfo.getTokenIdFromAddress(_token);
+
+        bytes memory data = abi.encodeWithSelector(
+            IL3Gateway.increaseTraderBalance.selector,
+            msg.sender, // _trader
+            tokenId, // _assetId
+            _depositAmount // _amount
+        );
+
+        uint256 ticketId = inbox.createRetryableTicket{
+            value: _maxSubmissionCost + _gasLimit * _gasPriceBid
+        }(
+            l3GatewayAddress,
+            0, // l3CallValue
+            _maxSubmissionCost,
+            msg.sender, // excessFeeRefundAddress // TODO: aggregate excess fees on a L3 admin contract (not msg.sender)
+            msg.sender, // callValueRefundAddress
+            _gasLimit,
+            _gasPriceBid,
+            data
+        );
+
+        // refund excess ETH
+        _transferEth(
+            payable(msg.sender),
+            msg.value - (_maxSubmissionCost + _gasLimit * _gasPriceBid)
+        );
+
+        return ticketId;
+    }
+
     // TODO: mint $RLP tokens
     // TODO: liquidity - ETH & ERC20
     // TODO: integration test
@@ -147,6 +200,55 @@ contract L2Gateway is IL2Gateway, TransferHelper {
             payable(msg.sender),
             msg.value -
                 (_addAmount + _maxSubmissionCost + _gasLimit * _gasPriceBid)
+        );
+
+        return ticketId;
+    }
+
+    function addERC20LiquidityToL3(
+        address _token,
+        uint256 _marketId,
+        bool _isLong, // LongReserveToken or ShortReserveToken
+        uint256 _addAmount,
+        uint256 _maxSubmissionCost,
+        uint256 _gasLimit,
+        uint256 _gasPriceBid
+    ) external payable returns (uint256) {
+        require(_addAmount > 0, "L2Gateway: deposit amount should be positive");
+        require(
+            msg.value >= _maxSubmissionCost + _gasLimit * _gasPriceBid,
+            "L2Gateway: insufficient msg.value"
+        );
+
+        // Market.MarketInfo memory marketInfo = market.getMarketInfo(_marketId);
+        // TODO: check if marketId matches the token address
+
+        _transferIn(msg.sender, _token, _addAmount);
+
+        bytes memory data = abi.encodeWithSelector(
+            IL3Gateway.addLiquidity.selector,
+            _marketId,
+            _isLong,
+            _addAmount
+        );
+
+        uint256 ticketId = inbox.createRetryableTicket{
+            value: _maxSubmissionCost + _gasLimit * _gasPriceBid
+        }(
+            l3GatewayAddress,
+            0, // l3CallValue
+            _maxSubmissionCost,
+            msg.sender, // excessFeeRefundAddress // TODO: aggregate excess fees on a L3 admin contract (not msg.sender)
+            msg.sender, // callValueRefundAddress
+            _gasLimit,
+            _gasPriceBid,
+            data
+        );
+
+        // refund excess ETH
+        _transferEth(
+            payable(msg.sender),
+            msg.value - (_maxSubmissionCost + _gasLimit * _gasPriceBid)
         );
 
         return ticketId;

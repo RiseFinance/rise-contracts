@@ -9,8 +9,8 @@ import "../risepool/RisePool.sol";
 
 // TODO: check - `override` needed for function declared in the interface `IL3Vault`?
 contract TraderVault {
-    RisePool public risePool;
     PositionVault public positionVault;
+    RisePool public risePool;
 
     mapping(address => mapping(uint256 => uint256)) public traderBalances; // userAddress => assetId => Balance
     mapping(address => uint256) public traderFilledOrderCounts; // userAddress => orderCount
