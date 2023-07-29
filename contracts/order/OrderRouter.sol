@@ -2,7 +2,6 @@
 
 pragma solidity ^0.8.0;
 
-import "../common/Context.sol";
 import "../account/TraderVault.sol";
 import "../global/GlobalState.sol";
 import "./OrderValidator.sol";
@@ -14,18 +13,13 @@ import "../position/PositionVault.sol";
 import "../market/TokenInfo.sol";
 import "../market/Market.sol";
 
-contract OrderRouter is Context {
+contract OrderRouter is OrderUtils {
     OrderValidator orderValidator;
-    PositionVault positionVault;
     PriceManager priceManager;
     OrderHistory orderHistory;
     GlobalState globalState;
-    TraderVault traderVault;
     OrderUtils orderUtils;
     OrderBook orderBook;
-    TokenInfo tokenInfo;
-    RisePool risePool;
-    Market market;
 
     constructor(
         address _traderVault,

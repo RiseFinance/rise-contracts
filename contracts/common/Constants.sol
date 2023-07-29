@@ -2,7 +2,7 @@
 
 pragma solidity ^0.8.0;
 
-abstract contract Constants {
+contract Constants {
     uint256 public constant USD_ID = 0;
     uint256 public constant ETH_ID = 1;
 

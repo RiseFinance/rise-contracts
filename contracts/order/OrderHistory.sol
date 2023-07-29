@@ -2,10 +2,9 @@
 
 pragma solidity ^0.8.0;
 
-import "../common/Context.sol";
 import "../account/TraderVault.sol";
 
-contract OrderHistory is Context {
+contract OrderHistory {
     TraderVault public traderVault; // TODO: check - the pattern?
 
     mapping(address => mapping(uint256 => FilledOrder)) public filledOrders; // userAddress => traderOrderCount => Order (filled orders by trader)

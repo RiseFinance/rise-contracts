@@ -2,9 +2,10 @@
 
 pragma solidity ^0.8.0;
 
-import "../common/Context.sol";
+import "../common/structs.sol";
+import "../position/PositionUtils.sol";
 
-contract GlobalState is Context {
+contract GlobalState is PositionUtils {
     mapping(uint256 => GlobalPositionState) private globalLongPositionStates; // marketId => GlobalPositionState
     mapping(uint256 => GlobalPositionState) private globalShortPositionStates; // marketId => GlobalPositionState
 

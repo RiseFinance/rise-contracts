@@ -10,17 +10,15 @@ import "../market/Market.sol";
 import "../order/OrderHistory.sol";
 import "../order/OrderUtils.sol";
 import "../position/PositionVault.sol";
+import "../common/Modifiers.sol";
+import "../common/MathUtils.sol";
 
 import "hardhat/console.sol";
 
-contract OrderBook is OrderBookBase {
-    TraderVault public traderVault;
+contract OrderBook is OrderBookBase, Modifiers, MathUtils {
     GlobalState public globalState;
-    TokenInfo public tokenInfo;
-    Market public market;
     OrderHistory public orderHistory;
     OrderUtils public orderUtils;
-    PositionVault public positionVault;
 
     struct IterationContext {
         uint256 interimMarkPrice;

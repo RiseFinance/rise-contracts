@@ -2,14 +2,14 @@
 
 pragma solidity ^0.8.0;
 
-import "../common/Context.sol";
 import "../account/TraderVault.sol";
 import "../risepool/RisePool.sol";
 import "./interfaces/l2/IL2Gateway.sol";
 import "./interfaces/l3/IL3Gateway.sol";
+import "../common/Constants.sol";
 import {ArbSys} from "./interfaces/l3/ArbSys.sol";
 
-contract L3Gateway is IL3Gateway, Context {
+contract L3Gateway is IL3Gateway, Constants {
     address public l2GatewayAddress;
     TraderVault public traderVault;
     RisePool public risePool;

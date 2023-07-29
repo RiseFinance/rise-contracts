@@ -2,19 +2,70 @@
 
 pragma solidity ^0.8.0;
 
-import "../common/Context.sol";
 import "../risepool/RisePool.sol";
 import "../account/TraderVault.sol";
 import "../position/PositionVault.sol";
+import "../common/Constants.sol";
 import "../market/TokenInfo.sol";
 import "../market/Market.sol";
 
-contract OrderUtils is Context {
+contract OrderUtils is Constants {
     RisePool public risePool;
     TraderVault public traderVault;
     PositionVault public positionVault;
     TokenInfo public tokenInfo;
     Market public market;
+
+    function _usdToToken(
+        uint256 _usdAmount,
+        uint256 _tokenPrice,
+        uint256 _tokenDecimals
+    ) public pure returns (uint256) {
+        return
+            ((_usdAmount * 10 ** _tokenDecimals) / USD_PRECISION) / _tokenPrice;
+    }
+
+    function _tokenToUsd(
+        uint256 _tokenAmount,
+        uint256 _tokenPrice,
+        uint256 _tokenDecimals
+    ) public pure returns (uint256) {
+        return
+            ((_tokenAmount * _tokenPrice) * USD_PRECISION) /
+            10 ** _tokenDecimals;
+    }
+
+    function _getPositionKey(
+        address _account,
+        bool _isLong,
+        uint256 _marketId
+    ) public pure returns (bytes32) {
+        return keccak256(abi.encodePacked(_account, _isLong, _marketId));
+    }
+
+    function _getAvgExecutionPrice(
+        uint256 _basePrice,
+        uint256 _priceImpactInUsd,
+        bool _isIncrease
+    ) internal pure returns (uint256) {
+        return
+            _isIncrease
+                ? _basePrice + (_priceImpactInUsd / 2)
+                : _basePrice - (_priceImpactInUsd / 2);
+    }
+
+    function _calculatePnL(
+        uint256 _size,
+        uint256 _averagePrice,
+        uint256 _markPrice,
+        bool _isLong
+    ) public pure returns (uint256, bool) {
+        uint256 pnlAbs = _markPrice >= _averagePrice
+            ? (_size * (_markPrice - _averagePrice)) / USD_PRECISION
+            : (_size * (_averagePrice - _markPrice)) / USD_PRECISION;
+        bool hasProfit = _markPrice >= _averagePrice ? _isLong : !_isLong;
+        return (pnlAbs, hasProfit);
+    }
 
     function settlePnL(
         bytes32 _key,
