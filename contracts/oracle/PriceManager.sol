@@ -4,6 +4,7 @@ pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import "../orderbook/OrderBook.sol";
+import "../market/TokenInfo.sol";
 import {PRICE_BUFFER_PRECISION, DECAY_CONSTANT, PRICE_BUFFER_DELTA_TO_SIZE} from "../common/constants.sol";
 import "hardhat/console.sol";
 
@@ -12,6 +13,7 @@ contract PriceManager {
     using SafeCast for uint256;
 
     OrderBook public orderBook;
+    TokenInfo public tokenInfo;
 
     mapping(address => bool) public isPriceKeeper;
     mapping(uint256 => uint256) public indexPrice;
@@ -146,7 +148,7 @@ contract PriceManager {
             ((price).toInt256() * priceBufferChange) /
             2 /
             (PRICE_BUFFER_PRECISION).toInt256();
-        emit Execution(_marketId, averageExecutedPrice);
+        // emit Execution(_marketId, averageExecutedPrice);
         return (averageExecutedPrice).toUint256();
     }
 

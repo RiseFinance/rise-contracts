@@ -145,7 +145,7 @@ contract OrderRouter is OrderUtils {
             orderUtils.settlePnL(
                 fmc.key,
                 c._isLong,
-                fmc.markPrice,
+                fmc.avgExecPrice,
                 c._marketId,
                 c._sizeAbs,
                 c._marginAbs
@@ -161,7 +161,7 @@ contract OrderRouter is OrderUtils {
             c._marketId,
             c._sizeAbs,
             c._marginAbs,
-            fmc.markPrice
+            fmc.avgExecPrice
         );
 
         uint256 positionSize = positionVault.getPositionSize(fmc.key);
@@ -177,7 +177,7 @@ contract OrderRouter is OrderUtils {
                 msg.sender, // trader
                 c._isLong,
                 c._marketId,
-                fmc.markPrice,
+                fmc.avgExecPrice,
                 c._sizeAbs,
                 c._marginAbs,
                 c._isIncrease, // isIncreaseInSize
@@ -193,7 +193,7 @@ contract OrderRouter is OrderUtils {
                 c._marketId,
                 c._sizeAbs,
                 c._marginAbs,
-                fmc.markPrice
+                fmc.avgExecPrice
             );
         } else {
             globalState.updateGlobalShortPositionState(
@@ -201,7 +201,7 @@ contract OrderRouter is OrderUtils {
                 c._marketId,
                 c._sizeAbs,
                 c._marginAbs,
-                fmc.markPrice
+                fmc.avgExecPrice
             );
         }
 
