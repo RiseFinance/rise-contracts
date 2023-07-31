@@ -5,6 +5,7 @@ pragma solidity ^0.8.0;
 import "../account/TraderVault.sol";
 import "../risepool/RisePool.sol";
 import "../market/Market.sol";
+import "../market/TokenInfo.sol";
 import "./interfaces/l2/IL2MarginGateway.sol";
 import "./interfaces/l2/IL2LiquidityGateway.sol";
 import "./interfaces/l3/IL3Gateway.sol";
@@ -15,6 +16,7 @@ contract L3Gateway is IL3Gateway {
     address public l2MarginGatewayAddress;
     address public l2LiquidityGatewayAddress;
     TraderVault public traderVault;
+    TokenInfo public tokenInfo;
     Market public market;
     RisePool public risePool;
 
@@ -89,8 +91,6 @@ contract L3Gateway is IL3Gateway {
         address _recipient,
         uint256 _amount
     ) external {
-        address tokenAddress = address(0); // FIXME:
-
         // FIXME: check if the recipient can remove the `_amount` of liquidity.
 
         require(
@@ -105,8 +105,11 @@ contract L3Gateway is IL3Gateway {
             ? marketInfo.longReserveAssetId
             : marketInfo.shortReserveAssetId;
 
+        address tokenAddress = tokenInfo.getTokenAddressFromAssetId(_assetId);
+
         bytes4 selector;
         bytes memory data;
+
         if (_assetId == ETH_ID) {
             selector = IL2LiquidityGateway
                 ._removeEthLiquidityFromOutbox

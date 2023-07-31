@@ -62,7 +62,9 @@ contract FundingFee {
         uint256 sizeInUsd = orderUtils._tokenToUsd(
             _position.size,
             markPrice,
-            tokenInfo.tokenDecimals(market.getMarketInfo(_marketId).baseAssetId)
+            tokenInfo.getTokenDecimals(
+                market.getMarketInfo(_marketId).baseAssetId
+            )
         );
 
         int256 fundingFeeToPay = ((sizeInUsd).toInt256() *

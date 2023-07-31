@@ -123,12 +123,12 @@ contract L2MarginGateway is TransferHelper {
 
         _transferIn(msg.sender, _token, _depositAmount);
 
-        uint256 tokenId = tokenInfo.getTokenIdFromAddress(_token);
+        uint256 assetId = tokenInfo.getAssetIdFromTokenAddress(_token);
 
         bytes memory data = abi.encodeWithSelector(
             IL3Gateway.increaseTraderBalance.selector,
             msg.sender, // _trader
-            tokenId, // _assetId
+            assetId, // _assetId
             _depositAmount // _amount
         );
 
