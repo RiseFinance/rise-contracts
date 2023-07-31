@@ -2,7 +2,7 @@
 
 pragma solidity ^0.8.0;
 
-interface IL2Gateway {
+interface IL2MarginGateway {
     function depositEthToL3(
         uint256,
         uint256,

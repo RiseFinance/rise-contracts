@@ -9,9 +9,8 @@ import "../market/Market.sol";
 import "../token/RMM.sol";
 import "../risepool/RisePoolUtils.sol";
 import "./TransferHelper.sol";
-import "../common/Constants.sol";
 
-contract L2LiquidityGateway is TransferHelper, Constants {
+contract L2LiquidityGateway is TransferHelper {
     address public l3GatewayAddress;
     RisePoolUtils public risePoolUtils;
     TokenInfo public tokenInfo;
@@ -44,8 +43,6 @@ contract L2LiquidityGateway is TransferHelper, Constants {
     // ----------------------- L2 -> L3 Messaging -----------------------
     // Inflow (add Liquidity)
 
-    // TODO: mint $RMM tokens
-    // TODO: liquidity - ETH & ERC20
     // TODO: integration test
     function addEthLiquidityToL3(
         uint256 _marketId,
@@ -93,7 +90,6 @@ contract L2LiquidityGateway is TransferHelper, Constants {
 
         Market.MarketInfo memory marketInfo = market.getMarketInfo(_marketId);
         RiseMarketMaker rmm = RiseMarketMaker(marketInfo.marketMakerToken);
-
         uint256 mintAmount = risePoolUtils.getMintAmount(); // TODO: calculate AUM of MM pool & calculate the mint amount of $RMM tokens
 
         rmm.mint(msg.sender, mintAmount);
@@ -146,6 +142,14 @@ contract L2LiquidityGateway is TransferHelper, Constants {
             payable(msg.sender),
             msg.value - (_maxSubmissionCost + _gasLimit * _gasPriceBid)
         );
+
+        // mint $RMM tokens
+
+        Market.MarketInfo memory marketInfo = market.getMarketInfo(_marketId);
+        RiseMarketMaker rmm = RiseMarketMaker(marketInfo.marketMakerToken);
+        uint256 mintAmount = risePoolUtils.getMintAmount(); // TODO: calculate AUM of MM pool & calculate the mint amount of $RMM tokens
+
+        rmm.mint(msg.sender, mintAmount);
 
         return ticketId;
     }

@@ -7,9 +7,9 @@ import "./interfaces/l3/IL3Gateway.sol";
 import "../market/TokenInfo.sol";
 import "../market/Market.sol";
 import "./TransferHelper.sol";
-import "../common/Constants.sol";
+import {ETH_ID} from "../common/constants.sol";
 
-contract L2MarginGateway is TransferHelper, Constants {
+contract L2MarginGateway is TransferHelper {
     address public l3GatewayAddress;
     TokenInfo public tokenInfo;
     Market public market;
@@ -159,7 +159,7 @@ contract L2MarginGateway is TransferHelper, Constants {
     // Outflow (withdraw)
 
     // FIXME: cross mode PnL까지 고려해서 withdraw max cap 지정 (require)
-    function triggerWithdrawalFromL2(
+    function triggerEthWithdrawalFromL2(
         uint256 _withdrawAmount,
         uint256 _maxSubmissionCost,
         uint256 _gasLimit,
@@ -168,8 +168,9 @@ contract L2MarginGateway is TransferHelper, Constants {
         // minimal validation should be conducted from frontend (check L3Vault.traderBalances)
 
         bytes memory data = abi.encodeWithSelector(
-            IL3Gateway.withdrawEthToL2.selector,
+            IL3Gateway.withdrawAssetToL2.selector,
             msg.sender, // _trader => cannot modify the recipient address
+            ETH_ID, // _assetId
             _withdrawAmount // _amount
         );
 

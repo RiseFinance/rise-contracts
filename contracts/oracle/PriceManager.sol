@@ -4,10 +4,10 @@ pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import "../orderbook/OrderBook.sol";
-import "../common/Constants.sol";
+import {PRICE_BUFFER_PRECISION, DECAY_CONSTANT, PRICE_BUFFER_DELTA_TO_SIZE} from "../common/constants.sol";
 import "hardhat/console.sol";
 
-contract PriceManager is Constants {
+contract PriceManager {
     using SafeCast for int256;
     using SafeCast for uint256;
 
