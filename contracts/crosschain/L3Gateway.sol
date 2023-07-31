@@ -4,6 +4,7 @@ pragma solidity ^0.8.0;
 
 import "../account/TraderVault.sol";
 import "../risepool/RisePool.sol";
+import "../market/Market.sol";
 import "./interfaces/l2/IL2MarginGateway.sol";
 import "./interfaces/l2/IL2LiquidityGateway.sol";
 import "./interfaces/l3/IL3Gateway.sol";
@@ -14,6 +15,7 @@ contract L3Gateway is IL3Gateway {
     address public l2MarginGatewayAddress;
     address public l2LiquidityGatewayAddress;
     TraderVault public traderVault;
+    Market public market;
     RisePool public risePool;
 
     constructor(
@@ -77,5 +79,51 @@ contract L3Gateway is IL3Gateway {
             _amount // _amount
         );
         ArbSys(address(100)).sendTxToL1(l2MarginGatewayAddress, data);
+    }
+
+    // Remove Liquidity
+    // Should be called via retryable tickets
+    function removeLiquidityToL2(
+        uint256 _marketId,
+        bool _isLongReserve,
+        address _recipient,
+        uint256 _amount
+    ) external {
+        address tokenAddress = address(0); // FIXME:
+
+        // FIXME: check if the recipient can remove the `_amount` of liquidity.
+
+        require(
+            risePool.getLongPoolCapacity(_marketId) >= _amount,
+            "L3Gateway: insufficient long pool capacity"
+        );
+
+        risePool.removeLiquidity(_marketId, _isLongReserve, _amount);
+
+        Market.MarketInfo memory marketInfo = market.getMarketInfo(_marketId);
+        uint256 _assetId = _isLongReserve
+            ? marketInfo.longReserveAssetId
+            : marketInfo.shortReserveAssetId;
+
+        bytes4 selector;
+        bytes memory data;
+        if (_assetId == ETH_ID) {
+            selector = IL2LiquidityGateway
+                ._removeEthLiquidityFromOutbox
+                .selector;
+            data = abi.encodeWithSelector(selector, _recipient, _amount);
+        } else {
+            selector = IL2LiquidityGateway
+                ._removeERC20LiquidityFromOutbox
+                .selector;
+            data = abi.encodeWithSelector(
+                selector,
+                _recipient,
+                _amount,
+                tokenAddress
+            );
+        }
+
+        ArbSys(address(100)).sendTxToL1(l2LiquidityGatewayAddress, data);
     }
 }

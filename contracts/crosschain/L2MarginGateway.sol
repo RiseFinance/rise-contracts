@@ -159,7 +159,8 @@ contract L2MarginGateway is TransferHelper {
     // Outflow (withdraw)
 
     // FIXME: cross mode PnL까지 고려해서 withdraw max cap 지정 (require)
-    function triggerEthWithdrawalFromL2(
+    function triggerWithdrawalFromL2(
+        uint256 _assetId,
         uint256 _withdrawAmount,
         uint256 _maxSubmissionCost,
         uint256 _gasLimit,
@@ -170,7 +171,7 @@ contract L2MarginGateway is TransferHelper {
         bytes memory data = abi.encodeWithSelector(
             IL3Gateway.withdrawAssetToL2.selector,
             msg.sender, // _trader => cannot modify the recipient address
-            ETH_ID, // _assetId
+            _assetId, // _assetId
             _withdrawAmount // _amount
         );
 
