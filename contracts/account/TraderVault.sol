@@ -21,6 +21,23 @@ contract TraderVault {
         isIsolated[msg.sender] = !isIsolated[msg.sender];
     }
 
+    // from DA server (or from EVM storage)
+    function getTraderOpenPositionKeys() public {}
+
+    // Liquidation => UnrealizedPnL, Maintenance Margin의 총합만 있으면 됨
+    // function getTraderUnrealizedPnL() public {}
+    // function getTraderMaintenanceMargin() public {}
+    // trader open positions
+    // trader open orders
+    // trader order history
+    // trader trade history
+    // trader position history
+    // trader balance
+    // trader unrealized PnL (by position / total)
+    // trader margin balance
+    // trader maintenance margin
+    // trader avbl margin
+
     // TODO: onlyManager
     function increaseTraderBalance(
         address _trader,
