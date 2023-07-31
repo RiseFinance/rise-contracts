@@ -2,7 +2,7 @@
 
 pragma solidity ^0.8.0;
 
-abstract contract Modifiers {
+contract Modifiers {
     modifier onlyKeeper() {
         require(true, "only keeper"); // FIXME: implementation
         _;

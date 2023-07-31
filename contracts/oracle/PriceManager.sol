@@ -2,11 +2,11 @@
 
 pragma solidity ^0.8.0;
 
-import "../common/Context.sol";
 import "../orderbook/OrderBook.sol";
+import "../common/Constants.sol";
 import "hardhat/console.sol";
 
-contract PriceManager is Context {
+contract PriceManager is Constants {
     OrderBook public orderBook;
 
     mapping(address => bool) public isPriceKeeper;

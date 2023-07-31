@@ -2,17 +2,16 @@
 
 pragma solidity ^0.8.0;
 
-import "../common/Context.sol";
 import "../risepool/RisePool.sol";
 import "../market/TokenInfo.sol";
 import "../position/PositionVault.sol";
 import "../global/GlobalState.sol";
 
-contract OrderValidator is Context {
-    RisePool public risePool;
-    TokenInfo public tokenInfo;
+contract OrderValidator {
     PositionVault public positionVault;
     GlobalState public globalState;
+    TokenInfo public tokenInfo;
+    RisePool public risePool;
 
     function validateIncreaseExecution(OrderContext calldata c) external view {
         uint256 poolAmount = c._isLong
@@ -50,9 +49,8 @@ contract OrderValidator is Context {
 
     function validateDecreaseExecution(
         OrderContext calldata c,
-        bytes32 _key
-    ) external view // uint256 _markPrice
-    {
+        bytes32 _key // uint256 _markPrice
+    ) external view {
         Position memory position = positionVault.getPosition(_key);
 
         require(

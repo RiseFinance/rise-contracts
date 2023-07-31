@@ -7,5 +7,5 @@ pragma solidity ^0.8.0;
 // * Asset ID ++, market token addresses register, LP pool register, LP token generating, etc.
 
 contract MarketFactory {
-
+    // TODO: create LP token contract for each market
 }

@@ -2,9 +2,10 @@
 
 pragma solidity ^0.8.0;
 
-import "../common/Context.sol";
+import "../common/structs.sol";
+import "./PositionUtils.sol";
 
-contract PositionVault is Context {
+contract PositionVault is PositionUtils {
     // TODO: open <> close 사이의 position을 하나로 연결하여 기록
     mapping(bytes32 => Position) public positions; // positionHash => Position
 

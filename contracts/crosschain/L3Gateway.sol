@@ -2,14 +2,14 @@
 
 pragma solidity ^0.8.0;
 
-import "../common/Context.sol";
 import "../account/TraderVault.sol";
 import "../risepool/RisePool.sol";
-import "../interfaces/l2/IL2Gateway.sol";
-import "../interfaces/l3/IL3Gateway.sol";
-import {ArbSys} from "../interfaces/l3/ArbSys.sol";
+import "./interfaces/l2/IL2Gateway.sol";
+import "./interfaces/l3/IL3Gateway.sol";
+import "../common/Constants.sol";
+import {ArbSys} from "./interfaces/l3/ArbSys.sol";
 
-contract L3Gateway is IL3Gateway, Context {
+contract L3Gateway is IL3Gateway, Constants {
     address public l2GatewayAddress;
     TraderVault public traderVault;
     RisePool public risePool;
@@ -19,6 +19,9 @@ contract L3Gateway is IL3Gateway, Context {
         l2GatewayAddress = _l2Gateway;
     }
 
+    // -------------------- Call L3 Contracts --------------------
+
+    // Deposit
     function increaseTraderBalance(
         address _trader,
         uint256 _assetId,
@@ -28,22 +31,20 @@ contract L3Gateway is IL3Gateway, Context {
         traderVault.increaseTraderBalance(_trader, _assetId, _amount);
     }
 
-    // function decreaseTraderBalance(
-    //     address _trader,
-    //     uint256 _assetId,
-    //     uint256 _amount
-    // ) external {
-    //     traderVault.decreaseTraderBalance(_trader, _assetId, _amount);
-    // }
-
-    // function addLiquidity(uint256 _marketId, uint256 _amount) external {
-    //     risePool.addLiquidity(_marketId, _amount);
-    // }
+    // Add Liquidity
+    function addLiquidity(
+        uint256 _marketId,
+        bool _isLong,
+        uint256 _amount
+    ) external {
+        risePool.addLiquidity(_marketId, _isLong, _amount);
+    }
 
     // -------------------- L3 -> L2 Messaging --------------------
 
-    // TODO: L3 gas fee should be paid by the L2 user (or by L3 admin contract)
+    // Withdraw
     // Should be called via retryable tickets
+    // TODO: L3 gas fee should be paid by the L2 user (or by L3 admin contract)
     function withdrawEthToL2(address _trader, uint256 _amount) external {
         // TODO: msg.sender validation?
         // FIXME: restrict this function call from L3 EOA
