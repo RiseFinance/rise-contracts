@@ -3,7 +3,7 @@
 pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts/utils/math/SafeCast.sol";
-import "../common/Structs.sol";
+import "../common/structs.sol";
 import "../global/GlobalState.sol";
 import "../order/OrderUtils.sol";
 import "../oracle/PriceManager.sol";
