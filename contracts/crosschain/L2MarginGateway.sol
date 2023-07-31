@@ -207,4 +207,18 @@ contract L2MarginGateway is TransferHelper {
 
         _transferEth(payable(_recipient), _amount);
     }
+
+    /**
+     * @notice restricted to be called by the allowed L2 Bridges
+     */
+    function _withdrawERC20FromOutbox(
+        address _recipient,
+        uint256 _amount,
+        address _token
+    ) external {
+        if (!allowedBridgesMap[msg.sender].allowed)
+            revert NotBridge(msg.sender);
+
+        _transferOut(_token, _amount, _recipient);
+    }
 }
