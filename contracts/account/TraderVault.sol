@@ -17,7 +17,7 @@ contract TraderVault {
     mapping(address => bool) public isIsolated; // trader's margin mode
 
     function changeMarginMode() public {
-        // TODO: only allowed when there is no open position
+        // TODO: allowed to change the margin mode only when there is no open position for the trader
         isIsolated[msg.sender] = !isIsolated[msg.sender];
     }
 

@@ -2,11 +2,15 @@
 
 pragma solidity ^0.8.0;
 
+import "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import "../orderbook/OrderBook.sol";
 import "../common/Constants.sol";
 import "hardhat/console.sol";
 
 contract PriceManager is Constants {
+    using SafeCast for int256;
+    using SafeCast for uint256;
+
     OrderBook public orderBook;
 
     mapping(address => bool) public isPriceKeeper;
@@ -37,19 +41,18 @@ contract PriceManager is Constants {
         require(_marketId.length == _price.length, "PriceManager: Wrong input");
         uint256 l = _marketId.length;
 
-        for (uint256 i = 0; i < uint256(l); i++) {
+        for (uint256 i = 0; i < l; i++) {
             require(_price[i] > 0, "PriceManager: price has to be positive");
 
             int256 currentPriceBuffer = getPriceBuffer(_marketId[i]); // % of price shift
 
-            int256 currentPriceBufferInUsd = (int256(_price[i]) *
-                currentPriceBuffer) / int256(PRICE_BUFFER_PRECISION);
+            int256 currentPriceBufferInUsd = ((_price[i]).toInt256() *
+                currentPriceBuffer) / (PRICE_BUFFER_PRECISION).toInt256();
 
             // int prevMarkPrice = indexPrice[_marketId[i]] +
             //     currentPriceBufferInUsd;
-            uint256 currentMarkPrice = uint256(
-                int256(_price[i]) + currentPriceBufferInUsd
-            );
+            uint256 currentMarkPrice = ((_price[i]).toInt256() +
+                currentPriceBufferInUsd).toUint256();
 
             uint256 markPriceWithLimitOrderPriceImpact;
 
@@ -62,8 +65,8 @@ contract PriceManager is Constants {
                     .executeLimitOrdersAndGetFinalMarkPrice(
                         checkBuyOrderBook, // isBuy
                         _marketId[i],
-                        uint256(_price[i]),
-                        uint256(currentMarkPrice)
+                        (_price[i]),
+                        (currentMarkPrice)
                     );
             }
 
@@ -73,15 +76,14 @@ contract PriceManager is Constants {
             );
 
             // TODO: set price with markPriceWithLimitOrderPriceImpact
-            int256 newPriceBuffer = ((int256(
-                markPriceWithLimitOrderPriceImpact
-            ) - int256(_price[i])) * int256(PRICE_BUFFER_PRECISION)) /
-                int256(_price[i]);
+            int256 newPriceBuffer = (((markPriceWithLimitOrderPriceImpact)
+                .toInt256() - (_price[i]).toInt256()) *
+                (PRICE_BUFFER_PRECISION).toInt256()) / (_price[i]).toInt256();
 
             setPriceBuffer(_marketId[i], newPriceBuffer);
             console.log(
                 "PriceManager: newPriceBuffer: ",
-                uint256(newPriceBuffer)
+                (newPriceBuffer).toUint256()
             );
             console.log("PriceManager: _price[i]: ", _price[i]);
             console.log("\n");
@@ -90,10 +92,9 @@ contract PriceManager is Constants {
     }
 
     function getPriceBuffer(uint256 _marketId) public view returns (int256) {
-        int256 elapsedTime = int256(
-            block.timestamp - priceBufferUpdatedTime[_marketId]
-        );
-        int256 decayedAmount = elapsedTime * int256(DECAY_CONSTANT);
+        int256 elapsedTime = (block.timestamp -
+            priceBufferUpdatedTime[_marketId]).toInt256();
+        int256 decayedAmount = elapsedTime * (DECAY_CONSTANT).toInt256();
         int256 absLastPriceBuffer = lastPriceBuffer[_marketId] >= 0
             ? lastPriceBuffer[_marketId]
             : -lastPriceBuffer[_marketId];
@@ -118,9 +119,11 @@ contract PriceManager is Constants {
 
     function getMarkPrice(uint256 _marketId) public view returns (uint256) {
         int256 newPriceBuffer = getPriceBuffer(_marketId);
-        int256 newPriceBufferInUsd = (int256(indexPrice[_marketId]) *
-            newPriceBuffer) / int256(PRICE_BUFFER_PRECISION);
-        return uint256(int256(indexPrice[_marketId]) + newPriceBufferInUsd);
+        int256 newPriceBufferInUsd = ((indexPrice[_marketId]).toInt256() *
+            newPriceBuffer) / (PRICE_BUFFER_PRECISION).toInt256();
+        return
+            ((indexPrice[_marketId]).toInt256() + newPriceBufferInUsd)
+                .toUint256();
     }
 
     function getAverageExecutionPrice(
@@ -132,18 +135,21 @@ contract PriceManager is Constants {
         // require first bit of _size is 0
         require(_sizeInUsd < 2 ** 255, "PriceManager: size overflow");
         require(price > 0, "PriceManager: price not set");
-        int256 intSize = _isBuy ? int256(_sizeInUsd) : -int256(_sizeInUsd);
-        int256 priceBufferChange = intSize / int256(PRICE_BUFFER_DELTA_TO_SIZE);
+        int256 intSize = _isBuy
+            ? (_sizeInUsd).toInt256()
+            : -(_sizeInUsd).toInt256();
+        int256 priceBufferChange = intSize /
+            (PRICE_BUFFER_DELTA_TO_SIZE).toInt256();
         setPriceBuffer(
             _marketId,
             getPriceBuffer(_marketId) + priceBufferChange
         );
-        int256 averageExecutedPrice = int256(price) +
-            (int256(price) * priceBufferChange) /
+        int256 averageExecutedPrice = (price).toInt256() +
+            ((price).toInt256() * priceBufferChange) /
             2 /
-            int256(PRICE_BUFFER_PRECISION);
+            (PRICE_BUFFER_PRECISION).toInt256();
         require(averageExecutedPrice > 0, "PriceManager: price underflow");
         emit Execution(_marketId, averageExecutedPrice);
-        return uint256(averageExecutedPrice);
+        return (averageExecutedPrice).toUint256();
     }
 }

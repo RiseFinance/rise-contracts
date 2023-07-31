@@ -2,6 +2,7 @@
 
 pragma solidity ^0.8.0;
 
+import "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import "./OrderBookBase.sol";
 import "../account/TraderVault.sol";
 import "../global/GlobalState.sol";
@@ -16,6 +17,9 @@ import "../common/MathUtils.sol";
 import "hardhat/console.sol";
 
 contract OrderBook is OrderBookBase, Modifiers, MathUtils {
+    using SafeCast for int256;
+    using SafeCast for uint256;
+
     OrderHistory public orderHistory;
     GlobalState public globalState;
     OrderUtils public orderUtils;
@@ -176,7 +180,8 @@ contract OrderBook is OrderBookBase, Modifiers, MathUtils {
 
             ptc._sizeCapInUsd =
                 (_abs(
-                    int256(ic.limitPriceIterator) - int256(ic.interimMarkPrice)
+                    (ic.limitPriceIterator).toInt256() -
+                        (ic.interimMarkPrice).toInt256()
                 ) *
                     100000 *
                     100 *

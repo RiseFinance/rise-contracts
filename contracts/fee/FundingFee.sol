@@ -2,6 +2,7 @@
 
 pragma solidity ^0.8.0;
 
+import "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import "../common/Structs.sol";
 import "../global/GlobalState.sol";
 import "../order/OrderUtils.sol";
@@ -10,6 +11,9 @@ import "../market/Market.sol";
 import "../market/TokenInfo.sol";
 
 contract FundingFee {
+    using SafeCast for int256;
+    using SafeCast for uint256;
+
     GlobalState public globalState;
     PriceManager public priceManager;
     Market public market;
@@ -24,7 +28,7 @@ contract FundingFee {
 
     function updateCumulativeFundingRate(uint256 _marketId) external {
         int256 fundingIndexDelta = getFundingRate(_marketId) *
-            int256(block.timestamp - latestFundingTimestamp[_marketId]);
+            (block.timestamp - latestFundingTimestamp[_marketId]).toInt256();
         latestFundingIndex[_marketId] =
             latestFundingIndex[_marketId] +
             fundingIndexDelta;
@@ -44,8 +48,9 @@ contract FundingFee {
         );
         return
             (FUNDING_FEE_CONSTANT *
-                (int256(longOpenInterest) - int256(shortOpenInterest))) /
-            (int256(longOpenInterest) + int256(shortOpenInterest));
+                ((longOpenInterest).toInt256() -
+                    (shortOpenInterest).toInt256())) /
+            ((longOpenInterest).toInt256() + (shortOpenInterest).toInt256());
     }
 
     function getFundingFeeToPay(
@@ -60,7 +65,7 @@ contract FundingFee {
             tokenInfo.tokenDecimals(market.getMarketInfo(_marketId).baseAssetId)
         );
 
-        int256 fundingFeeToPay = (int256(sizeInUsd) *
+        int256 fundingFeeToPay = ((sizeInUsd).toInt256() *
             (latestFundingIndex[_marketId] - _position.entryFundingIndex)) /
             FUNDING_FEE_PRECISION;
         // TODO: position에 entryFundingIndex 추가
