@@ -20,4 +20,11 @@ interface IL3Gateway {
         uint256 _assetId,
         uint256 _amount
     ) external;
+
+    function removeLiquidityToL2(
+        uint256 _marketId,
+        bool _isLongReserve,
+        address _recipient,
+        uint256 _amount
+    ) external;
 }

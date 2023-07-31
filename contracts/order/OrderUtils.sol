@@ -81,7 +81,7 @@ contract OrderUtils {
         // uint256 sizeInUsd = _tokenToUsd(
         //     position.size,
         //     _executionPrice,
-        //     tokenInfo.tokenDecimals(market.getMarketInfo(_marketId).baseAssetId)
+        //     tokenInfo.getTokenDecimals(market.getMarketInfo(_marketId).baseAssetId)
         // );
 
         (uint256 pnlUsdAbs, bool traderHasProfit) = _calculatePnL(
