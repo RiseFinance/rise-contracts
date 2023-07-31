@@ -3,13 +3,13 @@
 pragma solidity ^0.8.0;
 
 import "./interfaces/l2/IInbox.sol";
-import "./interfaces/l2/IL2Gateway.sol";
 import "./interfaces/l3/IL3Gateway.sol";
 import "../market/TokenInfo.sol";
 import "../market/Market.sol";
 import "./TransferHelper.sol";
+import "../common/Constants.sol";
 
-contract L2Gateway is IL2Gateway, TransferHelper {
+contract L2MarginGateway is TransferHelper, Constants {
     address public l3GatewayAddress;
     TokenInfo public tokenInfo;
     Market public market;
@@ -23,8 +23,6 @@ contract L2Gateway is IL2Gateway, TransferHelper {
     }
 
     mapping(address => InOutInfo) private allowedBridgesMap;
-
-    uint256 public constant ETH_ID = 1; // TODO: move to constants
 
     // event RetryableTicketCreated(uint256 indexed ticketId);
 
@@ -40,9 +38,8 @@ contract L2Gateway is IL2Gateway, TransferHelper {
         l3GatewayAddress = _l3GatewayAddress;
     }
 
-    // -------------------- L2 -> L3 Messaging --------------------
-    // Inflow
-    // Deposit & Add Liquidity
+    // ----------------------- L2 -> L3 Messaging -----------------------
+    // Inflow (deposit)
     // TODO: deposit & withdraw ERC-20 (SafeERC20)
     // TODO: gas fee calculation & L3 gas fee funding
 
@@ -157,107 +154,9 @@ contract L2Gateway is IL2Gateway, TransferHelper {
         return ticketId;
     }
 
-    // TODO: mint $RLP tokens
-    // TODO: liquidity - ETH & ERC20
-    // TODO: integration test
-    function addEthLiquidityToL3(
-        uint256 _marketId,
-        bool _isLong, // LongReserveToken or ShortReserveToken
-        uint256 _addAmount,
-        uint256 _maxSubmissionCost,
-        uint256 _gasLimit,
-        uint256 _gasPriceBid
-    ) external payable returns (uint256) {
-        require(_addAmount > 0, "L2Gateway: deposit amount should be positive");
-        require(
-            msg.value >=
-                _addAmount + _maxSubmissionCost + _gasLimit * _gasPriceBid,
-            "L2Gateway: insufficient msg.value"
-        );
-
-        bytes memory data = abi.encodeWithSelector(
-            IL3Gateway.addLiquidity.selector,
-            _marketId,
-            _isLong,
-            _addAmount
-        );
-
-        uint256 ticketId = inbox.createRetryableTicket{
-            value: _maxSubmissionCost + _gasLimit * _gasPriceBid
-        }(
-            l3GatewayAddress,
-            0, // l3CallValue
-            _maxSubmissionCost,
-            msg.sender, // excessFeeRefundAddress // TODO: aggregate excess fees on a L3 admin contract (not msg.sender)
-            msg.sender, // callValueRefundAddress
-            _gasLimit,
-            _gasPriceBid,
-            data
-        );
-
-        // refund excess ETH
-        _transferEth(
-            payable(msg.sender),
-            msg.value -
-                (_addAmount + _maxSubmissionCost + _gasLimit * _gasPriceBid)
-        );
-
-        return ticketId;
-    }
-
-    function addERC20LiquidityToL3(
-        address _token,
-        uint256 _marketId,
-        bool _isLong, // LongReserveToken or ShortReserveToken
-        uint256 _addAmount,
-        uint256 _maxSubmissionCost,
-        uint256 _gasLimit,
-        uint256 _gasPriceBid
-    ) external payable returns (uint256) {
-        require(_addAmount > 0, "L2Gateway: deposit amount should be positive");
-        require(
-            msg.value >= _maxSubmissionCost + _gasLimit * _gasPriceBid,
-            "L2Gateway: insufficient msg.value"
-        );
-
-        // Market.MarketInfo memory marketInfo = market.getMarketInfo(_marketId);
-        // TODO: check if marketId matches the token address
-
-        _transferIn(msg.sender, _token, _addAmount);
-
-        bytes memory data = abi.encodeWithSelector(
-            IL3Gateway.addLiquidity.selector,
-            _marketId,
-            _isLong,
-            _addAmount
-        );
-
-        uint256 ticketId = inbox.createRetryableTicket{
-            value: _maxSubmissionCost + _gasLimit * _gasPriceBid
-        }(
-            l3GatewayAddress,
-            0, // l3CallValue
-            _maxSubmissionCost,
-            msg.sender, // excessFeeRefundAddress // TODO: aggregate excess fees on a L3 admin contract (not msg.sender)
-            msg.sender, // callValueRefundAddress
-            _gasLimit,
-            _gasPriceBid,
-            data
-        );
-
-        // refund excess ETH
-        _transferEth(
-            payable(msg.sender),
-            msg.value - (_maxSubmissionCost + _gasLimit * _gasPriceBid)
-        );
-
-        return ticketId;
-    }
-
     // -------------------- L2 -> L3 -> L2 Messaging --------------------
     // path: L2 => Retryable => L3 withdraw => ArbSys => Outbox
-    // Outflow
-    // Withdraw & Remove Liquidity
+    // Outflow (withdraw)
 
     // FIXME: cross mode PnL까지 고려해서 withdraw max cap 지정 (require)
     function triggerWithdrawalFromL2(
@@ -302,19 +201,6 @@ contract L2Gateway is IL2Gateway, TransferHelper {
 
         // require(tx.origin == _recipient); // cannot delegate the execution to keepers with this condition
 
-        if (!allowedBridgesMap[msg.sender].allowed)
-            revert NotBridge(msg.sender);
-
-        _transferEth(payable(_recipient), _amount);
-    }
-
-    /**
-     * @notice restricted to be called by the allowed L2 Bridges
-     */
-    function _removeEthLiquidityFromOutbox(
-        address _recipient,
-        uint256 _amount
-    ) external {
         if (!allowedBridgesMap[msg.sender].allowed)
             revert NotBridge(msg.sender);
 
