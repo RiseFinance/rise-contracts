@@ -9,6 +9,11 @@ contract GlobalState is PositionUtils {
     mapping(uint256 => GlobalPositionState) private globalLongPositionStates; // marketId => GlobalPositionState
     mapping(uint256 => GlobalPositionState) private globalShortPositionStates; // marketId => GlobalPositionState
 
+    function getOpenInterest(
+        uint256 _marketId,
+        bool _isLong
+    ) public view returns (uint256) {}
+
     function getGlobalLongPositionState(
         uint256 _marketId
     ) external view returns (GlobalPositionState memory) {

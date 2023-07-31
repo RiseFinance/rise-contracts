@@ -22,6 +22,10 @@ contract PositionVault is PositionUtils {
 
     function updatePosition(
         bytes32 _key,
+        bool _isOpen,
+        address _trader,
+        bool _isLong,
+        uint256 _marketId,
         uint256 _executionPrice,
         uint256 _sizeDeltaAbs,
         uint256 _marginDeltaAbs,
@@ -29,6 +33,14 @@ contract PositionVault is PositionUtils {
         bool _isIncreaseInMargin
     ) external {
         Position storage _position = positions[_key];
+
+        // trader, isLong, marketId
+        if (_isOpen) {
+            _position.trader = _trader;
+            _position.isLong = _isLong;
+            _position.marketId = _marketId;
+        }
+
         if (_sizeDeltaAbs > 0 && _isIncreaseInSize) {
             _position.avgOpenPrice = _getNextAvgPrice(
                 _isIncreaseInSize,

@@ -35,10 +35,13 @@ struct FilledOrder {
 
 struct Position {
     address trader;
+    bool isLong;
+    uint256 marketId;
     uint256 size; // Token Counts
     uint256 margin; // Token Counts
     uint256 avgOpenPrice; // TODO: check - should be coupled w/ positions link logic
     uint256 lastUpdatedTime; // Currently not used for any validation
+    int256 entryFundingIndex;
 }
 
 struct GlobalPositionState {

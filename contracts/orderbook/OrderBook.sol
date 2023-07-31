@@ -347,10 +347,17 @@ contract OrderBook is OrderBookBase, Modifiers, MathUtils {
             _request.isLong,
             _request.marketId
         );
+
+        bool isOpen = positionVault.getPositionSize(key) == 0;
+
         // Position {size, marginSizeInUsd, avgOpenPrice, lastUpdatedTime}
         if (_request.isIncrease) {
             positionVault.updatePosition(
                 key,
+                isOpen,
+                _request.trader,
+                _request.isLong,
+                _request.marketId,
                 _avgExecutionPrice,
                 floc._sizeAbs,
                 floc._marginAbs,
@@ -378,6 +385,10 @@ contract OrderBook is OrderBookBase, Modifiers, MathUtils {
             } else {
                 positionVault.updatePosition(
                     key,
+                    isOpen,
+                    _request.trader,
+                    _request.isLong,
+                    _request.marketId,
                     _avgExecutionPrice,
                     floc._sizeAbs,
                     floc._marginAbs,

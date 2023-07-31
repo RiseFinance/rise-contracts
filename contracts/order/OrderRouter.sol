@@ -21,6 +21,14 @@ contract OrderRouter is OrderUtils {
     OrderUtils orderUtils;
     OrderBook orderBook;
 
+    struct FillMarketOrderContext {
+        bool isBuy;
+        bool isOpen;
+        uint256 marginAssetId;
+        uint256 markPrice;
+        bytes32 key;
+    }
+
     constructor(
         address _traderVault,
         address _orderBook,
@@ -93,41 +101,42 @@ contract OrderRouter is OrderUtils {
     function executeMarketOrder(
         OrderContext calldata c
     ) private returns (bytes32) {
-        Market.MarketInfo memory marketInfo = market.getMarketInfo(c._marketId);
+        FillMarketOrderContext memory fmc;
 
-        bool isBuy = c._isLong == c._isIncrease;
+        fmc.marginAssetId = market.getMarketInfo(c._marketId).marginAssetId;
+        fmc.isBuy = c._isLong == c._isIncrease;
 
-        uint256 markPrice = getMarkPrice(c._marketId, c._sizeAbs, isBuy);
+        fmc.markPrice = getMarkPrice(c._marketId, c._sizeAbs, fmc.isBuy);
 
-        bytes32 key = _getPositionKey(msg.sender, c._isLong, c._marketId);
+        fmc.key = _getPositionKey(msg.sender, c._isLong, c._marketId);
 
         // validations
         c._isIncrease
             ? orderValidator.validateIncreaseExecution(c)
-            : orderValidator.validateDecreaseExecution(c, key);
+            : orderValidator.validateDecreaseExecution(c, fmc.key);
 
         // update state variables
         if (c._isIncrease) {
             traderVault.decreaseTraderBalance(
                 msg.sender,
-                marketInfo.marginAssetId,
+                fmc.marginAssetId,
                 c._marginAbs
             );
             c._isLong
                 ? risePool.increaseLongReserveAmount(
-                    marketInfo.marginAssetId,
+                    fmc.marginAssetId,
                     c._sizeAbs
                 )
                 : risePool.increaseShortReserveAmount(
-                    marketInfo.marginAssetId,
+                    fmc.marginAssetId,
                     c._sizeAbs
                 );
         } else {
             // PnL settlement
             orderUtils.settlePnL(
-                key,
+                fmc.key,
                 c._isLong,
-                markPrice,
+                fmc.markPrice,
                 c._marketId,
                 c._sizeAbs,
                 c._marginAbs
@@ -143,19 +152,23 @@ contract OrderRouter is OrderUtils {
             c._marketId,
             c._sizeAbs,
             c._marginAbs,
-            markPrice
+            fmc.markPrice
         );
 
-        uint256 positionSize = positionVault.getPositionSize(key);
+        uint256 positionSize = positionVault.getPositionSize(fmc.key);
 
         if (!c._isIncrease && c._sizeAbs == positionSize) {
             // close position
-            positionVault.deletePosition(key);
+            positionVault.deletePosition(fmc.key);
         } else {
             // partial close position
             positionVault.updatePosition(
-                key,
-                markPrice,
+                fmc.key,
+                positionSize == 0, // isOpen
+                msg.sender, // trader
+                c._isLong,
+                c._marketId,
+                fmc.markPrice,
                 c._sizeAbs,
                 c._marginAbs,
                 c._isIncrease, // isIncreaseInSize
@@ -171,7 +184,7 @@ contract OrderRouter is OrderUtils {
                 c._marketId,
                 c._sizeAbs,
                 c._marginAbs,
-                markPrice
+                fmc.markPrice
             );
         } else {
             globalState.updateGlobalShortPositionState(
@@ -179,10 +192,10 @@ contract OrderRouter is OrderUtils {
                 c._marketId,
                 c._sizeAbs,
                 c._marginAbs,
-                markPrice
+                fmc.markPrice
             );
         }
 
-        return key;
+        return fmc.key;
     }
 }
