@@ -64,9 +64,13 @@ contract L3Gateway is IL3Gateway {
 
         traderVault.decreaseTraderBalance(_trader, _assetId, _amount);
 
-        if (_assetId == ETH_ID) {} else {}
+        bytes4 selector;
+        if (_assetId == ETH_ID) {
+            selector = IL2MarginGateway._withdrawEthFromOutbox.selector;
+        } else {
+            selector = IL2MarginGateway._withdrawERC20FromOutbox.selector;
+        }
 
-        bytes4 selector = IL2MarginGateway._withdrawEthFromOutbox.selector;
         bytes memory data = abi.encodeWithSelector(
             selector,
             _trader, // _dest => not allowing to designate a different recipient address
