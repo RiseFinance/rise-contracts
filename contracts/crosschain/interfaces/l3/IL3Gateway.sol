@@ -3,9 +3,21 @@
 pragma solidity ^0.8.0;
 
 interface IL3Gateway {
-    function increaseTraderBalance(address, uint256, uint256) external;
+    function increaseTraderBalance(
+        address _trader,
+        uint256 _assetId,
+        uint256 _amount
+    ) external;
 
-    function addLiquidity(uint256, bool, uint256) external;
+    function addLiquidity(
+        uint256 _marketId,
+        bool _isLongReserve,
+        uint256 _amount
+    ) external;
 
-    function withdrawEthToL2(address, uint256) external;
+    function withdrawAssetToL2(
+        address _trader,
+        uint256 _assetId,
+        uint256 _amount
+    ) external;
 }

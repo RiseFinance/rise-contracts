@@ -124,20 +124,20 @@ contract RisePool {
     // TODO: check how to determine the Liquidity Provider
     function addLiquidity(
         uint256 _marketId,
-        bool _isLong,
+        bool _isLongReserve,
         uint256 _amount
     ) external {
-        _isLong
+        _isLongReserve
             ? increaseLongPoolAmount(_marketId, _amount)
             : increaseShortPoolAmount(_marketId, _amount);
     }
 
     function removeLiquidity(
         uint256 _marketId,
-        bool _isLong,
+        bool _isLongReserve,
         uint256 _amount
     ) external {
-        _isLong
+        _isLongReserve
             ? decreaseLongPoolAmount(_marketId, _amount)
             : decreaseShortPoolAmount(_marketId, _amount);
     }

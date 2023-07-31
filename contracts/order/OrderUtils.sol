@@ -5,11 +5,11 @@ pragma solidity ^0.8.0;
 import "../risepool/RisePool.sol";
 import "../account/TraderVault.sol";
 import "../position/PositionVault.sol";
-import "../common/Constants.sol";
 import "../market/TokenInfo.sol";
 import "../market/Market.sol";
+import {USD_PRECISION} from "../common/constants.sol";
 
-contract OrderUtils is Constants {
+contract OrderUtils {
     PositionVault public positionVault;
     TraderVault public traderVault;
     TokenInfo public tokenInfo;

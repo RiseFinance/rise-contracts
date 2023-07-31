@@ -2,12 +2,12 @@
 
 pragma solidity ^0.8.0;
 
-import "../common/Constants.sol";
+import "../common/constants.sol";
 import "../oracle/PriceManager.sol";
 import "../market/TokenInfo.sol";
 import "../market/Market.sol";
 
-contract Liquidation is Constants {
+contract Liquidation {
     mapping(uint256 => uint256) maintenanceMarginRatioInBasisPoints; // assetId => maintenanceMarginRatio
     uint256 maintenanceMarginRatioPrecision = 1e18;
     uint256 public constant BASIS_POINTS = 1e4;

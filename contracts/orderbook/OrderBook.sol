@@ -13,6 +13,7 @@ import "../order/OrderUtils.sol";
 import "../position/PositionVault.sol";
 import "../common/Modifiers.sol";
 import "../common/MathUtils.sol";
+import {PARTIAL_RATIO_PRECISION} from "../common/constants.sol";
 
 import "hardhat/console.sol";
 
