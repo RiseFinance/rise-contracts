@@ -43,6 +43,20 @@ contract RisePool {
         return shortReserveAmounts[_marketId];
     }
 
+    /// @dev for liquidity removal & OI capacity check
+    function getLongPoolCapacity(
+        uint256 _marketId
+    ) external view returns (uint256) {
+        return longPoolAmounts[_marketId] - longReserveAmounts[_marketId];
+    }
+
+    /// @dev for liquidity removal & OI capacity check
+    function getShortPoolCapacity(
+        uint256 _marketId
+    ) external view returns (uint256) {
+        return shortPoolAmounts[_marketId] - shortReserveAmounts[_marketId];
+    }
+
     /// setters
     // TODO: onlyManager for the following functions
     function increaseLongPoolAmount(uint256 _marketId, uint256 _amount) public {

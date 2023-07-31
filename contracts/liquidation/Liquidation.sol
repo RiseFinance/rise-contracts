@@ -42,7 +42,7 @@ contract Liquidation {
         uint256 MMR = maintenanceMarginRatioInBasisPoints[baseAssetId];
 
         uint256 TOKEN_SIZE_PRECISION = 10 **
-            tokenInfo.tokenDecimals(baseAssetId);
+            tokenInfo.getTokenDecimals(baseAssetId);
 
         if (_position.isLong) {
             return

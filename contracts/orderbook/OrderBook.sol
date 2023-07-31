@@ -192,7 +192,7 @@ contract OrderBook is OrderBookBase, Modifiers, MathUtils {
             ptc._sizeCap = _usdToToken(
                 ptc._sizeCapInUsd,
                 ic.limitPriceIterator,
-                tokenInfo.tokenDecimals(
+                tokenInfo.getTokenDecimals(
                     market.getMarketInfo(_marketId).baseAssetId
                 )
             );

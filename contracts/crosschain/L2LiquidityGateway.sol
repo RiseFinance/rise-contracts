@@ -46,7 +46,7 @@ contract L2LiquidityGateway is TransferHelper {
     // TODO: integration test
     function addEthLiquidityToL3(
         uint256 _marketId,
-        bool _isLong, // LongReserveToken or ShortReserveToken
+        bool _isLongReserve,
         uint256 _addAmount,
         uint256 _maxSubmissionCost,
         uint256 _gasLimit,
@@ -62,7 +62,7 @@ contract L2LiquidityGateway is TransferHelper {
         bytes memory data = abi.encodeWithSelector(
             IL3Gateway.addLiquidity.selector,
             _marketId,
-            _isLong,
+            _isLongReserve,
             _addAmount
         );
 
@@ -100,7 +100,7 @@ contract L2LiquidityGateway is TransferHelper {
     function addERC20LiquidityToL3(
         address _token,
         uint256 _marketId,
-        bool _isLong, // LongReserveToken or ShortReserveToken
+        bool _isLongReserve,
         uint256 _addAmount,
         uint256 _maxSubmissionCost,
         uint256 _gasLimit,
@@ -120,7 +120,7 @@ contract L2LiquidityGateway is TransferHelper {
         bytes memory data = abi.encodeWithSelector(
             IL3Gateway.addLiquidity.selector,
             _marketId,
-            _isLong,
+            _isLongReserve,
             _addAmount
         );
 
@@ -158,6 +158,45 @@ contract L2LiquidityGateway is TransferHelper {
     // path: L2 => Retryable => L3 withdraw => ArbSys => Outbox
     // Outflow (remove liquidity)
 
+    function triggerRemoveLiquidityFromL2(
+        uint256 _marketId,
+        bool _isLongReserve,
+        uint256 _withdrawAmount,
+        uint256 _maxSubmissionCost,
+        uint256 _gasLimit,
+        uint256 _gasPriceBid
+    ) external payable returns (uint256) {
+        // TODO: check - 호출 순서 확인 및 Retryable redeem 실패 시 다시 $RMM mint 가능한지 확인
+        Market.MarketInfo memory marketInfo = market.getMarketInfo(_marketId);
+
+        // burn $RMM tokens
+        RiseMarketMaker rmm = RiseMarketMaker(marketInfo.marketMakerToken);
+        rmm.burn(msg.sender, _withdrawAmount);
+
+        bytes memory data = abi.encodeWithSelector(
+            IL3Gateway.removeLiquidityToL2.selector,
+            _marketId,
+            _isLongReserve,
+            msg.sender, // recipient restricted to msg.sender
+            _withdrawAmount
+        );
+
+        uint256 ticketId = inbox.createRetryableTicket{
+            value: _maxSubmissionCost + _gasLimit * _gasPriceBid
+        }(
+            l3GatewayAddress,
+            0,
+            _maxSubmissionCost,
+            msg.sender, // excessFeeRefundAddress // TODO: aggregate excess fees on a L3 admin contract (not msg.sender)
+            msg.sender, // callValueRefundAddress
+            _gasLimit,
+            _gasPriceBid,
+            data
+        );
+
+        return ticketId;
+    }
+
     /**
      * @notice restricted to be called by the allowed L2 Bridges
      */
@@ -169,5 +208,19 @@ contract L2LiquidityGateway is TransferHelper {
             revert NotBridge(msg.sender);
 
         _transferEth(payable(_recipient), _amount);
+    }
+
+    /**
+     * @notice restricted to be called by the allowed L2 Bridges
+     */
+    function _removeERC20LiquidityFromOutbox(
+        address _recipient,
+        uint256 _amount,
+        address _token
+    ) external {
+        if (!allowedBridgesMap[msg.sender].allowed)
+            revert NotBridge(msg.sender);
+
+        _transferOut(_token, _amount, _recipient);
     }
 }
