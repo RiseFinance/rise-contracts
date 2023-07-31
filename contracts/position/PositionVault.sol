@@ -22,7 +22,7 @@ contract PositionVault is PositionUtils {
 
     function updatePosition(
         bytes32 _key,
-        bool _isOpen,
+        bool _isNew,
         address _trader,
         bool _isLong,
         uint256 _marketId,
@@ -35,7 +35,7 @@ contract PositionVault is PositionUtils {
         Position storage _position = positions[_key];
 
         // trader, isLong, marketId
-        if (_isOpen) {
+        if (_isNew) {
             _position.trader = _trader;
             _position.isLong = _isLong;
             _position.marketId = _marketId;

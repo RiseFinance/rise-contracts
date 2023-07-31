@@ -259,6 +259,7 @@ contract L2Gateway is IL2Gateway, TransferHelper {
     // Outflow
     // Withdraw & Remove Liquidity
 
+    // FIXME: cross mode PnL까지 고려해서 withdraw max cap 지정 (require)
     function triggerWithdrawalFromL2(
         uint256 _withdrawAmount,
         uint256 _maxSubmissionCost,

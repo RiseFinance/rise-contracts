@@ -14,6 +14,12 @@ contract TraderVault {
 
     mapping(address => mapping(uint256 => uint256)) public traderBalances; // userAddress => assetId => Balance
     mapping(address => uint256) public traderFilledOrderCounts; // userAddress => orderCount
+    mapping(address => bool) public isIsolated; // trader's margin mode
+
+    function changeMarginMode() public {
+        // TODO: only allowed when there is no open position
+        isIsolated[msg.sender] = !isIsolated[msg.sender];
+    }
 
     // TODO: onlyManager
     function increaseTraderBalance(
