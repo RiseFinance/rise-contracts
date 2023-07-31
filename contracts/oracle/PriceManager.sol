@@ -113,7 +113,7 @@ contract PriceManager {
         priceBufferUpdatedTime[_marketId] = block.timestamp;
     }
 
-    function getIndexPrice(uint256 _marketId) external view returns (uint256) {
+    function getIndexPrice(uint256 _marketId) public view returns (uint256) {
         return indexPrice[_marketId];
     }
 
@@ -126,30 +126,48 @@ contract PriceManager {
                 .toUint256();
     }
 
-    function getAverageExecutionPrice(
+    function getAvgExecPrice(
         uint256 _marketId,
-        uint256 _sizeInUsd,
+        uint256 _size,
         bool _isBuy
-    ) external returns (uint256) {
+    ) public view returns (uint256) {
         uint256 price = getMarkPrice(_marketId);
         // require first bit of _size is 0
-        require(_sizeInUsd < 2 ** 255, "PriceManager: size overflow");
+        uint256 tokenDecimals = tokenInfo.getBaseTokenDecimals(_marketId);
+        uint256 sizeInUsd = (_size * getIndexPrice(_marketId)) /
+            10 ** tokenDecimals;
         require(price > 0, "PriceManager: price not set");
         int256 intSize = _isBuy
-            ? (_sizeInUsd).toInt256()
-            : -(_sizeInUsd).toInt256();
+            ? (sizeInUsd).toInt256()
+            : -(sizeInUsd).toInt256();
+        int256 priceBufferChange = intSize /
+            (PRICE_BUFFER_DELTA_TO_SIZE).toInt256();
+        int256 averageExecutedPrice = (price).toInt256() +
+            ((price).toInt256() * priceBufferChange) /
+            2 /
+            (PRICE_BUFFER_PRECISION).toInt256();
+        emit Execution(_marketId, averageExecutedPrice);
+        return (averageExecutedPrice).toUint256();
+    }
+
+    function getAvgExecPriceAndUpdatePriceBuffer(
+        uint256 _marketId,
+        uint256 _size,
+        bool _isBuy
+    ) external returns (uint256) {
+        uint256 avgExecPrice = getAvgExecPrice(_marketId, _size, _isBuy);
+        uint256 tokenDecimals = tokenInfo.getBaseTokenDecimals(_marketId);
+        uint256 sizeInUsd = (_size * getIndexPrice(_marketId)) /
+            10 ** tokenDecimals;
+        int256 intSize = _isBuy
+            ? (sizeInUsd).toInt256()
+            : -(sizeInUsd).toInt256();
         int256 priceBufferChange = intSize /
             (PRICE_BUFFER_DELTA_TO_SIZE).toInt256();
         setPriceBuffer(
             _marketId,
             getPriceBuffer(_marketId) + priceBufferChange
         );
-        int256 averageExecutedPrice = (price).toInt256() +
-            ((price).toInt256() * priceBufferChange) /
-            2 /
-            (PRICE_BUFFER_PRECISION).toInt256();
-        require(averageExecutedPrice > 0, "PriceManager: price underflow");
-        emit Execution(_marketId, averageExecutedPrice);
-        return (averageExecutedPrice).toUint256();
+        return avgExecPrice;
     }
 }

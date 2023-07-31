@@ -25,7 +25,7 @@ contract OrderRouter is OrderUtils {
         bool isBuy;
         bool isOpen;
         uint256 marginAssetId;
-        uint256 markPrice;
+        uint256 avgExecPrice;
         bytes32 key;
     }
 
@@ -39,7 +39,7 @@ contract OrderRouter is OrderUtils {
         priceManager = PriceManager(_priceManager);
     }
 
-    function getMarkPrice(
+    function _getAvgExecPriceAndUpdatePriceBuffer(
         uint256 _assetId,
         uint256 _size,
         bool _isLong
@@ -48,7 +48,12 @@ contract OrderRouter is OrderUtils {
          * // TODO: impl
          * @dev Jae Yoon
          */
-        return priceManager.getAverageExecutionPrice(_assetId, _size, _isLong);
+        return
+            priceManager.getAvgExecPriceAndUpdatePriceBuffer(
+                _assetId,
+                _size,
+                _isLong
+            );
     }
 
     function _validateOrder(OrderContext calldata c) internal view {
@@ -106,7 +111,11 @@ contract OrderRouter is OrderUtils {
         fmc.marginAssetId = market.getMarketInfo(c._marketId).marginAssetId;
         fmc.isBuy = c._isLong == c._isIncrease;
 
-        fmc.markPrice = getMarkPrice(c._marketId, c._sizeAbs, fmc.isBuy);
+        fmc.avgExecPrice = _getAvgExecPriceAndUpdatePriceBuffer(
+            c._marketId,
+            c._sizeAbs,
+            fmc.isBuy
+        );
 
         fmc.key = _getPositionKey(msg.sender, c._isLong, c._marketId);
 
