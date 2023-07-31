@@ -2,7 +2,7 @@
 
 pragma solidity ^0.8.0;
 
-import "../common/structs.sol";
+import "../common/Structs.sol";
 import "../position/PositionUtils.sol";
 
 contract GlobalState is PositionUtils {

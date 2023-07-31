@@ -2,7 +2,7 @@
 
 pragma solidity ^0.8.0;
 
-import "../common/structs.sol";
+import "../common/Structs.sol";
 import "../order/OrderUtils.sol";
 import "hardhat/console.sol";
 
