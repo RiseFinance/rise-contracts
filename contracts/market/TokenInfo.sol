@@ -11,6 +11,7 @@ contract TokenInfo {
     mapping(uint256 => uint256) private tokenDecimals; // TODO: listing restriction needed
     mapping(address => uint256) private tokenAddressToAssetId;
     mapping(uint256 => address) private assetIdToTokenAddress;
+    mapping(uint256 => uint256) private tokenPriceBufferConstants;
 
     function getTokenDecimals(
         uint256 _assetId
@@ -28,6 +29,12 @@ contract TokenInfo {
         uint256 _assetId
     ) external view returns (address) {
         return assetIdToTokenAddress[_assetId];
+    }
+
+    function getTokenPriceBufferConstants(
+        uint256 _assetId
+    ) external view returns (uint256) {
+        return tokenPriceBufferConstants[_assetId];
     }
 
     // TODO: onlyAdmin
@@ -49,5 +56,12 @@ contract TokenInfo {
     ) external view returns (uint256) {
         Market.MarketInfo memory marketInfo = market.getMarketInfo(_marketId);
         return tokenDecimals[marketInfo.baseAssetId];
+    }
+
+    function getBaseTokenPriceBufferConstants(
+        uint256 _marketId
+    ) external view returns (uint256) {
+        Market.MarketInfo memory marketInfo = market.getMarketInfo(_marketId);
+        return tokenPriceBufferConstants[marketInfo.baseAssetId];
     }
 }

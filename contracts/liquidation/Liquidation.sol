@@ -43,6 +43,8 @@ contract Liquidation {
     function liquidatePosition(Position calldata _position) internal {
         if (!_isPositionLiquidationValid(_position)) return;
         // TODO: liquidate Position
+        // TODO: @0xjunha
+        // market order로 close, 남은 돈은 LP pool로 보내기
     }
 
     function liquidateTrader(address _trader) internal {
@@ -114,14 +116,17 @@ contract Liquidation {
             ) +
             mulDiv(
                 mulDiv(
-                    priceManager.getIndexPrice(baseAssetId),
+                    mulDiv(
+                        priceManager.getIndexPrice(baseAssetId),
+                        _position.size,
+                        SP
+                    ),
                     _position.size,
                     SP
                 ),
-                _position.size,
-                SP
+                tokenInfo.getTokenPriceBufferConstants(baseAssetId),
+                TOKEN_PRICE_BUFFER_CONSTANT_PRECISION
             ) /
-            PRICE_BUFFER_DELTA_TO_SIZE /
             2;
         return (lefthandSide, righthandSide);
     }

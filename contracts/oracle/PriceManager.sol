@@ -5,7 +5,7 @@ pragma solidity ^0.8.0;
 import "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import "../orderbook/OrderBook.sol";
 import "../market/TokenInfo.sol";
-import {PRICE_BUFFER_PRECISION, DECAY_CONSTANT, PRICE_BUFFER_DELTA_TO_SIZE} from "../common/constants.sol";
+import {PRICE_BUFFER_PRECISION, DECAY_CONSTANT, TOKEN_PRICE_BUFFER_CONSTANT_PRECISION} from "../common/constants.sol";
 import "hardhat/console.sol";
 
 contract PriceManager {
@@ -142,8 +142,10 @@ contract PriceManager {
         int256 intSize = _isBuy
             ? (sizeInUsd).toInt256()
             : -(sizeInUsd).toInt256();
-        int256 priceBufferChange = intSize /
-            (PRICE_BUFFER_DELTA_TO_SIZE).toInt256();
+        int256 priceBufferChange = (intSize *
+            (tokenInfo.getBaseTokenPriceBufferConstants(_marketId))
+                .toInt256()) /
+            (TOKEN_PRICE_BUFFER_CONSTANT_PRECISION).toInt256();
         int256 averageExecutedPrice = (price).toInt256() +
             ((price).toInt256() * priceBufferChange) /
             2 /
@@ -164,8 +166,10 @@ contract PriceManager {
         int256 intSize = _isBuy
             ? (sizeInUsd).toInt256()
             : -(sizeInUsd).toInt256();
-        int256 priceBufferChange = intSize /
-            (PRICE_BUFFER_DELTA_TO_SIZE).toInt256();
+        int256 priceBufferChange = (intSize *
+            (tokenInfo.getBaseTokenPriceBufferConstants(_marketId))
+                .toInt256()) /
+            (TOKEN_PRICE_BUFFER_CONSTANT_PRECISION).toInt256();
         setPriceBuffer(
             _marketId,
             getPriceBuffer(_marketId) + priceBufferChange
