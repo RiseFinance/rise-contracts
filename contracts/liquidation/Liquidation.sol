@@ -14,7 +14,7 @@ import "../account/TraderVault.sol";
 contract Liquidation {
     mapping(uint256 => uint256) maintenanceMarginRatioInBasisPoints; // assetId => maintenanceMarginRatio
     uint256 maintenanceMarginRatioPrecision = 1e18;
-    uint256 public constant BASIS_POINTS = 1e4;
+    uint256 public constant BASIS_POINTS_PRECISION = 1e4;
     PriceManager public priceManager;
     TokenInfo public tokenInfo;
     Market public market;
@@ -52,28 +52,20 @@ contract Liquidation {
 
     function _isPositionLiquidationValid(
         Position calldata _position
-    ) internal returns (bool) {
+    ) internal view returns (bool) {
         uint256 baseAssetId = market
             .getMarketInfo(_position.marketId)
             .baseAssetId;
         uint256 tokenPrecision = 10 ** tokenInfo.getTokenDecimals(baseAssetId);
         (uint256 lefthandSide, uint256 righthandSide) = _calculateFormula(
-            priceManager.getMarkPrice(baseAssetId),
-            priceManager.getIndexPrice(baseAssetId),
-            _position.avgOpenPrice,
-            _position.size,
-            _position.isLong,
-            maintenanceMarginRatioInBasisPoints[baseAssetId],
-            PRICE_BUFFER_DELTA_TO_SIZE,
-            tokenPrecision,
-            BASIS_POINTS
+            _position
         );
         return _position.margin + lefthandSide < righthandSide;
     }
 
     function _isTraderLiquidationValid(
         address _trader
-    ) internal returns (bool) {
+    ) internal view returns (bool) {
         // TODO : getWalletBalance 구현 필요
         // uint256 lefthandSide = traderVault.getWalletBalance(_trader);
         uint256 lefthandSide = 0; // 임시
@@ -88,17 +80,7 @@ contract Liquidation {
             (
                 uint256 lefthandSideDelta,
                 uint256 righthandSideDelta
-            ) = _calculateFormula(
-                    priceManager.getMarkPrice(baseAssetId),
-                    priceManager.getIndexPrice(baseAssetId),
-                    positions[i].avgOpenPrice,
-                    positions[i].size,
-                    positions[i].isLong,
-                    maintenanceMarginRatioInBasisPoints[baseAssetId],
-                    PRICE_BUFFER_DELTA_TO_SIZE,
-                    10 ** tokenInfo.getTokenDecimals(baseAssetId),
-                    BASIS_POINTS
-                );
+            ) = _calculateFormula(positions[i]);
             lefthandSide += lefthandSideDelta;
             righthandSide += righthandSideDelta;
         }
@@ -106,23 +88,40 @@ contract Liquidation {
     }
 
     function _calculateFormula(
-        uint256 p,
-        uint256 pi,
-        uint256 pe,
-        uint256 s,
-        bool isLong,
-        uint256 r,
-        uint256 c,
-        uint256 SP,
-        uint256 RP
-    ) internal pure returns (uint256, uint256) {
-        uint256 p1 = isLong ? p : pe;
-        uint256 p2 = isLong ? pe : p;
-        uint256 lefthandSide = mulDiv(p1, s, SP);
-        uint256 righthandSide = mulDiv(p2, s, SP) +
-            mulDiv(mulDiv(p, s, SP), r, RP) +
-            mulDiv(mulDiv(pi, s, SP), s, SP) /
-            c /
+        Position memory _position // Memory 로 해야 하는가?
+    ) internal view returns (uint256, uint256) {
+        uint256 baseAssetId = market
+            .getMarketInfo(_position.marketId)
+            .baseAssetId;
+        uint256 SP = 10 ** tokenInfo.getTokenDecimals(baseAssetId);
+        uint256 RP = BASIS_POINTS_PRECISION;
+        uint256 p1 = _position.isLong
+            ? priceManager.getMarkPrice(baseAssetId)
+            : _position.avgOpenPrice;
+        uint256 p2 = _position.isLong
+            ? _position.avgOpenPrice
+            : priceManager.getMarkPrice(baseAssetId);
+        uint256 lefthandSide = mulDiv(p1, _position.size, SP);
+        uint256 righthandSide = mulDiv(p2, _position.size, SP) +
+            mulDiv(
+                mulDiv(
+                    priceManager.getMarkPrice(baseAssetId),
+                    _position.size,
+                    SP
+                ),
+                maintenanceMarginRatioInBasisPoints[baseAssetId],
+                RP
+            ) +
+            mulDiv(
+                mulDiv(
+                    priceManager.getIndexPrice(baseAssetId),
+                    _position.size,
+                    SP
+                ),
+                _position.size,
+                SP
+            ) /
+            PRICE_BUFFER_DELTA_TO_SIZE /
             2;
         return (lefthandSide, righthandSide);
     }
@@ -151,29 +150,29 @@ contract Liquidation {
 
         if (_position.isLong) {
             return
-                (((BASIS_POINTS / 2 - MMR) * indexPrice * (size ** 2)) /
+                (((BASIS_POINTS_PRECISION / 2 - MMR) * indexPrice * (size ** 2)) /
                     TOKEN_SIZE_PRECISION /
                     PRICE_BUFFER_DELTA_TO_SIZE +
                     _position.avgOpenPrice *
                     size *
-                    BASIS_POINTS -
+                    BASIS_POINTS_PRECISION -
                     _walletBalance *
                     TOKEN_SIZE_PRECISION *
-                    BASIS_POINTS) /
-                (BASIS_POINTS - MMR) /
+                    BASIS_POINTS_PRECISION) /
+                (BASIS_POINTS_PRECISION - MMR) /
                 size;
         } else {
             return
                 (_position.avgOpenPrice *
                     size *
-                    BASIS_POINTS +
+                    BASIS_POINTS_PRECISION +
                     _walletBalance *
                     TOKEN_SIZE_PRECISION *
-                    BASIS_POINTS -
-                    ((BASIS_POINTS / 2 + MMR) * indexPrice * (size ** 2)) /
+                    BASIS_POINTS_PRECISION -
+                    ((BASIS_POINTS_PRECISION / 2 + MMR) * indexPrice * (size ** 2)) /
                     TOKEN_SIZE_PRECISION /
                     PRICE_BUFFER_DELTA_TO_SIZE) /
-                (BASIS_POINTS + MMR) /
+                (BASIS_POINTS_PRECISION + MMR) /
                 size;
         }
     }
