@@ -93,6 +93,8 @@ contract PriceManager {
         }
     }
 
+    /* 
+    Old version (With decay)
     function getPriceBuffer(uint256 _marketId) public view returns (int256) {
         int256 elapsedTime = (block.timestamp -
             priceBufferUpdatedTime[_marketId]).toInt256();
@@ -108,6 +110,10 @@ contract PriceManager {
         } else {
             return lastPriceBuffer[_marketId] + decayedAmount;
         }
+    }
+    */
+    function getPriceBuffer(uint256 _marketId) public view returns (int256) {
+        return lastPriceBuffer[_marketId];
     }
 
     function setPriceBuffer(uint256 _marketId, int256 _value) internal {
