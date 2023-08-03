@@ -335,12 +335,16 @@ contract OrderBook is OrderBookBase, Modifiers, MathUtils {
                 PARTIAL_RATIO_PRECISION
             : _request.marginAbs;
 
+        // FIXME: create and get `position record`
+        uint256 positionRecordId = 0;
+
         // update filledOrders
-        orderHistory.recordOrder(
+        orderHistory.createOrderRecord(
             _request.trader,
             false, // isMarketOrder
             _request.isLong,
             _request.isIncrease,
+            positionRecordId,
             _request.marketId,
             floc._sizeAbs,
             floc._marginAbs,

@@ -152,12 +152,16 @@ contract OrderRouter is OrderUtils {
             );
         }
 
+        // FIXME: create and get `position record`
+        uint256 positionRecordId = 0;
+
         // fill the order
-        orderHistory.recordOrder(
+        orderHistory.createOrderRecord(
             msg.sender,
             true, // isMarketOrder
             c._isLong,
             c._isIncrease,
+            positionRecordId,
             c._marketId,
             c._sizeAbs,
             c._marginAbs,

@@ -27,10 +27,24 @@ struct OrderRecord {
     bool isMarketOrder;
     bool isLong;
     bool isIncrease;
+    uint256 positionRecordId;
     uint256 marketId;
     uint256 sizeAbs;
     uint256 marginAbs;
     uint256 executionPrice;
+    uint256 timestamp;
+}
+
+struct PositionRecord {
+    bool hasProfit;
+    bool isClosed;
+    uint256 marketId;
+    uint256 maxSize; // max open interest
+    uint256 avgOpenPrice;
+    uint256 avgClosePrice;
+    uint256 closingPnL;
+    uint256 openTimestamp;
+    uint256 closeTimestamp;
 }
 
 struct OpenPosition {

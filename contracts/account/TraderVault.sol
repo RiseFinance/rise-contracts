@@ -13,7 +13,8 @@ contract TraderVault {
     RisePool public risePool;
 
     mapping(address => mapping(uint256 => uint256)) public traderBalances; // userAddress => assetId => Balance
-    mapping(address => uint256) public traderFilledOrderCounts; // userAddress => orderCount
+    mapping(address => uint256) public traderOrderRecordCounts; // userAddress => orderCount
+    mapping(address => uint256) public traderPositionRecordCounts; // userAddress => positionCount
     mapping(address => bool) public isIsolated; // trader's margin mode
 
     function changeMarginMode() public {
@@ -64,17 +65,32 @@ contract TraderVault {
     }
 
     // onlyOrderHistory
-    function getTraderFilledOrderCount(
+    function getTraderOrderRecordCount(
         address _trader
     ) external view returns (uint256) {
-        return traderFilledOrderCounts[_trader];
+        return traderOrderRecordCounts[_trader];
     }
 
     // onlyOrderHistory
-    function setTraderFilledOrderCount(
+    function setTraderOrderRecordCount(
         address _trader,
         uint256 _count
     ) external {
-        traderFilledOrderCounts[_trader] = _count;
+        traderOrderRecordCounts[_trader] = _count;
+    }
+
+    // onlyPositionHistory
+    function getTraderPositionRecordCount(
+        address _trader
+    ) external view returns (uint256) {
+        return traderPositionRecordCounts[_trader];
+    }
+
+    // onlyPositionHistory
+    function setTraderPositionRecordCount(
+        address _trader,
+        uint256 _count
+    ) external {
+        traderPositionRecordCounts[_trader] = _count;
     }
 }
