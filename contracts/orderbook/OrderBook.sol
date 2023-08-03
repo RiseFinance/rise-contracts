@@ -11,6 +11,7 @@ import "../order/OrderUtils.sol";
 import "../position/PositionHistory.sol";
 import "../common/Modifiers.sol";
 import "../common/MathUtils.sol";
+import "../common/params.sol";
 
 import "hardhat/console.sol";
 
@@ -440,7 +441,8 @@ contract OrderBook is OrderUtils, OrderBookBase, Modifiers, MathUtils {
                 0
             );
 
-            positionVault.updateOpenPosition(
+            UpdatePositionParams memory params = UpdatePositionParams(
+                _execType,
                 flc._key,
                 true, // isOpening
                 msg.sender,
@@ -453,12 +455,15 @@ contract OrderBook is OrderUtils, OrderBookBase, Modifiers, MathUtils {
                 _request.isIncrease, // isIncreaseInSize
                 _request.isIncrease // isIncreaseInMargin
             );
+
+            positionVault.updateOpenPosition(params);
         } else if (_execType == OrderExecType.IncreasePosition) {
             /// @dev for IncreasePosition: OpenPosition => PositionRecord
 
             flc._positionRecordId = flc._openPosition.currentPositionRecordId;
 
-            positionVault.updateOpenPosition(
+            UpdatePositionParams memory params = UpdatePositionParams(
+                _execType,
                 flc._key,
                 false, // isOpening
                 msg.sender,
@@ -471,6 +476,8 @@ contract OrderBook is OrderUtils, OrderBookBase, Modifiers, MathUtils {
                 _request.isIncrease, // isIncreaseInSize
                 _request.isIncrease // isIncreaseInMargin
             );
+
+            positionVault.updateOpenPosition(params);
 
             positionHistory.updatePositionRecord(
                 msg.sender,
@@ -501,7 +508,8 @@ contract OrderBook is OrderUtils, OrderBookBase, Modifiers, MathUtils {
         flc._positionRecordId = flc._openPosition.currentPositionRecordId;
 
         if (_execType == OrderExecType.DecreasePosition) {
-            positionVault.updateOpenPosition(
+            UpdatePositionParams memory params = UpdatePositionParams(
+                _execType,
                 flc._key,
                 false, // isOpening
                 msg.sender,
@@ -514,6 +522,8 @@ contract OrderBook is OrderUtils, OrderBookBase, Modifiers, MathUtils {
                 _request.isIncrease, // isIncreaseInSize
                 _request.isIncrease // isIncreaseInMargin
             );
+
+            positionVault.updateOpenPositionWithPnl(0, params); // FIXME: first arg is interimPnlUsd
 
             positionHistory.updatePositionRecord(
                 msg.sender,

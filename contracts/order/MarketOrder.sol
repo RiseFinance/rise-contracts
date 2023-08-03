@@ -9,6 +9,7 @@ import "./OrderValidator.sol";
 import "../position/PositionVault.sol";
 import "../position/PositionHistory.sol";
 import "../global/GlobalState.sol";
+import "../common/params.sol";
 
 contract MarketOrder is OrderUtils, OrderPriceUtils {
     OrderValidator orderValidator;
@@ -150,7 +151,8 @@ contract MarketOrder is OrderUtils, OrderPriceUtils {
                 0
             );
 
-            positionVault.updateOpenPosition(
+            UpdatePositionParams memory params = UpdatePositionParams(
+                _execType,
                 fmc.key,
                 true, // isOpening
                 msg.sender,
@@ -163,12 +165,15 @@ contract MarketOrder is OrderUtils, OrderPriceUtils {
                 c._isIncrease, // isIncreaseInSize
                 c._isIncrease // isIncreaseInMargin
             );
+
+            positionVault.updateOpenPosition(params);
         } else if (_execType == OrderExecType.IncreasePosition) {
             /// @dev for IncreasePosition: OpenPosition => PositionRecord
 
             fmc.positionRecordId = fmc.openPosition.currentPositionRecordId;
 
-            positionVault.updateOpenPosition(
+            UpdatePositionParams memory params = UpdatePositionParams(
+                _execType,
                 fmc.key,
                 false, // isOpening
                 msg.sender,
@@ -181,6 +186,8 @@ contract MarketOrder is OrderUtils, OrderPriceUtils {
                 c._isIncrease, // isIncreaseInSize
                 c._isIncrease // isIncreaseInMargin
             );
+
+            positionVault.updateOpenPosition(params);
 
             positionHistory.updatePositionRecord(
                 msg.sender,
@@ -199,6 +206,7 @@ contract MarketOrder is OrderUtils, OrderPriceUtils {
         FillMarketOrderContext memory fmc
     ) private {
         // PnL settlement
+        // (uint256 pnlUsdAbs, bool traderHasProfit) = settlePnL(
         settlePnL(
             fmc.key,
             c._isLong,
@@ -211,7 +219,8 @@ contract MarketOrder is OrderUtils, OrderPriceUtils {
         fmc.positionRecordId = fmc.openPosition.currentPositionRecordId;
 
         if (_execType == OrderExecType.DecreasePosition) {
-            positionVault.updateOpenPosition(
+            UpdatePositionParams memory params = UpdatePositionParams(
+                _execType,
                 fmc.key,
                 false, // isOpening
                 msg.sender,
@@ -224,6 +233,8 @@ contract MarketOrder is OrderUtils, OrderPriceUtils {
                 c._isIncrease, // isIncreaseInSize
                 c._isIncrease // isIncreaseInMargin
             );
+
+            positionVault.updateOpenPositionWithPnl(0, params); // FIXME: first arg is interimPnlUsd
 
             positionHistory.updatePositionRecord(
                 msg.sender,

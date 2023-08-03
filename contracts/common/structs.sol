@@ -4,6 +4,7 @@ pragma solidity ^0.8.0;
 
 import "./enums.sol";
 
+// TODO: move to params.sol
 struct OrderContext {
     bool _isLong;
     bool _isIncrease;
@@ -37,13 +38,13 @@ struct OrderRecord {
 }
 
 struct PositionRecord {
-    bool hasProfit; // only for closed positions
+    // bool hasProfit; // only for closed positions
     bool isClosed;
+    int256 closingPnl; // only for closed positions
     uint256 marketId;
     uint256 maxSize; // max open interest
     uint256 avgOpenPrice;
     uint256 avgClosePrice; // only for closed positions
-    uint256 closingPnL; // only for closed positions
     uint256 openTimestamp;
     uint256 closeTimestamp; // only for closed positions
 }
@@ -51,13 +52,13 @@ struct PositionRecord {
 struct OpenPosition {
     address trader;
     bool isLong;
-    bool hasProfit;
+    // bool hasProfit; // whether the cumulativePnL is positive
+    int256 cumulativePnl; // FIXME: int256으로 처리하기 (PositionVault.updateOpenPosition 내부 로직이 너무 복잡함)
     uint256 currentPositionRecordId;
     uint256 marketId;
     uint256 size; // Token Counts
     uint256 margin; // Token Counts
     uint256 avgOpenPrice; // TODO: check - should be coupled w/ positions link logic
-    uint256 cumulativePnL;
     uint256 lastUpdatedTime; // Currently not used for any validation
     int256 entryFundingIndex;
 }

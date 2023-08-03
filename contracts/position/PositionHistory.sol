@@ -37,13 +37,12 @@ contract PositionHistory {
             .getTraderPositionRecordCount(_trader);
 
         positionRecords[_trader][traderPositionRecordCount] = PositionRecord(
-            false, // hasProfit
             false, // isClosed
+            0, // closingPnl
             _marketId,
             _maxSize,
             _avgOpenPrice,
             _avgClosePrice,
-            0, // closingPnL
             block.timestamp,
             0 // closeTimestamp
         );
@@ -82,6 +81,7 @@ contract PositionHistory {
         if (_isIncrease) {
             positionRecord.avgOpenPrice = openPosition.avgOpenPrice;
         }
+        // no need to update PnL for position records for decreasing position (only for closed positions)
     }
 
     function closePositionRecord(
@@ -96,9 +96,8 @@ contract PositionHistory {
         OpenPosition memory openPosition = positionVault.getPosition(_key);
 
         // TODO:
-        // update hasProfit
         // update avgClosePrice
-        // update closingPnL
+        // update closingPnl
 
         // update isClosed
         positionRecord.isClosed = true;

@@ -69,7 +69,7 @@ contract OrderUtils {
         uint256 _executionPrice,
         uint256 _marketId,
         uint256 _sizeAbs,
-        uint256 _marginAbs
+        uint256 _marginAbs // ) public returns (uint256, bool) {
     ) public {
         OpenPosition memory position = positionVault.getPosition(_key);
         Market.MarketInfo memory marketInfo = market.getMarketInfo(_marketId);
@@ -80,7 +80,8 @@ contract OrderUtils {
         //     tokenInfo.getTokenDecimals(market.getMarketInfo(_marketId).baseAssetId)
         // );
 
-        (uint256 pnlUsdAbs, bool traderHasProfit) = _calculatePnL(
+        // (uint256 pnlUsdAbs, bool traderHasProfit) = _calculatePnL(
+        _calculatePnL(
             _sizeAbs,
             position.avgOpenPrice,
             _executionPrice,
@@ -93,29 +94,11 @@ contract OrderUtils {
             _marginAbs
         );
 
-        if (traderHasProfit) {
-            traderVault.increaseTraderBalance(
-                position.trader,
-                marketInfo.marginAssetId,
-                pnlUsdAbs
-            );
-            _isLong
-                ? risePool.decreaseLongPoolAmount(_marketId, pnlUsdAbs)
-                : risePool.decreaseShortPoolAmount(_marketId, pnlUsdAbs);
-        } else {
-            traderVault.decreaseTraderBalance(
-                position.trader,
-                marketInfo.marginAssetId,
-                pnlUsdAbs
-            );
-            _isLong
-                ? risePool.increaseLongPoolAmount(_marketId, pnlUsdAbs)
-                : risePool.increaseShortPoolAmount(_marketId, pnlUsdAbs);
-        }
-
         // TODO: check - PnL includes margin?
         _isLong
             ? risePool.decreaseLongReserveAmount(_marketId, _sizeAbs)
             : risePool.decreaseShortReserveAmount(_marketId, _sizeAbs);
+
+        // return (pnlUsdAbs, traderHasProfit);
     }
 }
