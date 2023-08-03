@@ -4,6 +4,7 @@ pragma solidity ^0.8.0;
 
 import "../account/TraderVault.sol";
 import "../common/structs.sol";
+import "../common/enums.sol";
 
 contract OrderHistory {
     TraderVault public traderVault; // TODO: check - the pattern?
@@ -18,7 +19,7 @@ contract OrderHistory {
 
     function createOrderRecord(
         address _trader,
-        bool _isMarketOrder,
+        OrderType _orderType,
         bool _isLong,
         bool _isIncrease,
         uint256 _positionRecordId,
@@ -33,7 +34,7 @@ contract OrderHistory {
         );
 
         orderRecords[_trader][traderOrderRecordCount] = OrderRecord(
-            _isMarketOrder,
+            _orderType,
             _isLong,
             _isIncrease,
             _positionRecordId,

@@ -2,6 +2,8 @@
 
 pragma solidity ^0.8.0;
 
+import "./enums.sol";
+
 struct OrderContext {
     bool _isLong;
     bool _isIncrease;
@@ -11,7 +13,7 @@ struct OrderContext {
     uint256 _limitPrice; // empty for market orders
 } // TODO: modify - size in Token Counts
 
-// limit
+// Limit order only
 struct OrderRequest {
     address trader;
     bool isLong;
@@ -22,9 +24,8 @@ struct OrderRequest {
     uint256 limitPrice;
 }
 
-// limit, market
 struct OrderRecord {
-    bool isMarketOrder;
+    OrderType orderType;
     bool isLong;
     bool isIncrease;
     uint256 positionRecordId;

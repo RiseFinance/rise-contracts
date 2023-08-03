@@ -349,7 +349,7 @@ contract OrderBook is OrderBookBase, Modifiers, MathUtils {
         // update filledOrders
         orderHistory.createOrderRecord(
             _request.trader,
-            false, // isMarketOrder
+            OrderType.Limit,
             _request.isLong,
             _request.isIncrease,
             positionRecordId,

@@ -13,6 +13,7 @@ import "../position/PositionVault.sol";
 import "../position/PositionHistory.sol";
 import "../market/TokenInfo.sol";
 import "../market/Market.sol";
+import "../common/enums.sol";
 
 contract OrderRouter is OrderUtils {
     PositionHistory positionHistory;
@@ -166,7 +167,7 @@ contract OrderRouter is OrderUtils {
         // fill the order
         orderHistory.createOrderRecord(
             msg.sender,
-            true, // isMarketOrder
+            OrderType.Market,
             c._isLong,
             c._isIncrease,
             positionRecordId,
