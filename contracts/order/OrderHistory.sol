@@ -7,7 +7,7 @@ import "../account/TraderVault.sol";
 contract OrderHistory {
     TraderVault public traderVault; // TODO: check - the pattern?
 
-    mapping(address => mapping(uint256 => FilledOrder)) public filledOrders; // userAddress => traderOrderCount => Order (filled orders by trader)
+    mapping(address => mapping(uint256 => FilledOrder)) public filledOrders; // userAddress => traderOrderCount => FilledOrder (filled orders by trader)
 
     constructor(address _traderVault) {
         traderVault = TraderVault(_traderVault);

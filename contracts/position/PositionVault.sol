@@ -7,17 +7,17 @@ import "./PositionUtils.sol";
 
 contract PositionVault is PositionUtils {
     // TODO: open <> close 사이의 position을 하나로 연결하여 기록
-    mapping(bytes32 => Position) public positions; // positionHash => Position
+    mapping(bytes32 => OpenPosition) public openPositions; // positionHash => Position
 
-    mapping(uint256 => uint256) public maxLongCapacity; // marketId => tokenCount
+    mapping(uint256 => uint256) public maxLongCapacity; // marketId => tokenCountq
     mapping(uint256 => uint256) public maxShortCapacity; // marketId => tokenCount // TODO: check - is it for stablecoins?
 
-    function getPosition(bytes32 _key) external view returns (Position memory) {
-        return positions[_key];
+    function getPosition(bytes32 _key) external view returns (OpenPosition memory) {
+        return openPositions[_key];
     }
 
     function getPositionSize(bytes32 _key) external view returns (uint256) {
-        return positions[_key].size;
+        return openPositions[_key].size;
     }
 
     function updatePosition(
@@ -32,7 +32,7 @@ contract PositionVault is PositionUtils {
         bool _isIncreaseInSize,
         bool _isIncreaseInMargin
     ) external {
-        Position storage _position = positions[_key];
+        OpenPosition storage _position = openPositions[_key];
 
         // trader, isLong, marketId
         if (_isNew) {
@@ -62,6 +62,6 @@ contract PositionVault is PositionUtils {
     }
 
     function deletePosition(bytes32 _key) external {
-        delete positions[_key];
+        delete openPositions[_key];
     }
 }

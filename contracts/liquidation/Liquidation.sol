@@ -29,9 +29,9 @@ contract Liquidation {
     }
 
     function executeLiquidations(
-        Position[] calldata _positions,
+        OpenPosition[] calldata _positions,
         address[] calldata _traders
-    ) external {
+    ) external view {
         for (uint256 i = 0; i < _positions.length; i++) {
             liquidatePosition(_positions[i]);
         }
@@ -40,20 +40,20 @@ contract Liquidation {
         }
     }
 
-    function liquidatePosition(Position calldata _position) internal {
+    function liquidatePosition(OpenPosition calldata _position) internal view {
         if (!_isPositionLiquidationValid(_position)) return;
         // TODO: liquidate Position
         // TODO: @0xjunha
         // market order로 close, 남은 돈은 LP pool로 보내기
     }
 
-    function liquidateTrader(address _trader) internal {
+    function liquidateTrader(address _trader) internal view {
         if (!_isTraderLiquidationValid(_trader)) return;
         // TODO: liquidate all positions of trader
     }
 
     function _isPositionLiquidationValid(
-        Position calldata _position
+        OpenPosition calldata _position
     ) internal view returns (bool) {
         uint256 baseAssetId = market
             .getMarketInfo(_position.marketId)
@@ -74,7 +74,7 @@ contract Liquidation {
         uint256 righthandSide = 0;
         // TODO : getTraderPositions 구현 필요
         // Position[] memory positions = traderVault.getTraderPositions(_trader);
-        Position[] memory positions; // 임시
+        OpenPosition[] memory positions; // 임시
         for (uint256 i = 0; i < positions.length; i++) {
             uint256 baseAssetId = market
                 .getMarketInfo(positions[i].marketId)
@@ -90,7 +90,7 @@ contract Liquidation {
     }
 
     function _calculateFormula(
-        Position memory _position // Memory 로 해야 하는가?
+        OpenPosition memory _position // Memory 로 해야 하는가?
     ) internal view returns (uint256, uint256) {
         uint256 baseAssetId = market
             .getMarketInfo(_position.marketId)
@@ -140,7 +140,7 @@ contract Liquidation {
     // Only isolated mode
     // TODO: build for cross mode
     function getLiquidationPrice(
-        Position calldata _position,
+        OpenPosition calldata _position,
         uint256 _walletBalance
     ) public view returns (uint256) {
         uint256 baseAssetId = market
@@ -183,7 +183,7 @@ contract Liquidation {
     }
 
     function shouldLiquidate(
-        Position calldata _position,
+        OpenPosition calldata _position,
         uint256 _walletBalance
     ) public view returns (bool) {
         uint256 baseAssetId = market

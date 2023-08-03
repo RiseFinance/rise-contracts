@@ -55,7 +55,7 @@ contract FundingFee {
 
     function getFundingFeeToPay(
         uint256 _marketId,
-        Position calldata _position
+        OpenPosition calldata _position
     ) public view returns (int256) {
         uint256 markPrice = priceManager.getMarkPrice(_marketId);
 

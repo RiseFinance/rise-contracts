@@ -75,7 +75,7 @@ contract OrderUtils {
         uint256 _sizeAbs,
         uint256 _marginAbs
     ) external {
-        Position memory position = positionVault.getPosition(_key);
+        OpenPosition memory position = positionVault.getPosition(_key);
         Market.MarketInfo memory marketInfo = market.getMarketInfo(_marketId);
 
         // uint256 sizeInUsd = _tokenToUsd(

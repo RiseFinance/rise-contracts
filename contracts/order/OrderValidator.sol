@@ -51,7 +51,7 @@ contract OrderValidator {
         OrderContext calldata c,
         bytes32 _key // uint256 _markPrice
     ) external view {
-        Position memory position = positionVault.getPosition(_key);
+        OpenPosition memory position = positionVault.getPosition(_key);
 
         require(
             position.size >= c._sizeAbs,

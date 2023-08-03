@@ -33,7 +33,7 @@ struct FilledOrder {
     uint256 executionPrice;
 }
 
-struct Position {
+struct OpenPosition {
     address trader;
     bool isLong;
     uint256 marketId;
