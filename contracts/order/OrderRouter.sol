@@ -153,7 +153,7 @@ contract OrderRouter is OrderUtils {
         }
 
         // fill the order
-        orderHistory.fillOrder(
+        orderHistory.recordOrder(
             msg.sender,
             true, // isMarketOrder
             c._isLong,

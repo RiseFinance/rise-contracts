@@ -23,7 +23,7 @@ struct OrderRequest {
 }
 
 // limit, market
-struct FilledOrder {
+struct OrderRecord {
     bool isMarketOrder;
     bool isLong;
     bool isIncrease;

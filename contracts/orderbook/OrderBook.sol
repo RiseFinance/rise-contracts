@@ -336,7 +336,7 @@ contract OrderBook is OrderBookBase, Modifiers, MathUtils {
             : _request.marginAbs;
 
         // update filledOrders
-        orderHistory.fillOrder(
+        orderHistory.recordOrder(
             _request.trader,
             false, // isMarketOrder
             _request.isLong,
