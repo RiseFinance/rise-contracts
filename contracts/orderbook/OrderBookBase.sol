@@ -3,10 +3,9 @@
 pragma solidity ^0.8.0;
 
 import "../common/structs.sol";
-import "../order/OrderUtils.sol";
 import "hardhat/console.sol";
 
-abstract contract OrderBookBase is OrderUtils {
+abstract contract OrderBookBase {
     mapping(address => uint256) public traderOrderRequestCounts; // userAddress => orderRequestCount (limit order)
 
     mapping(address => mapping(uint256 => OrderRequest)) public pendingOrders; // userAddress => traderOrderRequestCounts => Order (pending orders by trader)

@@ -3,13 +3,14 @@
 pragma solidity ^0.8.0;
 
 import "../order/OrderUtils.sol";
+import "../order/OrderPriceUtils.sol";
 import "./OrderHistory.sol";
 import "./OrderValidator.sol";
 import "../position/PositionVault.sol";
 import "../position/PositionHistory.sol";
 import "../global/GlobalState.sol";
 
-contract MarketOrder is OrderUtils {
+contract MarketOrder is OrderUtils, OrderPriceUtils {
     OrderValidator orderValidator;
     OrderHistory orderHistory;
     PositionHistory positionHistory;
@@ -28,7 +29,7 @@ contract MarketOrder is OrderUtils {
 
     function executeMarketOrder(
         OrderContext calldata c
-    ) private returns (bytes32) {
+    ) external returns (bytes32) {
         FillMarketOrderContext memory fmc;
 
         fmc.marginAssetId = market.getMarketInfo(c._marketId).marginAssetId;
@@ -162,8 +163,10 @@ contract MarketOrder is OrderUtils {
                 c._isIncrease, // isIncreaseInSize
                 c._isIncrease // isIncreaseInMargin
             );
-        } else if (_execType == OrderType.IncreasePosition) {
+        } else if (_execType == OrderExecType.IncreasePosition) {
             /// @dev for IncreasePosition: OpenPosition => PositionRecord
+
+            fmc.positionRecordId = fmc.openPosition.currentPositionRecordId;
 
             positionVault.updateOpenPosition(
                 fmc.key,
@@ -182,7 +185,7 @@ contract MarketOrder is OrderUtils {
             positionHistory.updatePositionRecord(
                 msg.sender,
                 fmc.key,
-                fmc.openPosition.currentPositionRecordId,
+                fmc.positionRecordId,
                 c._isIncrease
             );
         } else {
@@ -204,6 +207,8 @@ contract MarketOrder is OrderUtils {
             c._sizeAbs,
             c._marginAbs
         );
+
+        fmc.positionRecordId = fmc.openPosition.currentPositionRecordId;
 
         if (_execType == OrderExecType.DecreasePosition) {
             positionVault.updateOpenPosition(

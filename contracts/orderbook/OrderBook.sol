@@ -4,28 +4,24 @@ pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import "./OrderBookBase.sol";
-import "../account/TraderVault.sol";
 import "../global/GlobalState.sol";
 import "../market/TokenInfo.sol";
-import "../market/Market.sol";
-import "../order/OrderHistory.sol";
+
 import "../order/OrderUtils.sol";
-import "../position/PositionVault.sol";
 import "../position/PositionHistory.sol";
 import "../common/Modifiers.sol";
 import "../common/MathUtils.sol";
-import {PARTIAL_RATIO_PRECISION} from "../common/constants.sol";
 
 import "hardhat/console.sol";
 
-contract OrderBook is OrderBookBase, Modifiers, MathUtils {
+contract OrderBook is OrderUtils, OrderBookBase, Modifiers, MathUtils {
     using SafeCast for int256;
     using SafeCast for uint256;
 
     PositionHistory public positionHistory;
-    OrderHistory public orderHistory;
+    // OrderHistory public orderHistory;
     GlobalState public globalState;
-    OrderUtils public orderUtils;
+    TokenInfo public tokenInfo;
 
     struct IterationContext {
         uint256 interimMarkPrice;
@@ -45,15 +41,16 @@ contract OrderBook is OrderBookBase, Modifiers, MathUtils {
     }
 
     struct FillLimitOrderContext {
+        OrderExecType _execType;
         bool _isPartial;
+        uint256 _marginAssetId;
         uint256 _partialRatio;
         uint256 _sizeAbs;
         uint256 _marginAbs;
         uint256 _positionSize;
-    }
-
-    constructor(address _traderVault) {
-        traderVault = TraderVault(_traderVault);
+        bytes32 _key;
+        OpenPosition _openPosition;
+        uint256 _positionRecordId;
     }
 
     function getOrderRequest(
@@ -256,7 +253,7 @@ contract OrderBook is OrderBookBase, Modifiers, MathUtils {
 
                 OrderRequest memory request = _orderRequests[i];
 
-                _fillLimitOrder(
+                executeLimitOrder(
                     request,
                     ptc._avgExecutionPrice,
                     ptc._sizeCap,
@@ -314,131 +311,226 @@ contract OrderBook is OrderBookBase, Modifiers, MathUtils {
         return ic.interimMarkPrice; // price impact (buffer size)
     }
 
-    function _fillLimitOrder(
+    function executeLimitOrder(
         OrderRequest memory _request,
         uint256 _avgExecPrice,
         uint256 _sizeCap,
         bool _isBuy // bool _isPartial
-    ) internal {
-        FillLimitOrderContext memory floc;
+    ) private {
+        FillLimitOrderContext memory flc;
 
-        floc._isPartial = _request.sizeAbs > _sizeCap;
-        floc._partialRatio = floc._isPartial
+        flc._marginAssetId = market
+            .getMarketInfo(_request.marketId)
+            .marginAssetId;
+
+        flc._isPartial = _request.sizeAbs > _sizeCap;
+        flc._partialRatio = flc._isPartial
             ? (_sizeCap / _request.sizeAbs) * PARTIAL_RATIO_PRECISION
             : 1 * PARTIAL_RATIO_PRECISION;
 
-        floc._sizeAbs = floc._isPartial ? _sizeCap : _request.sizeAbs;
+        flc._sizeAbs = flc._isPartial ? _sizeCap : _request.sizeAbs;
 
-        floc._marginAbs = floc._isPartial
-            ? (_request.marginAbs * floc._partialRatio) /
-                PARTIAL_RATIO_PRECISION
+        flc._marginAbs = flc._isPartial
+            ? (_request.marginAbs * flc._partialRatio) / PARTIAL_RATIO_PRECISION
             : _request.marginAbs;
 
-        // create position record
-        uint256 positionRecordId = positionHistory.openPositionRecord(
-            _request.trader,
-            _request.marketId,
-            floc._sizeAbs,
-            _avgExecPrice,
-            0
-        );
-
-        // update filledOrders
-        orderHistory.createOrderRecord(
-            _request.trader,
-            OrderType.Limit,
-            _request.isLong,
-            _request.isIncrease,
-            positionRecordId,
-            _request.marketId,
-            floc._sizeAbs,
-            floc._marginAbs,
-            _avgExecPrice
-        );
-
         // update position
-        bytes32 key = _getPositionKey(
+        flc._key = _getPositionKey(
             _request.trader,
             _request.isLong,
             _request.marketId
         );
 
-        bool isOpen = positionVault.getPositionSize(key) == 0;
+        flc._openPosition = positionVault.getPosition(flc._key);
 
-        // Position {size, marginSizeInUsd, avgOpenPrice, lastUpdatedTime}
-        if (_request.isIncrease) {
-            positionVault.updateOpenPosition(
-                key,
-                isOpen,
-                _request.trader,
-                _request.isLong,
-                _request.marketId,
-                _avgExecPrice,
-                floc._sizeAbs,
-                floc._marginAbs,
-                true, // isIncreaseInSize
-                true // isIncreaseInMargin
-            );
-        } else {
-            // position 업데이트
-            // PnL 계산, trader balance, poolAmounts, reservedAmounts 업데이트
-            // position 삭제 검사
+        // Execution type 1: open position
+        if (flc._openPosition.size == 0 && _request.isIncrease) {
+            flc._execType = OrderExecType.OpenPosition;
 
-            orderUtils.settlePnL(
-                key,
-                _request.isLong,
-                _avgExecPrice,
-                _request.marketId,
-                floc._sizeAbs,
-                floc._marginAbs
-            );
+            _executeIncreasePosition(flc._execType, _request, flc);
+        }
 
-            floc._positionSize = positionVault.getPositionSize(key);
+        // Execution type 2: increase position (update existing position)
+        if (flc._openPosition.size > 0 && _request.isIncrease) {
+            flc._execType = OrderExecType.IncreasePosition;
 
-            if (floc._sizeAbs == floc._positionSize) {
-                positionVault.deletePosition(key);
-            } else {
-                positionVault.updateOpenPosition(
-                    key,
-                    isOpen,
-                    _request.trader,
-                    _request.isLong,
-                    _request.marketId,
-                    _avgExecPrice,
-                    floc._sizeAbs,
-                    floc._marginAbs,
-                    false,
-                    false
-                );
-            }
+            _executeIncreasePosition(flc._execType, _request, flc);
+        }
+
+        // Execution type 3: decrease position
+        if (
+            flc._openPosition.size > 0 &&
+            !_request.isIncrease &&
+            _request.sizeAbs != flc._openPosition.size
+        ) {
+            flc._execType = OrderExecType.DecreasePosition;
+
+            _executeDecreasePosition(flc._execType, _request, flc);
+        }
+
+        // Execution type 4: close position
+        if (
+            flc._openPosition.size > 0 &&
+            !_request.isIncrease &&
+            _request.sizeAbs == flc._openPosition.size
+        ) {
+            flc._execType = OrderExecType.ClosePosition;
+
+            _executeDecreasePosition(flc._execType, _request, flc);
         }
 
         if (_request.isLong) {
             globalState.updateGlobalLongPositionState(
                 _request.isIncrease,
                 _request.marketId,
-                floc._sizeAbs,
-                floc._marginAbs,
+                flc._sizeAbs,
+                flc._marginAbs,
                 _avgExecPrice
             );
         } else {
             globalState.updateGlobalShortPositionState(
                 _request.isIncrease,
                 _request.marketId,
-                floc._sizeAbs,
-                floc._marginAbs,
+                flc._sizeAbs,
+                flc._marginAbs,
                 _avgExecPrice
             );
         }
 
-        _sizeCap -= floc._sizeAbs; // TODO: validation - assert(sum(request.sizeAbs) == orderSizeInUsdForPriceTick[_marketId][_limitPriceIterator])
+        _sizeCap -= flc._sizeAbs; // TODO: validation - assert(sum(request.sizeAbs) == orderSizeInUsdForPriceTick[_marketId][_limitPriceIterator])
 
-        // delete or update (isPartial) limit order
-        if (floc._isPartial) {
-            _request.sizeAbs -= floc._sizeAbs;
-            _request.marginAbs -= floc._marginAbs;
+        // delete or update (isPartial) limit order from the orderbook
+        if (flc._isPartial) {
+            _request.sizeAbs -= flc._sizeAbs;
+            _request.marginAbs -= flc._marginAbs;
         } else {
             dequeueOrderBook(_request, _isBuy); // TODO: check - if the target order is the first one in the queue
+        }
+    }
+
+    function _executeIncreasePosition(
+        OrderExecType _execType,
+        OrderRequest memory _request,
+        FillLimitOrderContext memory flc
+    ) private {
+        traderVault.decreaseTraderBalance(
+            msg.sender,
+            flc._marginAssetId,
+            flc._marginAbs
+        );
+
+        _request.isLong
+            ? risePool.increaseLongReserveAmount(
+                flc._marginAssetId,
+                _request.sizeAbs
+            )
+            : risePool.increaseShortReserveAmount(
+                flc._marginAssetId,
+                _request.sizeAbs
+            );
+
+        if (_execType == OrderExecType.OpenPosition) {
+            /// @dev for OpenPosition: PositionRecord => OpenPosition
+
+            flc._positionRecordId = positionHistory.openPositionRecord(
+                msg.sender,
+                _request.marketId,
+                _request.sizeAbs,
+                _request.limitPrice,
+                0
+            );
+
+            positionVault.updateOpenPosition(
+                flc._key,
+                true, // isOpening
+                msg.sender,
+                _request.isLong,
+                flc._positionRecordId,
+                _request.marketId,
+                _request.limitPrice,
+                _request.sizeAbs,
+                _request.marginAbs,
+                _request.isIncrease, // isIncreaseInSize
+                _request.isIncrease // isIncreaseInMargin
+            );
+        } else if (_execType == OrderExecType.IncreasePosition) {
+            /// @dev for IncreasePosition: OpenPosition => PositionRecord
+
+            flc._positionRecordId = flc._openPosition.currentPositionRecordId;
+
+            positionVault.updateOpenPosition(
+                flc._key,
+                false, // isOpening
+                msg.sender,
+                _request.isLong,
+                flc._positionRecordId,
+                _request.marketId,
+                _request.limitPrice,
+                _request.sizeAbs,
+                _request.marginAbs,
+                _request.isIncrease, // isIncreaseInSize
+                _request.isIncrease // isIncreaseInMargin
+            );
+
+            positionHistory.updatePositionRecord(
+                msg.sender,
+                flc._key,
+                flc._positionRecordId,
+                _request.isIncrease
+            );
+        } else {
+            revert("Invalid execution type");
+        }
+    }
+
+    function _executeDecreasePosition(
+        OrderExecType _execType,
+        OrderRequest memory _request,
+        FillLimitOrderContext memory flc
+    ) private {
+        // PnL settlement
+        settlePnL(
+            flc._key,
+            _request.isLong,
+            _request.limitPrice,
+            _request.marketId,
+            _request.sizeAbs,
+            _request.marginAbs
+        );
+
+        flc._positionRecordId = flc._openPosition.currentPositionRecordId;
+
+        if (_execType == OrderExecType.DecreasePosition) {
+            positionVault.updateOpenPosition(
+                flc._key,
+                false, // isOpening
+                msg.sender,
+                _request.isLong,
+                flc._positionRecordId,
+                _request.marketId,
+                _request.limitPrice,
+                _request.sizeAbs,
+                _request.marginAbs,
+                _request.isIncrease, // isIncreaseInSize
+                _request.isIncrease // isIncreaseInMargin
+            );
+
+            positionHistory.updatePositionRecord(
+                msg.sender,
+                flc._key,
+                flc._openPosition.currentPositionRecordId,
+                _request.isIncrease
+            );
+        } else if (_execType == OrderExecType.ClosePosition) {
+            positionVault.deleteOpenPosition(flc._key);
+
+            positionHistory.closePositionRecord(
+                msg.sender,
+                flc._key,
+                flc._openPosition.currentPositionRecordId
+            );
+        } else {
+            revert("Invalid execution type");
         }
     }
 }

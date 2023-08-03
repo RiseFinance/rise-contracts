@@ -2,19 +2,13 @@
 
 pragma solidity ^0.8.0;
 
-import "../risepool/RisePool.sol";
 import "../account/TraderVault.sol";
-import "../position/PositionVault.sol";
-import "../oracle/PriceManager.sol";
-import "../market/TokenInfo.sol";
 import "../market/Market.sol";
-import {USD_PRECISION} from "../common/constants.sol";
+import {USD_PRECISION, PARTIAL_RATIO_PRECISION} from "../common/constants.sol";
 
 contract OrderUtils {
     PositionVault public positionVault;
     TraderVault public traderVault;
-    TokenInfo public tokenInfo;
-    PriceManager priceManager;
     RisePool public risePool;
     Market public market;
 
@@ -54,23 +48,6 @@ contract OrderUtils {
             _isIncrease
                 ? _basePrice + (_priceImpactInUsd / 2)
                 : _basePrice - (_priceImpactInUsd / 2);
-    }
-
-    function _getAvgExecPriceAndUpdatePriceBuffer(
-        uint256 _assetId,
-        uint256 _size,
-        bool _isLong
-    ) internal returns (uint256) {
-        /**
-         * // TODO: impl
-         * @dev Jae Yoon
-         */
-        return
-            priceManager.getAvgExecPriceAndUpdatePriceBuffer(
-                _assetId,
-                _size,
-                _isLong
-            );
     }
 
     function _calculatePnL(
