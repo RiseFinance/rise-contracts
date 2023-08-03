@@ -16,6 +16,7 @@ contract MarketOrder is OrderUtils {
     GlobalState globalState;
 
     struct FillMarketOrderContext {
+        OrderExecType execType;
         bool isBuy;
         bool isOpen;
         uint256 marginAssetId;
@@ -50,118 +51,26 @@ contract MarketOrder is OrderUtils {
 
         // Execution type 1: open position
         if (fmc.openPosition.size == 0 && c._isIncrease) {
-            traderVault.decreaseTraderBalance(
-                msg.sender,
-                fmc.marginAssetId,
-                c._marginAbs
-            );
-            c._isLong
-                ? risePool.increaseLongReserveAmount(
-                    fmc.marginAssetId,
-                    c._sizeAbs
-                )
-                : risePool.increaseShortReserveAmount(
-                    fmc.marginAssetId,
-                    c._sizeAbs
-                );
+            fmc.execType = OrderExecType.OpenPosition;
 
-            // create position record
-            fmc.positionRecordId = positionHistory.openPositionRecord(
-                msg.sender,
-                c._marketId,
-                c._sizeAbs,
-                fmc.avgExecPrice,
-                0
-            );
-
-            positionVault.updateOpenPosition(
-                fmc.key,
-                true, // isOpening
-                msg.sender,
-                c._isLong,
-                fmc.positionRecordId,
-                c._marketId,
-                fmc.avgExecPrice,
-                c._sizeAbs,
-                c._marginAbs,
-                c._isIncrease, // isIncreaseInSize
-                c._isIncrease // isIncreaseInMargin
-            );
+            _executeIncreasePosition(fmc.execType, c, fmc);
         }
 
         // Execution type 2: increase position (update existing position)
         if (fmc.openPosition.size > 0 && c._isIncrease) {
-            traderVault.decreaseTraderBalance(
-                msg.sender,
-                fmc.marginAssetId,
-                c._marginAbs
-            );
-            c._isLong
-                ? risePool.increaseLongReserveAmount(
-                    fmc.marginAssetId,
-                    c._sizeAbs
-                )
-                : risePool.increaseShortReserveAmount(
-                    fmc.marginAssetId,
-                    c._sizeAbs
-                );
+            fmc.execType = OrderExecType.IncreasePosition;
 
-            positionVault.updateOpenPosition(
-                fmc.key,
-                false, // isOpening
-                msg.sender,
-                c._isLong,
-                fmc.positionRecordId,
-                c._marketId,
-                fmc.avgExecPrice,
-                c._sizeAbs,
-                c._marginAbs,
-                c._isIncrease, // isIncreaseInSize
-                c._isIncrease // isIncreaseInMargin
-            );
-
-            // update position record
-            positionHistory.updatePositionRecord(
-                msg.sender,
-                fmc.key,
-                fmc.openPosition.currentPositionRecordId,
-                c._isIncrease
-            );
+            _executeIncreasePosition(fmc.execType, c, fmc);
         }
 
         // Execution type 3: decrease position
-        if (fmc.openPosition.size > 0 && !c._isIncrease) {
-            // PnL settlement
-            settlePnL(
-                fmc.key,
-                c._isLong,
-                fmc.avgExecPrice,
-                c._marketId,
-                c._sizeAbs,
-                c._marginAbs
-            );
-
-            positionVault.updateOpenPosition(
-                fmc.key,
-                false, // isOpening
-                msg.sender,
-                c._isLong,
-                fmc.positionRecordId,
-                c._marketId,
-                fmc.avgExecPrice,
-                c._sizeAbs,
-                c._marginAbs,
-                c._isIncrease, // isIncreaseInSize
-                c._isIncrease // isIncreaseInMargin
-            );
-
-            // update position record
-            positionHistory.updatePositionRecord(
-                msg.sender,
-                fmc.key,
-                fmc.openPosition.currentPositionRecordId,
-                c._isIncrease
-            );
+        if (
+            fmc.openPosition.size > 0 &&
+            !c._isIncrease &&
+            c._sizeAbs != fmc.openPosition.size
+        ) {
+            fmc.execType = OrderExecType.DecreasePosition;
+            _executeDecreasePosition(fmc.execType, c, fmc);
         }
 
         // Execution type 4: close position
@@ -170,24 +79,9 @@ contract MarketOrder is OrderUtils {
             !c._isIncrease &&
             c._sizeAbs == fmc.openPosition.size
         ) {
-            // PnL settlement
-            settlePnL(
-                fmc.key,
-                c._isLong,
-                fmc.avgExecPrice,
-                c._marketId,
-                c._sizeAbs,
-                c._marginAbs
-            );
+            fmc.execType = OrderExecType.ClosePosition;
 
-            positionVault.deleteOpenPosition(fmc.key);
-
-            // update position record
-            positionHistory.closePositionRecord(
-                msg.sender,
-                fmc.key,
-                fmc.openPosition.currentPositionRecordId
-            );
+            _executeDecreasePosition(fmc.execType, c, fmc);
         }
 
         // fill the order
@@ -224,5 +118,124 @@ contract MarketOrder is OrderUtils {
         }
 
         return fmc.key;
+    }
+
+    function _executeIncreasePosition(
+        OrderExecType _execType,
+        OrderContext calldata c,
+        FillMarketOrderContext memory fmc
+    ) private {
+        traderVault.decreaseTraderBalance(
+            msg.sender,
+            fmc.marginAssetId,
+            c._marginAbs
+        );
+
+        c._isLong
+            ? risePool.increaseLongReserveAmount(fmc.marginAssetId, c._sizeAbs)
+            : risePool.increaseShortReserveAmount(
+                fmc.marginAssetId,
+                c._sizeAbs
+            );
+
+        if (_execType == OrderExecType.OpenPosition) {
+            /// @dev for OpenPosition: PositionRecord => OpenPosition
+
+            fmc.positionRecordId = positionHistory.openPositionRecord(
+                msg.sender,
+                c._marketId,
+                c._sizeAbs,
+                fmc.avgExecPrice,
+                0
+            );
+
+            positionVault.updateOpenPosition(
+                fmc.key,
+                true, // isOpening
+                msg.sender,
+                c._isLong,
+                fmc.positionRecordId,
+                c._marketId,
+                fmc.avgExecPrice,
+                c._sizeAbs,
+                c._marginAbs,
+                c._isIncrease, // isIncreaseInSize
+                c._isIncrease // isIncreaseInMargin
+            );
+        } else if (_execType == OrderType.IncreasePosition) {
+            /// @dev for IncreasePosition: OpenPosition => PositionRecord
+
+            positionVault.updateOpenPosition(
+                fmc.key,
+                false, // isOpening
+                msg.sender,
+                c._isLong,
+                fmc.positionRecordId,
+                c._marketId,
+                fmc.avgExecPrice,
+                c._sizeAbs,
+                c._marginAbs,
+                c._isIncrease, // isIncreaseInSize
+                c._isIncrease // isIncreaseInMargin
+            );
+
+            positionHistory.updatePositionRecord(
+                msg.sender,
+                fmc.key,
+                fmc.openPosition.currentPositionRecordId,
+                c._isIncrease
+            );
+        } else {
+            revert("Invalid execution type");
+        }
+    }
+
+    function _executeDecreasePosition(
+        OrderExecType _execType,
+        OrderContext calldata c,
+        FillMarketOrderContext memory fmc
+    ) private {
+        // PnL settlement
+        settlePnL(
+            fmc.key,
+            c._isLong,
+            fmc.avgExecPrice,
+            c._marketId,
+            c._sizeAbs,
+            c._marginAbs
+        );
+
+        if (_execType == OrderExecType.DecreasePosition) {
+            positionVault.updateOpenPosition(
+                fmc.key,
+                false, // isOpening
+                msg.sender,
+                c._isLong,
+                fmc.positionRecordId,
+                c._marketId,
+                fmc.avgExecPrice,
+                c._sizeAbs,
+                c._marginAbs,
+                c._isIncrease, // isIncreaseInSize
+                c._isIncrease // isIncreaseInMargin
+            );
+
+            positionHistory.updatePositionRecord(
+                msg.sender,
+                fmc.key,
+                fmc.openPosition.currentPositionRecordId,
+                c._isIncrease
+            );
+        } else if (_execType == OrderExecType.ClosePosition) {
+            positionVault.deleteOpenPosition(fmc.key);
+
+            positionHistory.closePositionRecord(
+                msg.sender,
+                fmc.key,
+                fmc.openPosition.currentPositionRecordId
+            );
+        } else {
+            revert("Invalid execution type");
+        }
     }
 }
