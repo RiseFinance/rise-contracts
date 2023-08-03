@@ -12,7 +12,9 @@ contract PositionVault is PositionUtils {
     mapping(uint256 => uint256) public maxLongCapacity; // marketId => tokenCountq
     mapping(uint256 => uint256) public maxShortCapacity; // marketId => tokenCount // TODO: check - is it for stablecoins?
 
-    function getPosition(bytes32 _key) external view returns (OpenPosition memory) {
+    function getPosition(
+        bytes32 _key
+    ) external view returns (OpenPosition memory) {
         return openPositions[_key];
     }
 
@@ -20,11 +22,12 @@ contract PositionVault is PositionUtils {
         return openPositions[_key].size;
     }
 
-    function updatePosition(
+    function updateOpenPosition(
         bytes32 _key,
-        bool _isNew,
+        bool _isOpening,
         address _trader,
         bool _isLong,
+        uint256 _currentPositionRecordId,
         uint256 _marketId,
         uint256 _executionPrice,
         uint256 _sizeDeltaAbs,
@@ -35,9 +38,10 @@ contract PositionVault is PositionUtils {
         OpenPosition storage _position = openPositions[_key];
 
         // trader, isLong, marketId
-        if (_isNew) {
+        if (_isOpening) {
             _position.trader = _trader;
             _position.isLong = _isLong;
+            _position.currentPositionRecordId = _currentPositionRecordId;
             _position.marketId = _marketId;
         }
 
@@ -61,7 +65,7 @@ contract PositionVault is PositionUtils {
         _position.lastUpdatedTime = block.timestamp;
     }
 
-    function deletePosition(bytes32 _key) external {
+    function deleteOpenPosition(bytes32 _key) external {
         delete openPositions[_key];
     }
 }

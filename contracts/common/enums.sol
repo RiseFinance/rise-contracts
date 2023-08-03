@@ -8,3 +8,10 @@ enum OrderType {
     StopMarket,
     StopLimit
 }
+
+enum OrderExecType {
+    OpenPosition,
+    IncreasePosition,
+    DecreasePosition,
+    ClosePosition
+}

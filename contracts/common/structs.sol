@@ -37,24 +37,27 @@ struct OrderRecord {
 }
 
 struct PositionRecord {
-    bool hasProfit;
+    bool hasProfit; // only for closed positions
     bool isClosed;
     uint256 marketId;
     uint256 maxSize; // max open interest
     uint256 avgOpenPrice;
-    uint256 avgClosePrice;
-    uint256 closingPnL;
+    uint256 avgClosePrice; // only for closed positions
+    uint256 closingPnL; // only for closed positions
     uint256 openTimestamp;
-    uint256 closeTimestamp;
+    uint256 closeTimestamp; // only for closed positions
 }
 
 struct OpenPosition {
     address trader;
     bool isLong;
+    bool hasProfit;
+    uint256 currentPositionRecordId;
     uint256 marketId;
     uint256 size; // Token Counts
     uint256 margin; // Token Counts
     uint256 avgOpenPrice; // TODO: check - should be coupled w/ positions link logic
+    uint256 cumulativePnL;
     uint256 lastUpdatedTime; // Currently not used for any validation
     int256 entryFundingIndex;
 }

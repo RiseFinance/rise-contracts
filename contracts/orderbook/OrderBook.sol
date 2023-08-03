@@ -326,9 +326,6 @@ contract OrderBook is OrderBookBase, Modifiers, MathUtils {
         floc._partialRatio = floc._isPartial
             ? (_sizeCap / _request.sizeAbs) * PARTIAL_RATIO_PRECISION
             : 1 * PARTIAL_RATIO_PRECISION;
-        // uint256 _sizeAbsInUsd = _isPartial
-        //     ? _request.sizeAbsInUsd - _sizeCap
-        //     : _request.sizeAbsInUsd;
 
         floc._sizeAbs = floc._isPartial ? _sizeCap : _request.sizeAbs;
 
@@ -338,7 +335,7 @@ contract OrderBook is OrderBookBase, Modifiers, MathUtils {
             : _request.marginAbs;
 
         // create position record
-        uint256 positionRecordId = positionHistory.createPositionRecord(
+        uint256 positionRecordId = positionHistory.openPositionRecord(
             _request.trader,
             _request.marketId,
             floc._sizeAbs,
@@ -370,7 +367,7 @@ contract OrderBook is OrderBookBase, Modifiers, MathUtils {
 
         // Position {size, marginSizeInUsd, avgOpenPrice, lastUpdatedTime}
         if (_request.isIncrease) {
-            positionVault.updatePosition(
+            positionVault.updateOpenPosition(
                 key,
                 isOpen,
                 _request.trader,
@@ -401,7 +398,7 @@ contract OrderBook is OrderBookBase, Modifiers, MathUtils {
             if (floc._sizeAbs == floc._positionSize) {
                 positionVault.deletePosition(key);
             } else {
-                positionVault.updatePosition(
+                positionVault.updateOpenPosition(
                     key,
                     isOpen,
                     _request.trader,
