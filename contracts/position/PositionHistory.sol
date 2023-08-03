@@ -54,7 +54,7 @@ contract PositionHistory {
         return traderPositionRecordCount;
     }
 
-    function updatePostionRecord(
+    function updatePositionRecord(
         address _trader,
         uint256 _positionRecordId,
         bool _isClose,
