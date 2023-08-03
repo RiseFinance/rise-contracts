@@ -11,6 +11,7 @@ import "../market/Market.sol";
 import "../order/OrderHistory.sol";
 import "../order/OrderUtils.sol";
 import "../position/PositionVault.sol";
+import "../position/PositionHistory.sol";
 import "../common/Modifiers.sol";
 import "../common/MathUtils.sol";
 import {PARTIAL_RATIO_PRECISION} from "../common/constants.sol";
@@ -21,6 +22,7 @@ contract OrderBook is OrderBookBase, Modifiers, MathUtils {
     using SafeCast for int256;
     using SafeCast for uint256;
 
+    PositionHistory public positionHistory;
     OrderHistory public orderHistory;
     GlobalState public globalState;
     OrderUtils public orderUtils;
@@ -314,7 +316,7 @@ contract OrderBook is OrderBookBase, Modifiers, MathUtils {
 
     function _fillLimitOrder(
         OrderRequest memory _request,
-        uint256 _avgExecutionPrice,
+        uint256 _avgExecPrice,
         uint256 _sizeCap,
         bool _isBuy // bool _isPartial
     ) internal {
@@ -335,8 +337,14 @@ contract OrderBook is OrderBookBase, Modifiers, MathUtils {
                 PARTIAL_RATIO_PRECISION
             : _request.marginAbs;
 
-        // FIXME: create and get `position record`
-        uint256 positionRecordId = 0;
+        // create position record
+        uint256 positionRecordId = positionHistory.createPositionRecord(
+            _request.trader,
+            _request.marketId,
+            floc._sizeAbs,
+            _avgExecPrice,
+            0
+        );
 
         // update filledOrders
         orderHistory.createOrderRecord(
@@ -348,7 +356,7 @@ contract OrderBook is OrderBookBase, Modifiers, MathUtils {
             _request.marketId,
             floc._sizeAbs,
             floc._marginAbs,
-            _avgExecutionPrice
+            _avgExecPrice
         );
 
         // update position
@@ -368,7 +376,7 @@ contract OrderBook is OrderBookBase, Modifiers, MathUtils {
                 _request.trader,
                 _request.isLong,
                 _request.marketId,
-                _avgExecutionPrice,
+                _avgExecPrice,
                 floc._sizeAbs,
                 floc._marginAbs,
                 true, // isIncreaseInSize
@@ -382,7 +390,7 @@ contract OrderBook is OrderBookBase, Modifiers, MathUtils {
             orderUtils.settlePnL(
                 key,
                 _request.isLong,
-                _avgExecutionPrice,
+                _avgExecPrice,
                 _request.marketId,
                 floc._sizeAbs,
                 floc._marginAbs
@@ -399,7 +407,7 @@ contract OrderBook is OrderBookBase, Modifiers, MathUtils {
                     _request.trader,
                     _request.isLong,
                     _request.marketId,
-                    _avgExecutionPrice,
+                    _avgExecPrice,
                     floc._sizeAbs,
                     floc._marginAbs,
                     false,
@@ -414,7 +422,7 @@ contract OrderBook is OrderBookBase, Modifiers, MathUtils {
                 _request.marketId,
                 floc._sizeAbs,
                 floc._marginAbs,
-                _avgExecutionPrice
+                _avgExecPrice
             );
         } else {
             globalState.updateGlobalShortPositionState(
@@ -422,7 +430,7 @@ contract OrderBook is OrderBookBase, Modifiers, MathUtils {
                 _request.marketId,
                 floc._sizeAbs,
                 floc._marginAbs,
-                _avgExecutionPrice
+                _avgExecPrice
             );
         }
 

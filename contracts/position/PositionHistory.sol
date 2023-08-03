@@ -29,7 +29,7 @@ contract PositionHistory {
         uint256 _maxSize,
         uint256 _avgOpenPrice,
         uint256 _avgClosePrice
-    ) external {
+    ) external returns (uint256) {
         // use positionCount as positionRecordId
         uint256 traderPositionRecordCount = traderVault
             .getTraderPositionRecordCount(_trader);
@@ -50,6 +50,8 @@ contract PositionHistory {
             _trader,
             traderPositionRecordCount + 1
         );
+
+        return traderPositionRecordCount;
     }
 
     function updatePostionRecord(
@@ -59,6 +61,8 @@ contract PositionHistory {
         bool _hasProfit,
         uint256 _closingPnL
     ) external {
+        // FIXME: increase / decrease / leveraging / deleveraging 주문 종류에 따라서 필요한 필드 업데이트
+        // TODO: Enum 활용
         PositionRecord storage _positionRecord = positionRecords[_trader][
             _positionRecordId
         ];

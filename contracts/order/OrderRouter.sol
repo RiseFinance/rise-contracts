@@ -10,10 +10,12 @@ import "../oracle/PriceManager.sol";
 import "./OrderHistory.sol";
 import "./OrderUtils.sol";
 import "../position/PositionVault.sol";
+import "../position/PositionHistory.sol";
 import "../market/TokenInfo.sol";
 import "../market/Market.sol";
 
 contract OrderRouter is OrderUtils {
+    PositionHistory positionHistory;
     OrderValidator orderValidator;
     PriceManager priceManager;
     OrderHistory orderHistory;
@@ -152,8 +154,14 @@ contract OrderRouter is OrderUtils {
             );
         }
 
-        // FIXME: create and get `position record`
-        uint256 positionRecordId = 0;
+        // create position record
+        uint256 positionRecordId = positionHistory.createPositionRecord(
+            msg.sender,
+            c._marketId,
+            c._sizeAbs,
+            fmc.avgExecPrice,
+            0
+        );
 
         // fill the order
         orderHistory.createOrderRecord(
