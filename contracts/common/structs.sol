@@ -45,6 +45,7 @@ struct OpenPosition {
     int256 unrealizedPnl; // current unrealized PnL => FIXME: this value should be update in real-time
     uint256 currentPositionRecordId;
     uint256 marketId;
+    // uint256 leverage;
     uint256 size; // Token Counts
     uint256 margin; // Token Counts
     uint256 avgOpenPrice; // TODO: check - should be coupled w/ positions link logic

@@ -160,43 +160,43 @@ contract MarketOrder is PnlManager, OrderUtils, OrderPriceUtils {
                 )
             );
 
-            UpdatePositionParams memory params = UpdatePositionParams(
-                _execType,
-                fmc.key,
-                true, // isOpening
-                msg.sender,
-                c._isLong,
-                fmc.positionRecordId,
-                c._marketId,
-                fmc.avgExecPrice,
-                c._sizeAbs,
-                c._marginAbs,
-                c._isIncrease, // isIncreaseInSize
-                c._isIncrease // isIncreaseInMargin
+            positionVault.updateOpenPosition(
+                UpdatePositionParams(
+                    _execType,
+                    fmc.key,
+                    true, // isOpening
+                    msg.sender,
+                    c._isLong,
+                    fmc.positionRecordId,
+                    c._marketId,
+                    fmc.avgExecPrice,
+                    c._sizeAbs,
+                    c._marginAbs,
+                    c._isIncrease, // isIncreaseInSize
+                    c._isIncrease // isIncreaseInMargin
+                )
             );
-
-            positionVault.updateOpenPosition(params);
         } else if (_execType == OrderExecType.IncreasePosition) {
             /// @dev for IncreasePosition: OpenPosition => PositionRecord
 
             fmc.positionRecordId = fmc.openPosition.currentPositionRecordId;
 
-            UpdatePositionParams memory params = UpdatePositionParams(
-                _execType,
-                fmc.key,
-                false, // isOpening
-                msg.sender,
-                c._isLong,
-                fmc.positionRecordId,
-                c._marketId,
-                fmc.avgExecPrice,
-                c._sizeAbs,
-                c._marginAbs,
-                c._isIncrease, // isIncreaseInSize
-                c._isIncrease // isIncreaseInMargin
+            positionVault.updateOpenPosition(
+                UpdatePositionParams(
+                    _execType,
+                    fmc.key,
+                    false, // isOpening
+                    msg.sender,
+                    c._isLong,
+                    fmc.positionRecordId,
+                    c._marketId,
+                    fmc.avgExecPrice,
+                    c._sizeAbs,
+                    c._marginAbs,
+                    c._isIncrease, // isIncreaseInSize
+                    c._isIncrease // isIncreaseInMargin
+                )
             );
-
-            positionVault.updateOpenPosition(params);
 
             positionHistory.updatePositionRecord(
                 UpdatePositionRecordParams(
@@ -232,23 +232,22 @@ contract MarketOrder is PnlManager, OrderUtils, OrderPriceUtils {
         fmc.positionRecordId = fmc.openPosition.currentPositionRecordId;
 
         if (_execType == OrderExecType.DecreasePosition) {
-            UpdatePositionParams memory params = UpdatePositionParams(
-                _execType,
-                fmc.key,
-                false, // isOpening
-                msg.sender,
-                c._isLong,
-                fmc.positionRecordId,
-                c._marketId,
-                fmc.avgExecPrice,
-                c._sizeAbs,
-                c._marginAbs,
-                c._isIncrease, // isIncreaseInSize
-                c._isIncrease // isIncreaseInMargin
+            positionVault.updateOpenPosition(
+                UpdatePositionParams(
+                    _execType,
+                    fmc.key,
+                    false, // isOpening
+                    msg.sender,
+                    c._isLong,
+                    fmc.positionRecordId,
+                    c._marketId,
+                    fmc.avgExecPrice,
+                    c._sizeAbs,
+                    c._marginAbs,
+                    c._isIncrease, // isIncreaseInSize
+                    c._isIncrease // isIncreaseInMargin
+                )
             );
-
-            // positionVault.updateOpenPositionWithPnl(0, params); // FIXME: first arg is interimPnlUsd
-            positionVault.updateOpenPosition(params);
 
             positionHistory.updatePositionRecord(
                 UpdatePositionRecordParams(
