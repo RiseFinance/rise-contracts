@@ -34,7 +34,7 @@ contract PositionVault is PositionUtils {
 
         // TODO: refactor
         OpenPosition storage _position = openPositions[p._key];
-        _position.cumulativePnl += _interimPnlUsd;
+        _position.unrealizedPnl += _interimPnlUsd;
 
         require(
             p._execType == OrderExecType.DecreasePosition,

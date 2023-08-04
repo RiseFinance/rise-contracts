@@ -38,9 +38,9 @@ struct OrderRecord {
 }
 
 struct PositionRecord {
-    // bool hasProfit; // only for closed positions
     bool isClosed;
     int256 closingPnl; // only for closed positions
+    int256 cumulativeRealizedPnl; // cumulative realized PnL
     uint256 marketId;
     uint256 maxSize; // max open interest
     uint256 avgOpenPrice;
@@ -52,8 +52,7 @@ struct PositionRecord {
 struct OpenPosition {
     address trader;
     bool isLong;
-    // bool hasProfit; // whether the cumulativePnL is positive
-    int256 cumulativePnl; // FIXME: int256으로 처리하기 (PositionVault.updateOpenPosition 내부 로직이 너무 복잡함)
+    int256 unrealizedPnl; // current unrealized PnL
     uint256 currentPositionRecordId;
     uint256 marketId;
     uint256 size; // Token Counts

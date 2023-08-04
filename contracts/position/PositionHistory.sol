@@ -39,6 +39,7 @@ contract PositionHistory {
         positionRecords[_trader][traderPositionRecordCount] = PositionRecord(
             false, // isClosed
             0, // closingPnl
+            0, // cumulativeRealizedPnl
             _marketId,
             _maxSize,
             _avgOpenPrice,
