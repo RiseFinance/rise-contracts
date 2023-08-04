@@ -8,6 +8,7 @@ import "../common/Modifiers.sol";
 import "../common/MathUtils.sol";
 import "../common/constants.sol";
 import "../common/params.sol";
+
 import "../position/PositionHistory.sol";
 import "../position/PositionVault.sol";
 import "../position/PnlManager.sol";
@@ -391,19 +392,23 @@ contract OrderBook is
 
         if (_request.isLong) {
             globalState.updateGlobalLongPositionState(
-                _request.isIncrease,
-                _request.marketId,
-                flc.sizeAbs,
-                flc.marginAbs,
-                _avgExecPrice
+                UpdateGlobalPositionStateParams(
+                    _request.isIncrease,
+                    _request.marketId,
+                    flc.sizeAbs,
+                    flc.marginAbs,
+                    _avgExecPrice
+                )
             );
         } else {
             globalState.updateGlobalShortPositionState(
-                _request.isIncrease,
-                _request.marketId,
-                flc.sizeAbs,
-                flc.marginAbs,
-                _avgExecPrice
+                UpdateGlobalPositionStateParams(
+                    _request.isIncrease,
+                    _request.marketId,
+                    flc.sizeAbs,
+                    flc.marginAbs,
+                    _avgExecPrice
+                )
             );
         }
 
@@ -440,11 +445,13 @@ contract OrderBook is
             /// @dev for OpenPosition: PositionRecord => OpenPosition
 
             flc.positionRecordId = positionHistory.openPositionRecord(
-                msg.sender,
-                _request.marketId,
-                flc.sizeAbs,
-                _request.limitPrice,
-                0
+                OpenPositionRecordParams(
+                    msg.sender,
+                    _request.marketId,
+                    flc.sizeAbs,
+                    _request.limitPrice,
+                    0
+                )
             );
 
             UpdatePositionParams memory params = UpdatePositionParams(
@@ -486,13 +493,15 @@ contract OrderBook is
             positionVault.updateOpenPosition(params);
 
             positionHistory.updatePositionRecord(
-                msg.sender,
-                flc.key,
-                flc.positionRecordId,
-                _request.isIncrease,
-                flc.pnl,
-                flc.sizeAbs,
-                _request.limitPrice
+                UpdatePositionRecordParams(
+                    msg.sender,
+                    flc.key,
+                    flc.positionRecordId,
+                    _request.isIncrease,
+                    flc.pnl,
+                    flc.sizeAbs,
+                    _request.limitPrice
+                )
             );
         } else {
             revert("Invalid execution type");
@@ -536,23 +545,27 @@ contract OrderBook is
             positionVault.updateOpenPosition(params);
 
             positionHistory.updatePositionRecord(
-                msg.sender,
-                flc.key,
-                flc.openPosition.currentPositionRecordId,
-                _request.isIncrease,
-                flc.pnl,
-                flc.sizeAbs,
-                _request.limitPrice
+                UpdatePositionRecordParams(
+                    msg.sender,
+                    flc.key,
+                    flc.openPosition.currentPositionRecordId,
+                    _request.isIncrease,
+                    flc.pnl,
+                    flc.sizeAbs,
+                    _request.limitPrice
+                )
             );
         } else if (execType == OrderExecType.ClosePosition) {
             positionVault.deleteOpenPosition(flc.key);
 
             positionHistory.closePositionRecord(
-                msg.sender,
-                flc.openPosition.currentPositionRecordId,
-                flc.pnl,
-                flc.sizeAbs,
-                _request.limitPrice
+                ClosePositionRecordParams(
+                    msg.sender,
+                    flc.openPosition.currentPositionRecordId,
+                    flc.pnl,
+                    flc.sizeAbs,
+                    _request.limitPrice
+                )
             );
         } else {
             revert("Invalid execution type");

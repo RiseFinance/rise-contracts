@@ -3,7 +3,9 @@
 pragma solidity ^0.8.0;
 
 import "../common/structs.sol";
+import "../common/params.sol";
 import "../common/enums.sol";
+
 import "../account/TraderVault.sol";
 
 contract OrderHistory {
@@ -17,36 +19,26 @@ contract OrderHistory {
         traderVault = TraderVault(_traderVault);
     }
 
-    function createOrderRecord(
-        address _trader,
-        OrderType _orderType,
-        bool _isLong,
-        bool _isIncrease,
-        uint256 _positionRecordId,
-        uint256 _marketId,
-        uint256 _sizeAbs,
-        uint256 _marginAbs,
-        uint256 _executionPrice
-    ) external {
+    function createOrderRecord(CreateOrderRecordParams memory p) external {
         // use orderCount as orderRecordId
         uint256 traderOrderRecordCount = traderVault.getTraderOrderRecordCount(
-            _trader
+            p._trader
         );
 
-        orderRecords[_trader][traderOrderRecordCount] = OrderRecord(
-            _orderType,
-            _isLong,
-            _isIncrease,
-            _positionRecordId,
-            _marketId,
-            _sizeAbs,
-            _marginAbs,
-            _executionPrice,
+        orderRecords[p._trader][traderOrderRecordCount] = OrderRecord(
+            p._orderType,
+            p._isLong,
+            p._isIncrease,
+            p._positionRecordId,
+            p._marketId,
+            p._sizeAbs,
+            p._marginAbs,
+            p._executionPrice,
             block.timestamp
         );
 
         traderVault.setTraderOrderRecordCount(
-            _trader,
+            p._trader,
             traderOrderRecordCount + 1
         );
     }

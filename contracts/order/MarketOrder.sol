@@ -3,6 +3,7 @@
 pragma solidity ^0.8.0;
 
 import "../common/params.sol";
+
 import "../position/PositionHistory.sol";
 import "../position/PositionVault.sol";
 import "../position/PnlManager.sol";
@@ -88,34 +89,40 @@ contract MarketOrder is PnlManager, OrderUtils, OrderPriceUtils {
 
         // create order record
         orderHistory.createOrderRecord(
-            msg.sender,
-            OrderType.Market,
-            c._isLong,
-            c._isIncrease,
-            fmc.positionRecordId,
-            c._marketId,
-            c._sizeAbs,
-            c._marginAbs,
-            fmc.avgExecPrice
+            CreateOrderRecordParams(
+                msg.sender,
+                OrderType.Market,
+                c._isLong,
+                c._isIncrease,
+                fmc.positionRecordId,
+                c._marketId,
+                c._sizeAbs,
+                c._marginAbs,
+                fmc.avgExecPrice
+            )
         );
 
         // update global position state
 
         if (c._isLong) {
             globalState.updateGlobalLongPositionState(
-                c._isIncrease,
-                c._marketId,
-                c._sizeAbs,
-                c._marginAbs,
-                fmc.avgExecPrice
+                UpdateGlobalPositionStateParams(
+                    c._isIncrease,
+                    c._marketId,
+                    c._sizeAbs,
+                    c._marginAbs,
+                    fmc.avgExecPrice
+                )
             );
         } else {
             globalState.updateGlobalShortPositionState(
-                c._isIncrease,
-                c._marketId,
-                c._sizeAbs,
-                c._marginAbs,
-                fmc.avgExecPrice
+                UpdateGlobalPositionStateParams(
+                    c._isIncrease,
+                    c._marketId,
+                    c._sizeAbs,
+                    c._marginAbs,
+                    fmc.avgExecPrice
+                )
             );
         }
 
@@ -144,11 +151,13 @@ contract MarketOrder is PnlManager, OrderUtils, OrderPriceUtils {
             /// @dev for OpenPosition: PositionRecord => OpenPosition
 
             fmc.positionRecordId = positionHistory.openPositionRecord(
-                msg.sender,
-                c._marketId,
-                c._sizeAbs,
-                fmc.avgExecPrice,
-                0
+                OpenPositionRecordParams(
+                    msg.sender,
+                    c._marketId,
+                    c._sizeAbs,
+                    fmc.avgExecPrice,
+                    0
+                )
             );
 
             UpdatePositionParams memory params = UpdatePositionParams(
@@ -190,13 +199,15 @@ contract MarketOrder is PnlManager, OrderUtils, OrderPriceUtils {
             positionVault.updateOpenPosition(params);
 
             positionHistory.updatePositionRecord(
-                msg.sender,
-                fmc.key,
-                fmc.positionRecordId,
-                c._isIncrease,
-                fmc.pnl,
-                c._sizeAbs, // not used for increasing position
-                fmc.avgExecPrice // not used for increasing position
+                UpdatePositionRecordParams(
+                    msg.sender,
+                    fmc.key,
+                    fmc.positionRecordId,
+                    c._isIncrease,
+                    fmc.pnl,
+                    c._sizeAbs, // not used for increasing position
+                    fmc.avgExecPrice // not used for increasing position
+                )
             );
         } else {
             revert("Invalid execution type");
@@ -240,23 +251,27 @@ contract MarketOrder is PnlManager, OrderUtils, OrderPriceUtils {
             positionVault.updateOpenPosition(params);
 
             positionHistory.updatePositionRecord(
-                msg.sender,
-                fmc.key,
-                fmc.openPosition.currentPositionRecordId,
-                c._isIncrease,
-                fmc.pnl,
-                c._sizeAbs,
-                fmc.avgExecPrice
+                UpdatePositionRecordParams(
+                    msg.sender,
+                    fmc.key,
+                    fmc.openPosition.currentPositionRecordId,
+                    c._isIncrease,
+                    fmc.pnl,
+                    c._sizeAbs,
+                    fmc.avgExecPrice
+                )
             );
         } else if (_execType == OrderExecType.ClosePosition) {
             positionVault.deleteOpenPosition(fmc.key);
 
             positionHistory.closePositionRecord(
-                msg.sender,
-                fmc.openPosition.currentPositionRecordId,
-                fmc.pnl,
-                c._sizeAbs,
-                fmc.avgExecPrice
+                ClosePositionRecordParams(
+                    msg.sender,
+                    fmc.openPosition.currentPositionRecordId,
+                    fmc.pnl,
+                    c._sizeAbs,
+                    fmc.avgExecPrice
+                )
             );
         } else {
             revert("Invalid execution type");

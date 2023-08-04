@@ -2,6 +2,8 @@
 
 pragma solidity ^0.8.0;
 
+import "../common/params.sol";
+
 contract PositionUtils {
     /**
      * (new avg price) * (new size) = (old avg price) * (old size) + (mark price) * (size delta)

@@ -5,6 +5,7 @@ pragma solidity ^0.8.0;
 import "@openzeppelin/contracts/utils/math/SafeCast.sol";
 
 import "../common/structs.sol";
+
 import "../oracle/PriceManager.sol";
 import "../global/GlobalState.sol";
 import "../order/OrderUtils.sol";

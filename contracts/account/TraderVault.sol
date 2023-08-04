@@ -2,8 +2,9 @@
 
 pragma solidity ^0.8.0;
 
-import "hardhat/console.sol"; // test-only
 import "../crosschain/interfaces/l3/ArbSys.sol";
+
+import "hardhat/console.sol"; // test-only
 
 // TODO: check - `override` needed for function declared in the interface `IL3Vault`?
 contract TraderVault {

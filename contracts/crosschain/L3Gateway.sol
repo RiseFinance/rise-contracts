@@ -5,7 +5,9 @@ pragma solidity ^0.8.0;
 import "./interfaces/l2/IL2MarginGateway.sol";
 import "./interfaces/l2/IL2LiquidityGateway.sol";
 import "./interfaces/l3/IL3Gateway.sol";
+
 import "../common/structs.sol";
+
 import "../account/TraderVault.sol";
 import "../risepool/RisePool.sol";
 import "../market/TokenInfo.sol";
