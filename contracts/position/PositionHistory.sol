@@ -91,7 +91,7 @@ contract PositionHistory is PositionUtils {
             _updateAvgClosePrice(positionRecord, _sizeAbs, _avgExecPrice);
             _updateCumulativeRealizedPnl(positionRecord, _pnl);
         }
-        // no need to update PnL for position records for decreasing position (only for closed positions)
+        // no need to update PnL for position records for decreasing positzion (only for closed positions)
     }
 
     function closePositionRecord(

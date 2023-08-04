@@ -2,18 +2,9 @@
 
 pragma solidity ^0.8.0;
 
+import "../common/structs.sol";
+
 contract Market {
-    // TODO: check - base asset, quote asset size decimals for submitting an order
-    struct MarketInfo {
-        uint256 marketId;
-        uint256 priceTickSize; // in USD, 10^8
-        uint256 baseAssetId; // synthetic
-        uint256 quoteAssetId; // synthetic
-        uint256 longReserveAssetId; // real liquidity
-        uint256 shortReserveAssetId; // real liquidity
-        uint256 marginAssetId;
-        address marketMakerToken;
-    }
     mapping(uint256 => MarketInfo) public markets; // marketId => MarketInfo
     uint256 public globalMarketIdCounter = 0;
 

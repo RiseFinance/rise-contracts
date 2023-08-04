@@ -6,34 +6,42 @@ import "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import "./OrderBookBase.sol";
 import "../global/GlobalState.sol";
 import "../market/TokenInfo.sol";
-
 import "../order/OrderUtils.sol";
 import "../position/PositionHistory.sol";
+import "../position/PositionVault.sol";
+import "../position/PnlManager.sol";
 import "../common/Modifiers.sol";
 import "../common/MathUtils.sol";
+import "../common/constants.sol";
 import "../common/params.sol";
 
 import "hardhat/console.sol";
 
-contract OrderBook is OrderUtils, OrderBookBase, Modifiers, MathUtils {
+contract OrderBook is
+    OrderBookBase,
+    PnlManager,
+    OrderUtils,
+    Modifiers,
+    MathUtils
+{
     using SafeCast for int256;
     using SafeCast for uint256;
 
     PositionHistory public positionHistory;
-    // OrderHistory public orderHistory;
+    PositionVault public positionVault;
     GlobalState public globalState;
     TokenInfo public tokenInfo;
 
     struct IterationContext {
+        bool loopCondition;
         uint256 interimMarkPrice;
         uint256 limitPriceIterator;
-        bool loopCondition;
     }
 
     struct PriceTickIterationContext {
+        bool _isPartialForThePriceTick;
         uint256 _sizeCap;
         uint256 _sizeCapInUsd;
-        bool _isPartialForThePriceTick;
         uint256 _fillAmount;
         uint256 _priceImpactInUsd;
         uint256 _avgExecutionPrice;
@@ -43,16 +51,16 @@ contract OrderBook is OrderUtils, OrderBookBase, Modifiers, MathUtils {
 
     struct FillLimitOrderContext {
         OrderExecType _execType;
+        OpenPosition _openPosition;
         bool _isPartial;
+        bytes32 _key;
+        int256 _pnl;
         uint256 _marginAssetId;
         uint256 _partialRatio;
         uint256 _sizeAbs;
         uint256 _marginAbs;
         uint256 _positionSize;
-        bytes32 _key;
-        OpenPosition _openPosition;
         uint256 _positionRecordId;
-        int256 _pnl;
     }
 
     function getOrderRequest(
@@ -500,7 +508,7 @@ contract OrderBook is OrderUtils, OrderBookBase, Modifiers, MathUtils {
     ) private {
         // PnL settlement
         settlePnL(
-            flc._key,
+            flc._openPosition,
             _request.isLong,
             _request.limitPrice,
             _request.marketId,

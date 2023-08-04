@@ -4,14 +4,9 @@ pragma solidity ^0.8.0;
 
 import "hardhat/console.sol"; // test-only
 import "../crosschain/interfaces/l3/ArbSys.sol";
-import "../position/PositionVault.sol";
-import "../risepool/RisePool.sol";
 
 // TODO: check - `override` needed for function declared in the interface `IL3Vault`?
 contract TraderVault {
-    PositionVault public positionVault;
-    RisePool public risePool;
-
     mapping(address => mapping(uint256 => uint256)) public traderBalances; // userAddress => assetId => Balance
     mapping(address => uint256) public traderOrderRecordCounts; // userAddress => orderCount
     mapping(address => uint256) public traderPositionRecordCounts; // userAddress => positionCount

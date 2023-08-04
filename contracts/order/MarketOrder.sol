@@ -8,25 +8,27 @@ import "./OrderHistory.sol";
 import "./OrderValidator.sol";
 import "../position/PositionVault.sol";
 import "../position/PositionHistory.sol";
+import "../position/PnlManager.sol";
 import "../global/GlobalState.sol";
 import "../common/params.sol";
 
-contract MarketOrder is OrderUtils, OrderPriceUtils {
-    OrderValidator orderValidator;
-    OrderHistory orderHistory;
-    PositionHistory positionHistory;
-    GlobalState globalState;
+contract MarketOrder is PnlManager, OrderUtils, OrderPriceUtils {
+    PositionHistory public positionHistory;
+    PositionVault public positionVault;
+    OrderValidator public orderValidator;
+    OrderHistory public orderHistory;
+    GlobalState public globalState;
 
     struct FillMarketOrderContext {
+        OpenPosition openPosition;
         OrderExecType execType;
+        bytes32 key;
         bool isBuy;
         bool isOpen;
+        int256 pnl;
+        uint256 positionRecordId;
         uint256 marginAssetId;
         uint256 avgExecPrice;
-        bytes32 key;
-        OpenPosition openPosition;
-        uint256 positionRecordId;
-        int256 pnl;
     }
 
     function executeMarketOrder(
@@ -208,7 +210,7 @@ contract MarketOrder is OrderUtils, OrderPriceUtils {
     ) private {
         // PnL settlement
         fmc.pnl = settlePnL(
-            fmc.key,
+            fmc.openPosition,
             c._isLong,
             fmc.avgExecPrice,
             c._marketId,

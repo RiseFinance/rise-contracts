@@ -4,8 +4,8 @@ pragma solidity ^0.8.0;
 
 import "./interfaces/l2/IInbox.sol";
 import "./interfaces/l3/IL3Gateway.sol";
-import "../market/TokenInfo.sol";
 import "../market/Market.sol";
+import "../common/structs.sol";
 import "../token/RMM.sol";
 import "../risepool/RisePoolUtils.sol";
 import "./TransferHelper.sol";
@@ -13,7 +13,6 @@ import "./TransferHelper.sol";
 contract L2LiquidityGateway is TransferHelper {
     address public l3GatewayAddress;
     RisePoolUtils public risePoolUtils;
-    TokenInfo public tokenInfo;
     Market public market;
     IInbox public inbox;
 
@@ -88,7 +87,7 @@ contract L2LiquidityGateway is TransferHelper {
 
         // mint $RMM tokens
 
-        Market.MarketInfo memory marketInfo = market.getMarketInfo(_marketId);
+        MarketInfo memory marketInfo = market.getMarketInfo(_marketId);
         RiseMarketMaker rmm = RiseMarketMaker(marketInfo.marketMakerToken);
         uint256 mintAmount = risePoolUtils.getMintAmount(); // TODO: calculate AUM of MM pool & calculate the mint amount of $RMM tokens
 
@@ -112,7 +111,7 @@ contract L2LiquidityGateway is TransferHelper {
             "L2Gateway: insufficient msg.value"
         );
 
-        // Market.MarketInfo memory marketInfo = market.getMarketInfo(_marketId);
+        // MarketInfo memory marketInfo = market.getMarketInfo(_marketId);
         // TODO: check if marketId matches the token address
 
         _transferIn(msg.sender, _token, _addAmount);
@@ -145,7 +144,7 @@ contract L2LiquidityGateway is TransferHelper {
 
         // mint $RMM tokens
 
-        Market.MarketInfo memory marketInfo = market.getMarketInfo(_marketId);
+        MarketInfo memory marketInfo = market.getMarketInfo(_marketId);
         RiseMarketMaker rmm = RiseMarketMaker(marketInfo.marketMakerToken);
         uint256 mintAmount = risePoolUtils.getMintAmount(); // TODO: calculate AUM of MM pool & calculate the mint amount of $RMM tokens
 
@@ -167,7 +166,7 @@ contract L2LiquidityGateway is TransferHelper {
         uint256 _gasPriceBid
     ) external payable returns (uint256) {
         // TODO: check - 호출 순서 확인 및 Retryable redeem 실패 시 다시 $RMM mint 가능한지 확인
-        Market.MarketInfo memory marketInfo = market.getMarketInfo(_marketId);
+        MarketInfo memory marketInfo = market.getMarketInfo(_marketId);
 
         // burn $RMM tokens
         RiseMarketMaker rmm = RiseMarketMaker(marketInfo.marketMakerToken);

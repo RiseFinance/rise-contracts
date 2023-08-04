@@ -3,6 +3,7 @@
 pragma solidity ^0.8.0;
 
 import "../account/TraderVault.sol";
+import "../common/structs.sol";
 import "../risepool/RisePool.sol";
 import "../market/Market.sol";
 import "../market/TokenInfo.sol";
@@ -100,7 +101,7 @@ contract L3Gateway is IL3Gateway {
 
         risePool.removeLiquidity(_marketId, _isLongReserve, _amount);
 
-        Market.MarketInfo memory marketInfo = market.getMarketInfo(_marketId);
+        MarketInfo memory marketInfo = market.getMarketInfo(_marketId);
         uint256 _assetId = _isLongReserve
             ? marketInfo.longReserveAssetId
             : marketInfo.shortReserveAssetId;

@@ -5,14 +5,12 @@ pragma solidity ^0.8.0;
 import "./interfaces/l2/IInbox.sol";
 import "./interfaces/l3/IL3Gateway.sol";
 import "../market/TokenInfo.sol";
-import "../market/Market.sol";
 import "./TransferHelper.sol";
 import {ETH_ID} from "../common/constants.sol";
 
 contract L2MarginGateway is TransferHelper {
     address public l3GatewayAddress;
     TokenInfo public tokenInfo;
-    Market public market;
     IInbox public inbox;
 
     error NotBridge(address sender); // TODO: move to errors
