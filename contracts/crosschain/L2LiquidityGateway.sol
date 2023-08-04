@@ -4,16 +4,18 @@ pragma solidity ^0.8.0;
 
 import "./interfaces/l2/IInbox.sol";
 import "./interfaces/l3/IL3Gateway.sol";
-import "../market/TokenInfo.sol";
-import "../market/Market.sol";
-import "../token/RMM.sol";
+
+import "../common/structs.sol";
+import "../common/params.sol";
+
 import "../risepool/RisePoolUtils.sol";
+import "../market/Market.sol";
 import "./TransferHelper.sol";
+import "../token/RMM.sol";
 
 contract L2LiquidityGateway is TransferHelper {
     address public l3GatewayAddress;
     RisePoolUtils public risePoolUtils;
-    TokenInfo public tokenInfo;
     Market public market;
     IInbox public inbox;
 
@@ -48,14 +50,15 @@ contract L2LiquidityGateway is TransferHelper {
         uint256 _marketId,
         bool _isLongReserve,
         uint256 _addAmount,
-        uint256 _maxSubmissionCost,
-        uint256 _gasLimit,
-        uint256 _gasPriceBid
+        L2ToL3FeeParams memory p
     ) external payable returns (uint256) {
         require(_addAmount > 0, "L2Gateway: deposit amount should be positive");
         require(
             msg.value >=
-                _addAmount + _maxSubmissionCost + _gasLimit * _gasPriceBid,
+                _addAmount +
+                    p._maxSubmissionCost +
+                    p._gasLimit *
+                    p._gasPriceBid,
             "L2Gateway: insufficient msg.value"
         );
 
@@ -67,15 +70,15 @@ contract L2LiquidityGateway is TransferHelper {
         );
 
         uint256 ticketId = inbox.createRetryableTicket{
-            value: _maxSubmissionCost + _gasLimit * _gasPriceBid
+            value: p._maxSubmissionCost + p._gasLimit * p._gasPriceBid
         }(
             l3GatewayAddress,
             0, // l3CallValue
-            _maxSubmissionCost,
+            p._maxSubmissionCost,
             msg.sender, // excessFeeRefundAddress // TODO: aggregate excess fees on a L3 admin contract (not msg.sender)
             msg.sender, // callValueRefundAddress
-            _gasLimit,
-            _gasPriceBid,
+            p._gasLimit,
+            p._gasPriceBid,
             data
         );
 
@@ -83,12 +86,15 @@ contract L2LiquidityGateway is TransferHelper {
         _transferEth(
             payable(msg.sender),
             msg.value -
-                (_addAmount + _maxSubmissionCost + _gasLimit * _gasPriceBid)
+                (_addAmount +
+                    p._maxSubmissionCost +
+                    p._gasLimit *
+                    p._gasPriceBid)
         );
 
         // mint $RMM tokens
 
-        Market.MarketInfo memory marketInfo = market.getMarketInfo(_marketId);
+        MarketInfo memory marketInfo = market.getMarketInfo(_marketId);
         RiseMarketMaker rmm = RiseMarketMaker(marketInfo.marketMakerToken);
         uint256 mintAmount = risePoolUtils.getMintAmount(); // TODO: calculate AUM of MM pool & calculate the mint amount of $RMM tokens
 
@@ -102,17 +108,15 @@ contract L2LiquidityGateway is TransferHelper {
         uint256 _marketId,
         bool _isLongReserve,
         uint256 _addAmount,
-        uint256 _maxSubmissionCost,
-        uint256 _gasLimit,
-        uint256 _gasPriceBid
+        L2ToL3FeeParams memory p
     ) external payable returns (uint256) {
         require(_addAmount > 0, "L2Gateway: deposit amount should be positive");
         require(
-            msg.value >= _maxSubmissionCost + _gasLimit * _gasPriceBid,
+            msg.value >= p._maxSubmissionCost + p._gasLimit * p._gasPriceBid,
             "L2Gateway: insufficient msg.value"
         );
 
-        // Market.MarketInfo memory marketInfo = market.getMarketInfo(_marketId);
+        // MarketInfo memory marketInfo = market.getMarketInfo(_marketId);
         // TODO: check if marketId matches the token address
 
         _transferIn(msg.sender, _token, _addAmount);
@@ -125,27 +129,27 @@ contract L2LiquidityGateway is TransferHelper {
         );
 
         uint256 ticketId = inbox.createRetryableTicket{
-            value: _maxSubmissionCost + _gasLimit * _gasPriceBid
+            value: p._maxSubmissionCost + p._gasLimit * p._gasPriceBid
         }(
             l3GatewayAddress,
             0, // l3CallValue
-            _maxSubmissionCost,
+            p._maxSubmissionCost,
             msg.sender, // excessFeeRefundAddress // TODO: aggregate excess fees on a L3 admin contract (not msg.sender)
             msg.sender, // callValueRefundAddress
-            _gasLimit,
-            _gasPriceBid,
+            p._gasLimit,
+            p._gasPriceBid,
             data
         );
 
         // refund excess ETH
         _transferEth(
             payable(msg.sender),
-            msg.value - (_maxSubmissionCost + _gasLimit * _gasPriceBid)
+            msg.value - (p._maxSubmissionCost + p._gasLimit * p._gasPriceBid)
         );
 
         // mint $RMM tokens
 
-        Market.MarketInfo memory marketInfo = market.getMarketInfo(_marketId);
+        MarketInfo memory marketInfo = market.getMarketInfo(_marketId);
         RiseMarketMaker rmm = RiseMarketMaker(marketInfo.marketMakerToken);
         uint256 mintAmount = risePoolUtils.getMintAmount(); // TODO: calculate AUM of MM pool & calculate the mint amount of $RMM tokens
 
@@ -162,12 +166,10 @@ contract L2LiquidityGateway is TransferHelper {
         uint256 _marketId,
         bool _isLongReserve,
         uint256 _withdrawAmount,
-        uint256 _maxSubmissionCost,
-        uint256 _gasLimit,
-        uint256 _gasPriceBid
+        L2ToL3FeeParams memory p
     ) external payable returns (uint256) {
         // TODO: check - 호출 순서 확인 및 Retryable redeem 실패 시 다시 $RMM mint 가능한지 확인
-        Market.MarketInfo memory marketInfo = market.getMarketInfo(_marketId);
+        MarketInfo memory marketInfo = market.getMarketInfo(_marketId);
 
         // burn $RMM tokens
         RiseMarketMaker rmm = RiseMarketMaker(marketInfo.marketMakerToken);
@@ -182,15 +184,15 @@ contract L2LiquidityGateway is TransferHelper {
         );
 
         uint256 ticketId = inbox.createRetryableTicket{
-            value: _maxSubmissionCost + _gasLimit * _gasPriceBid
+            value: p._maxSubmissionCost + p._gasLimit * p._gasPriceBid
         }(
             l3GatewayAddress,
             0,
-            _maxSubmissionCost,
+            p._maxSubmissionCost,
             msg.sender, // excessFeeRefundAddress // TODO: aggregate excess fees on a L3 admin contract (not msg.sender)
             msg.sender, // callValueRefundAddress
-            _gasLimit,
-            _gasPriceBid,
+            p._gasLimit,
+            p._gasPriceBid,
             data
         );
 

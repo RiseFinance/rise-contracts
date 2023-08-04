@@ -2,13 +2,16 @@
 
 pragma solidity ^0.8.0;
 
-import "../account/TraderVault.sol";
-import "../risepool/RisePool.sol";
-import "../market/Market.sol";
-import "../market/TokenInfo.sol";
 import "./interfaces/l2/IL2MarginGateway.sol";
 import "./interfaces/l2/IL2LiquidityGateway.sol";
 import "./interfaces/l3/IL3Gateway.sol";
+
+import "../common/structs.sol";
+
+import "../account/TraderVault.sol";
+import "../risepool/RisePool.sol";
+import "../market/TokenInfo.sol";
+import "../market/Market.sol";
 import {ArbSys} from "./interfaces/l3/ArbSys.sol";
 import {ETH_ID} from "../common/constants.sol";
 
@@ -100,7 +103,7 @@ contract L3Gateway is IL3Gateway {
 
         risePool.removeLiquidity(_marketId, _isLongReserve, _amount);
 
-        Market.MarketInfo memory marketInfo = market.getMarketInfo(_marketId);
+        MarketInfo memory marketInfo = market.getMarketInfo(_marketId);
         uint256 _assetId = _isLongReserve
             ? marketInfo.longReserveAssetId
             : marketInfo.shortReserveAssetId;

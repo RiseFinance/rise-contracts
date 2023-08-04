@@ -3,55 +3,66 @@
 pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts/utils/math/SafeCast.sol";
-import "./OrderBookBase.sol";
-import "../account/TraderVault.sol";
-import "../global/GlobalState.sol";
-import "../market/TokenInfo.sol";
-import "../market/Market.sol";
-import "../order/OrderHistory.sol";
-import "../order/OrderUtils.sol";
-import "../position/PositionVault.sol";
+
 import "../common/Modifiers.sol";
 import "../common/MathUtils.sol";
-import {PARTIAL_RATIO_PRECISION} from "../common/constants.sol";
+import "../common/constants.sol";
+import "../common/params.sol";
+
+import "../position/PositionHistory.sol";
+import "../position/PositionVault.sol";
+import "../position/PnlManager.sol";
+import "../global/GlobalState.sol";
+import "../market/TokenInfo.sol";
+import "../order/OrderUtils.sol";
+import "./OrderBookBase.sol";
 
 import "hardhat/console.sol";
 
-contract OrderBook is OrderBookBase, Modifiers, MathUtils {
+contract OrderBook is
+    OrderBookBase,
+    PnlManager,
+    OrderUtils,
+    Modifiers,
+    MathUtils
+{
     using SafeCast for int256;
     using SafeCast for uint256;
 
-    OrderHistory public orderHistory;
+    PositionHistory public positionHistory;
+    PositionVault public positionVault;
     GlobalState public globalState;
-    OrderUtils public orderUtils;
+    TokenInfo public tokenInfo;
 
     struct IterationContext {
+        bool loopCondition;
         uint256 interimMarkPrice;
         uint256 limitPriceIterator;
-        bool loopCondition;
     }
 
     struct PriceTickIterationContext {
-        uint256 _sizeCap;
-        uint256 _sizeCapInUsd;
-        bool _isPartialForThePriceTick;
-        uint256 _fillAmount;
-        uint256 _priceImpactInUsd;
-        uint256 _avgExecutionPrice;
-        uint256 _firstIdx;
-        uint256 _lastIdx;
+        bool isPartialForThePriceTick;
+        uint256 sizeCap;
+        uint256 sizeCapInUsd;
+        uint256 fillAmount;
+        uint256 priceImpactInUsd;
+        uint256 avgExecutionPrice;
+        uint256 firstIdx;
+        uint256 lastIdx;
     }
 
     struct FillLimitOrderContext {
-        bool _isPartial;
-        uint256 _partialRatio;
-        uint256 _sizeAbs;
-        uint256 _marginAbs;
+        OrderExecType execType;
+        OpenPosition openPosition;
+        bool isPartial;
+        bytes32 key;
+        int256 pnl;
+        uint256 marginAssetId;
+        uint256 partialRatio;
+        uint256 sizeAbs;
+        uint256 marginAbs;
         uint256 _positionSize;
-    }
-
-    constructor(address _traderVault) {
-        traderVault = TraderVault(_traderVault);
+        uint256 positionRecordId;
     }
 
     function getOrderRequest(
@@ -67,7 +78,7 @@ contract OrderBook is OrderBookBase, Modifiers, MathUtils {
         }
     }
 
-    function placeLimitOrder(OrderContext calldata c) external {
+    function placeLimitOrder(OrderParams calldata c) external {
         // FIXME: orderSizeForPriceTick 업데이트
         // TODO: max cap 등 validation?
         // FIXME: TODO: Limit Order place or fill 할 때 traderBalance, poolAmount, reserveAmount 업데이트 필요
@@ -148,7 +159,7 @@ contract OrderBook is OrderBookBase, Modifiers, MathUtils {
 
         while (ic.loopCondition) {
             // check amounts of orders that can be filled in this price tick
-            // if `_sizeCap` amount of orders are filled, the mark price will reach `_limitPriceIterator`.
+            // if `sizeCap` amount of orders are filled, the mark price will reach `_limitPriceIterator`.
             // i.e. _interimMarkPrice + (price buffer) => _limitPriceIterator
 
             // then, the max amount of orders that can be filled in this price tick iteration is
@@ -172,14 +183,14 @@ contract OrderBook is OrderBookBase, Modifiers, MathUtils {
                 // break;
             }
 
-            // _sizeCap = 이번 limit price tick에서 체결할 수 있는 최대 주문량
+            // sizeCap = 이번 limit price tick에서 체결할 수 있는 최대 주문량
             // i.e. price impact가 발생하여 interimMarkPrice가 limitPriceIterator에 도달하는 경우
-            // 하나의 price tick 안의 다 requests를 처리하고나면 _sizeCap -= orderSizeInUsdForPriceTick[_marketId][_limitPriceIterator]
+            // 하나의 price tick 안의 다 requests를 처리하고나면 sizeCap -= orderSizeInUsdForPriceTick[_marketId][_limitPriceIterator]
 
-            // note: this is the right place for the variable `_sizeCap` declaration +
-            // `_sizeCap` maintains its context within the while loop
+            // note: this is the right place for the variable `sizeCap` declaration +
+            // `sizeCap` maintains its context within the while loop
 
-            ptc._sizeCapInUsd =
+            ptc.sizeCapInUsd =
                 (_abs(
                     (ic.limitPriceIterator).toInt256() -
                         (ic.interimMarkPrice).toInt256()
@@ -189,8 +200,8 @@ contract OrderBook is OrderBookBase, Modifiers, MathUtils {
                     1e20) / // 100000 USD per // 1% price buffer
                 (ic.interimMarkPrice);
 
-            ptc._sizeCap = _usdToToken(
-                ptc._sizeCapInUsd,
+            ptc.sizeCap = _usdToToken(
+                ptc.sizeCapInUsd,
                 ic.limitPriceIterator,
                 tokenInfo.getTokenDecimals(
                     market.getMarketInfo(_marketId).baseAssetId
@@ -199,53 +210,53 @@ contract OrderBook is OrderBookBase, Modifiers, MathUtils {
 
             console.log(
                 "\n>>> Enter Price Tick Iteration / sizeCapInUsd: ",
-                ptc._sizeCapInUsd / 1e20,
+                ptc.sizeCapInUsd / 1e20,
                 "USD"
             );
             console.log("Price: ", ic.limitPriceIterator / 1e20, "USD\n");
 
-            ptc._isPartialForThePriceTick =
-                ptc._sizeCap <
+            ptc.isPartialForThePriceTick =
+                ptc.sizeCap <
                 orderSizeForPriceTick[_marketId][ic.limitPriceIterator];
-            console.log(">>> isPartial:", ptc._isPartialForThePriceTick);
+            console.log(">>> isPartial:", ptc.isPartialForThePriceTick);
 
-            ptc._fillAmount = ptc._isPartialForThePriceTick
-                ? ptc._sizeCap // _sizeCap 남아있는만큼 체결하고 종료
-                : orderSizeForPriceTick[_marketId][ic.limitPriceIterator]; // _fillAmount = 이번 price tick에서 체결할 주문량
+            ptc.fillAmount = ptc.isPartialForThePriceTick
+                ? ptc.sizeCap // sizeCap 남아있는만큼 체결하고 종료
+                : orderSizeForPriceTick[_marketId][ic.limitPriceIterator]; // fillAmount = 이번 price tick에서 체결할 주문량
 
             // 이번 price tick에서 발생할 price impact
             // price impact is calculated based on the index price
             // to avoid cumulative price impact
-            ptc._priceImpactInUsd =
-                (_currentIndexPrice * ptc._fillAmount) /
+            ptc.priceImpactInUsd =
+                (_currentIndexPrice * ptc.fillAmount) /
                 (100000 * 100 * 1e20);
 
-            console.log(">>> ptc._priceImpactInUsd: ", ptc._priceImpactInUsd);
+            console.log(">>> ptc.priceImpactInUsd: ", ptc.priceImpactInUsd);
 
-            ptc._avgExecutionPrice = _getAvgExecutionPrice(
+            ptc.avgExecutionPrice = _getAvgExecutionPrice(
                 ic.interimMarkPrice,
-                ptc._priceImpactInUsd,
+                ptc.priceImpactInUsd,
                 _isBuy
             );
 
-            // _orderRequest[i].sizeAbs > _sizeCap => isPartial = true
+            // _orderRequest[i].sizeAbs > sizeCap => isPartial = true
 
             mapping(uint256 => OrderRequest) storage _orderRequests = _isBuy
                 ? buyOrderBook[_marketId][ic.limitPriceIterator]
                 : sellOrderBook[_marketId][ic.limitPriceIterator];
 
-            ptc._firstIdx = _isBuy
+            ptc.firstIdx = _isBuy
                 ? buyFirstIndex[_marketId][ic.limitPriceIterator]
                 : sellFirstIndex[_marketId][ic.limitPriceIterator];
 
-            ptc._lastIdx = _isBuy
+            ptc.lastIdx = _isBuy
                 ? buyLastIndex[_marketId][ic.limitPriceIterator]
                 : sellLastIndex[_marketId][ic.limitPriceIterator];
 
-            // console.log("^^^^^ ptc._firstIdx: ", ptc._firstIdx); // FIXME:
-            // console.log("^^^^^ ptc._lastIdx: ", ptc._lastIdx);
+            // console.log("^^^^^ ptc.firstIdx: ", ptc.firstIdx); // FIXME:
+            // console.log("^^^^^ ptc.lastIdx: ", ptc.lastIdx);
 
-            for (uint256 i = ptc._firstIdx; i <= ptc._lastIdx; i++) {
+            for (uint256 i = ptc.firstIdx; i <= ptc.lastIdx; i++) {
                 // console.log(">>> chkpt 3");
                 // console.log(">>> i: ", i);
 
@@ -253,20 +264,19 @@ contract OrderBook is OrderBookBase, Modifiers, MathUtils {
                 // TODO: validateExecution here (increase, decrease)
 
                 OrderRequest memory request = _orderRequests[i];
-
-                _fillLimitOrder(
+                executeLimitOrder(
                     request,
-                    ptc._avgExecutionPrice,
-                    ptc._sizeCap,
+                    ptc.avgExecutionPrice,
+                    ptc.sizeCap,
                     _isBuy
                 );
 
-                if (ptc._sizeCap == 0) {
+                if (ptc.sizeCap == 0) {
                     break;
                 }
             }
 
-            if (ptc._isPartialForThePriceTick) {
+            if (ptc.isPartialForThePriceTick) {
                 console.log(">>> Exit: Partial Order");
                 break;
             } else {
@@ -287,11 +297,11 @@ contract OrderBook is OrderBookBase, Modifiers, MathUtils {
                     }
                 }
             }
-            // Note: if `isPartial = true` in this while loop,  _sizeCap will be 0 after the for loop
+            // Note: if `isPartial = true` in this while loop,  sizeCap will be 0 after the for loop
 
             ic.interimMarkPrice = _isBuy
-                ? ic.interimMarkPrice + ptc._priceImpactInUsd
-                : ic.interimMarkPrice - ptc._priceImpactInUsd; // 이번 price tick 주문 iteration 이후 Price Impact를 interimPrice에 적용
+                ? ic.interimMarkPrice + ptc.priceImpactInUsd
+                : ic.interimMarkPrice - ptc.priceImpactInUsd; // 이번 price tick 주문 iteration 이후 Price Impact를 interimPrice에 적용
 
             ic.limitPriceIterator = _isBuy
                 ? ic.limitPriceIterator - market.getPriceTickSize(_marketId)
@@ -312,124 +322,253 @@ contract OrderBook is OrderBookBase, Modifiers, MathUtils {
         return ic.interimMarkPrice; // price impact (buffer size)
     }
 
-    function _fillLimitOrder(
+    function executeLimitOrder(
         OrderRequest memory _request,
-        uint256 _avgExecutionPrice,
-        uint256 _sizeCap,
-        bool _isBuy // bool _isPartial
-    ) internal {
-        FillLimitOrderContext memory floc;
+        uint256 _avgExecPrice,
+        uint256 sizeCap,
+        bool _isBuy // bool isPartial
+    ) private {
+        FillLimitOrderContext memory flc;
 
-        floc._isPartial = _request.sizeAbs > _sizeCap;
-        floc._partialRatio = floc._isPartial
-            ? (_sizeCap / _request.sizeAbs) * PARTIAL_RATIO_PRECISION
+        flc.marginAssetId = market
+            .getMarketInfo(_request.marketId)
+            .marginAssetId;
+
+        flc.isPartial = _request.sizeAbs > sizeCap;
+        flc.partialRatio = flc.isPartial
+            ? (sizeCap / _request.sizeAbs) * PARTIAL_RATIO_PRECISION
             : 1 * PARTIAL_RATIO_PRECISION;
-        // uint256 _sizeAbsInUsd = _isPartial
-        //     ? _request.sizeAbsInUsd - _sizeCap
-        //     : _request.sizeAbsInUsd;
 
-        floc._sizeAbs = floc._isPartial ? _sizeCap : _request.sizeAbs;
+        flc.sizeAbs = flc.isPartial ? sizeCap : _request.sizeAbs;
 
-        floc._marginAbs = floc._isPartial
-            ? (_request.marginAbs * floc._partialRatio) /
-                PARTIAL_RATIO_PRECISION
+        flc.marginAbs = flc.isPartial
+            ? (_request.marginAbs * flc.partialRatio) / PARTIAL_RATIO_PRECISION
             : _request.marginAbs;
 
-        // update filledOrders
-        orderHistory.fillOrder(
-            _request.trader,
-            false, // isMarketOrder
-            _request.isLong,
-            _request.isIncrease,
-            _request.marketId,
-            floc._sizeAbs,
-            floc._marginAbs,
-            _avgExecutionPrice
-        );
-
         // update position
-        bytes32 key = _getPositionKey(
+        flc.key = _getPositionKey(
             _request.trader,
             _request.isLong,
             _request.marketId
         );
 
-        bool isOpen = positionVault.getPositionSize(key) == 0;
+        flc.openPosition = positionVault.getPosition(flc.key);
 
-        // Position {size, marginSizeInUsd, avgOpenPrice, lastUpdatedTime}
-        if (_request.isIncrease) {
-            positionVault.updatePosition(
-                key,
-                isOpen,
-                _request.trader,
-                _request.isLong,
-                _request.marketId,
-                _avgExecutionPrice,
-                floc._sizeAbs,
-                floc._marginAbs,
-                true, // isIncreaseInSize
-                true // isIncreaseInMargin
-            );
-        } else {
-            // position 업데이트
-            // PnL 계산, trader balance, poolAmounts, reservedAmounts 업데이트
-            // position 삭제 검사
+        // Execution type 1: open position
+        if (flc.openPosition.size == 0 && _request.isIncrease) {
+            flc.execType = OrderExecType.OpenPosition;
 
-            orderUtils.settlePnL(
-                key,
-                _request.isLong,
-                _avgExecutionPrice,
-                _request.marketId,
-                floc._sizeAbs,
-                floc._marginAbs
-            );
+            _executeIncreasePosition(flc.execType, _request, flc);
+        }
 
-            floc._positionSize = positionVault.getPositionSize(key);
+        // Execution type 2: increase position (update existing position)
+        if (flc.openPosition.size > 0 && _request.isIncrease) {
+            flc.execType = OrderExecType.IncreasePosition;
 
-            if (floc._sizeAbs == floc._positionSize) {
-                positionVault.deletePosition(key);
-            } else {
-                positionVault.updatePosition(
-                    key,
-                    isOpen,
-                    _request.trader,
-                    _request.isLong,
-                    _request.marketId,
-                    _avgExecutionPrice,
-                    floc._sizeAbs,
-                    floc._marginAbs,
-                    false,
-                    false
-                );
-            }
+            _executeIncreasePosition(flc.execType, _request, flc);
+        }
+
+        // Execution type 3: decrease position
+        if (
+            flc.openPosition.size > 0 &&
+            !_request.isIncrease &&
+            flc.sizeAbs != flc.openPosition.size
+        ) {
+            flc.execType = OrderExecType.DecreasePosition;
+
+            _executeDecreasePosition(flc.execType, _request, flc);
+        }
+
+        // Execution type 4: close position
+        if (
+            flc.openPosition.size > 0 &&
+            !_request.isIncrease &&
+            flc.sizeAbs == flc.openPosition.size
+        ) {
+            flc.execType = OrderExecType.ClosePosition;
+
+            _executeDecreasePosition(flc.execType, _request, flc);
         }
 
         if (_request.isLong) {
             globalState.updateGlobalLongPositionState(
-                _request.isIncrease,
-                _request.marketId,
-                floc._sizeAbs,
-                floc._marginAbs,
-                _avgExecutionPrice
+                UpdateGlobalPositionStateParams(
+                    _request.isIncrease,
+                    _request.marketId,
+                    flc.sizeAbs,
+                    flc.marginAbs,
+                    _avgExecPrice
+                )
             );
         } else {
             globalState.updateGlobalShortPositionState(
-                _request.isIncrease,
-                _request.marketId,
-                floc._sizeAbs,
-                floc._marginAbs,
-                _avgExecutionPrice
+                UpdateGlobalPositionStateParams(
+                    _request.isIncrease,
+                    _request.marketId,
+                    flc.sizeAbs,
+                    flc.marginAbs,
+                    _avgExecPrice
+                )
             );
         }
 
-        _sizeCap -= floc._sizeAbs; // TODO: validation - assert(sum(request.sizeAbs) == orderSizeInUsdForPriceTick[_marketId][_limitPriceIterator])
+        sizeCap -= flc.sizeAbs; // TODO: validation - assert(sum(request.sizeAbs) == orderSizeInUsdForPriceTick[_marketId][_limitPriceIterator])
 
-        // delete or update (isPartial) limit order
-        if (floc._isPartial) {
-            _request.sizeAbs -= floc._sizeAbs;
-            _request.marginAbs -= floc._marginAbs;
+        // delete or update (isPartial) limit order from the orderbook
+        if (flc.isPartial) {
+            _request.sizeAbs -= flc.sizeAbs;
+            _request.marginAbs -= flc.marginAbs;
         } else {
             dequeueOrderBook(_request, _isBuy); // TODO: check - if the target order is the first one in the queue
+        }
+    }
+
+    function _executeIncreasePosition(
+        OrderExecType execType,
+        OrderRequest memory _request,
+        FillLimitOrderContext memory flc
+    ) private {
+        traderVault.decreaseTraderBalance(
+            msg.sender,
+            flc.marginAssetId,
+            flc.marginAbs
+        );
+
+        _request.isLong
+            ? risePool.increaseLongReserveAmount(flc.marginAssetId, flc.sizeAbs)
+            : risePool.increaseShortReserveAmount(
+                flc.marginAssetId,
+                flc.sizeAbs
+            );
+
+        if (execType == OrderExecType.OpenPosition) {
+            /// @dev for OpenPosition: PositionRecord => OpenPosition
+
+            flc.positionRecordId = positionHistory.openPositionRecord(
+                OpenPositionRecordParams(
+                    msg.sender,
+                    _request.marketId,
+                    flc.sizeAbs,
+                    _request.limitPrice,
+                    0
+                )
+            );
+
+            UpdatePositionParams memory params = UpdatePositionParams(
+                execType,
+                flc.key,
+                true, // isOpening
+                msg.sender,
+                _request.isLong,
+                flc.positionRecordId,
+                _request.marketId,
+                _request.limitPrice,
+                flc.sizeAbs,
+                _request.marginAbs,
+                _request.isIncrease, // isIncreaseInSize
+                _request.isIncrease // isIncreaseInMargin
+            );
+
+            positionVault.updateOpenPosition(params);
+        } else if (execType == OrderExecType.IncreasePosition) {
+            /// @dev for IncreasePosition: OpenPosition => PositionRecord
+
+            flc.positionRecordId = flc.openPosition.currentPositionRecordId;
+
+            UpdatePositionParams memory params = UpdatePositionParams(
+                execType,
+                flc.key,
+                false, // isOpening
+                msg.sender,
+                _request.isLong,
+                flc.positionRecordId,
+                _request.marketId,
+                _request.limitPrice,
+                flc.sizeAbs,
+                _request.marginAbs,
+                _request.isIncrease, // isIncreaseInSize
+                _request.isIncrease // isIncreaseInMargin
+            );
+
+            positionVault.updateOpenPosition(params);
+
+            positionHistory.updatePositionRecord(
+                UpdatePositionRecordParams(
+                    msg.sender,
+                    flc.key,
+                    flc.positionRecordId,
+                    _request.isIncrease,
+                    flc.pnl,
+                    flc.sizeAbs,
+                    _request.limitPrice
+                )
+            );
+        } else {
+            revert("Invalid execution type");
+        }
+    }
+
+    function _executeDecreasePosition(
+        OrderExecType execType,
+        OrderRequest memory _request,
+        FillLimitOrderContext memory flc
+    ) private {
+        // PnL settlement
+        settlePnL(
+            flc.openPosition,
+            _request.isLong,
+            _request.limitPrice,
+            _request.marketId,
+            flc.sizeAbs,
+            _request.marginAbs
+        );
+
+        flc.positionRecordId = flc.openPosition.currentPositionRecordId;
+
+        if (execType == OrderExecType.DecreasePosition) {
+            UpdatePositionParams memory params = UpdatePositionParams(
+                execType,
+                flc.key,
+                false, // isOpening
+                msg.sender,
+                _request.isLong,
+                flc.positionRecordId,
+                _request.marketId,
+                _request.limitPrice,
+                flc.sizeAbs,
+                _request.marginAbs,
+                _request.isIncrease, // isIncreaseInSize
+                _request.isIncrease // isIncreaseInMargin
+            );
+
+            // positionVault.updateOpenPositionWithPnl(0, params); // FIXME: first arg is interimPnlUsd
+            positionVault.updateOpenPosition(params);
+
+            positionHistory.updatePositionRecord(
+                UpdatePositionRecordParams(
+                    msg.sender,
+                    flc.key,
+                    flc.openPosition.currentPositionRecordId,
+                    _request.isIncrease,
+                    flc.pnl,
+                    flc.sizeAbs,
+                    _request.limitPrice
+                )
+            );
+        } else if (execType == OrderExecType.ClosePosition) {
+            positionVault.deleteOpenPosition(flc.key);
+
+            positionHistory.closePositionRecord(
+                ClosePositionRecordParams(
+                    msg.sender,
+                    flc.openPosition.currentPositionRecordId,
+                    flc.pnl,
+                    flc.sizeAbs,
+                    _request.limitPrice
+                )
+            );
+        } else {
+            revert("Invalid execution type");
         }
     }
 }

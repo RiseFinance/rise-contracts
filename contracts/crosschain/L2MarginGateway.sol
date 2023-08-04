@@ -4,15 +4,16 @@ pragma solidity ^0.8.0;
 
 import "./interfaces/l2/IInbox.sol";
 import "./interfaces/l3/IL3Gateway.sol";
+
+import "../common/params.sol";
+
 import "../market/TokenInfo.sol";
-import "../market/Market.sol";
 import "./TransferHelper.sol";
 import {ETH_ID} from "../common/constants.sol";
 
 contract L2MarginGateway is TransferHelper {
     address public l3GatewayAddress;
     TokenInfo public tokenInfo;
-    Market public market;
     IInbox public inbox;
 
     error NotBridge(address sender); // TODO: move to errors
@@ -50,16 +51,14 @@ contract L2MarginGateway is TransferHelper {
      *    here, l3CallValue is always zero (not allowing ETH or ERC-20 token representations of traders balances to be minted in L3)
      *
      * @param _depositAmount amount of ETH to deposit
-     * @param _maxSubmissionCost the maximum amount of ETH to be paid for submitting the retryable ticket
-     * @param _gasLimit the maximum amount of gas used to cover L3 execution of the ticket
-     * @param _gasPriceBid the gas price bid for L3 execution of the ticket
+     * @param p._maxSubmissionCost the maximum amount of ETH to be paid for submitting the retryable ticket
+     * @param p._gasLimit the maximum amount of gas used to cover L3 execution of the ticket
+     * @param p._gasPriceBid the gas price bid for L3 execution of the ticket
      * @return ticketId the unique id of the retryable ticket created
      */
     function depositEthToL3(
         uint256 _depositAmount,
-        uint256 _maxSubmissionCost,
-        uint256 _gasLimit,
-        uint256 _gasPriceBid
+        L2ToL3FeeParams memory p
     ) external payable returns (uint256) {
         require(
             _depositAmount > 0,
@@ -67,7 +66,10 @@ contract L2MarginGateway is TransferHelper {
         );
         require(
             msg.value >=
-                _depositAmount + _maxSubmissionCost + _gasLimit * _gasPriceBid,
+                _depositAmount +
+                    p._maxSubmissionCost +
+                    p._gasLimit *
+                    p._gasPriceBid,
             "L2Gateway: insufficient msg.value"
         );
 
@@ -81,15 +83,15 @@ contract L2MarginGateway is TransferHelper {
         // with no custom ArbSys withdraw function, the deposit amount must be held in L2Gateway
         // and only Ticket process fees would be sent to the Bridge via Inbox
         uint256 ticketId = inbox.createRetryableTicket{
-            value: _maxSubmissionCost + _gasLimit * _gasPriceBid
+            value: p._maxSubmissionCost + p._gasLimit * p._gasPriceBid
         }(
             l3GatewayAddress,
             0, // l3CallValue
-            _maxSubmissionCost,
+            p._maxSubmissionCost,
             msg.sender, // excessFeeRefundAddress // TODO: aggregate excess fees on a L3 admin contract (not msg.sender)
             msg.sender, // callValueRefundAddress
-            _gasLimit,
-            _gasPriceBid,
+            p._gasLimit,
+            p._gasPriceBid,
             data
         );
 
@@ -97,7 +99,10 @@ contract L2MarginGateway is TransferHelper {
         _transferEth(
             payable(msg.sender),
             msg.value -
-                (_depositAmount + _maxSubmissionCost + _gasLimit * _gasPriceBid)
+                (_depositAmount +
+                    p._maxSubmissionCost +
+                    p._gasLimit *
+                    p._gasPriceBid)
         );
         // TODO: refund excess gas fee after processing the ticket
 
@@ -108,16 +113,14 @@ contract L2MarginGateway is TransferHelper {
     function depositERC20ToL3(
         address _token,
         uint256 _depositAmount,
-        uint256 _maxSubmissionCost,
-        uint256 _gasLimit,
-        uint256 _gasPriceBid
+        L2ToL3FeeParams memory p
     ) external payable returns (uint256) {
         require(
             _depositAmount > 0,
             "L2Gateway: deposit amount should be positive"
         );
         require(
-            msg.value >= _maxSubmissionCost + _gasLimit * _gasPriceBid,
+            msg.value >= p._maxSubmissionCost + p._gasLimit * p._gasPriceBid,
             "L2Gateway: insufficient msg.value"
         );
 
@@ -133,22 +136,22 @@ contract L2MarginGateway is TransferHelper {
         );
 
         uint256 ticketId = inbox.createRetryableTicket{
-            value: _maxSubmissionCost + _gasLimit * _gasPriceBid
+            value: p._maxSubmissionCost + p._gasLimit * p._gasPriceBid
         }(
             l3GatewayAddress,
             0, // l3CallValue
-            _maxSubmissionCost,
+            p._maxSubmissionCost,
             msg.sender, // excessFeeRefundAddress // TODO: aggregate excess fees on a L3 admin contract (not msg.sender)
             msg.sender, // callValueRefundAddress
-            _gasLimit,
-            _gasPriceBid,
+            p._gasLimit,
+            p._gasPriceBid,
             data
         );
 
         // refund excess ETH
         _transferEth(
             payable(msg.sender),
-            msg.value - (_maxSubmissionCost + _gasLimit * _gasPriceBid)
+            msg.value - (p._maxSubmissionCost + p._gasLimit * p._gasPriceBid)
         );
 
         return ticketId;
@@ -162,9 +165,7 @@ contract L2MarginGateway is TransferHelper {
     function triggerWithdrawalFromL2(
         uint256 _assetId,
         uint256 _withdrawAmount,
-        uint256 _maxSubmissionCost,
-        uint256 _gasLimit,
-        uint256 _gasPriceBid
+        L2ToL3FeeParams memory p
     ) external payable returns (uint256) {
         // minimal validation should be conducted from frontend (check L3Vault.traderBalances)
 
@@ -176,15 +177,15 @@ contract L2MarginGateway is TransferHelper {
         );
 
         uint256 ticketId = inbox.createRetryableTicket{
-            value: _maxSubmissionCost + _gasLimit * _gasPriceBid
+            value: p._maxSubmissionCost + p._gasLimit * p._gasPriceBid
         }(
             l3GatewayAddress,
             0,
-            _maxSubmissionCost,
+            p._maxSubmissionCost,
             msg.sender, // excessFeeRefundAddress // TODO: aggregate excess fees on a L3 admin contract (not msg.sender)
             msg.sender, // callValueRefundAddress
-            _gasLimit,
-            _gasPriceBid,
+            p._gasLimit,
+            p._gasPriceBid,
             data
         );
 

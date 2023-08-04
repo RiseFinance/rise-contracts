@@ -2,6 +2,8 @@
 
 pragma solidity ^0.8.0;
 
+import "../common/structs.sol";
+
 import "../token/RMM.sol";
 import "./Market.sol";
 
@@ -9,12 +11,12 @@ import "./Market.sol";
 // * Listing new markets
 // * Asset ID ++, market token addresses register, LP pool register, LP token generating, etc.
 
-contract MarketFactory {
+contract ListingManager {
     // TODO: create LP token contract for each market
 
     function createRisePerpsMarket(
-        Market.MarketInfo memory m
-    ) public returns (Market.MarketInfo memory) {
+        MarketInfo memory m
+    ) public returns (MarketInfo memory) {
         bytes32 salt = keccak256(
             abi.encode(
                 "RISE_PERPS_MARKET",
@@ -26,7 +28,7 @@ contract MarketFactory {
 
         RiseMarketMaker rmm = new RiseMarketMaker{salt: salt}(); // market maker token
 
-        Market.MarketInfo memory newMarket = Market.MarketInfo(
+        MarketInfo memory newMarket = MarketInfo(
             m.marketId,
             m.priceTickSize,
             m.baseAssetId,

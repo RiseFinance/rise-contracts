@@ -2,43 +2,44 @@
 
 pragma solidity ^0.8.0;
 
+import "../common/structs.sol";
+import "../common/params.sol";
+import "../common/enums.sol";
+
 import "../account/TraderVault.sol";
 
 contract OrderHistory {
     TraderVault public traderVault; // TODO: check - the pattern?
 
-    mapping(address => mapping(uint256 => FilledOrder)) public filledOrders; // userAddress => traderOrderCount => Order (filled orders by trader)
+    mapping(address => mapping(uint256 => OrderRecord)) public orderRecords; // userAddress => traderOrderRecordId => OrderRecord (filled orders by trader)
+
+    // TODO: check - Filled Order는 항상 Position과 N:1로 연결될 수 있지만, Open Order, Canceled Order 등에는 연결된 Position이 없을 수 있음
 
     constructor(address _traderVault) {
         traderVault = TraderVault(_traderVault);
     }
 
-    function fillOrder(
-        address _trader,
-        bool _isMarketOrder,
-        bool _isLong,
-        bool _isIncrease,
-        uint256 _marketId,
-        uint256 _sizeAbs,
-        uint256 _marginAbs,
-        uint256 _executionPrice
-    ) external {
-        uint256 traderFilledOrderCount = traderVault.getTraderFilledOrderCount(
-            _trader
+    function createOrderRecord(CreateOrderRecordParams memory p) external {
+        // use orderCount as orderRecordId
+        uint256 traderOrderRecordCount = traderVault.getTraderOrderRecordCount(
+            p._trader
         );
 
-        filledOrders[_trader][traderFilledOrderCount] = FilledOrder(
-            _isMarketOrder,
-            _isLong,
-            _isIncrease,
-            _marketId,
-            _sizeAbs,
-            _marginAbs,
-            _executionPrice
+        orderRecords[p._trader][traderOrderRecordCount] = OrderRecord(
+            p._orderType,
+            p._isLong,
+            p._isIncrease,
+            p._positionRecordId,
+            p._marketId,
+            p._sizeAbs,
+            p._marginAbs,
+            p._executionPrice,
+            block.timestamp
         );
-        traderVault.setTraderFilledOrderCount(
-            _trader,
-            traderFilledOrderCount + 1
+
+        traderVault.setTraderOrderRecordCount(
+            p._trader,
+            traderOrderRecordCount + 1
         );
     }
 }

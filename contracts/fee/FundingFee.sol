@@ -3,12 +3,14 @@
 pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts/utils/math/SafeCast.sol";
+
 import "../common/structs.sol";
+
+import "../oracle/PriceManager.sol";
 import "../global/GlobalState.sol";
 import "../order/OrderUtils.sol";
-import "../oracle/PriceManager.sol";
-import "../market/Market.sol";
 import "../market/TokenInfo.sol";
+import "../market/Market.sol";
 
 contract FundingFee {
     using SafeCast for int256;
@@ -55,7 +57,7 @@ contract FundingFee {
 
     function getFundingFeeToPay(
         uint256 _marketId,
-        Position calldata _position
+        OpenPosition calldata _position
     ) public view returns (int256) {
         uint256 markPrice = priceManager.getMarkPrice(_marketId);
 

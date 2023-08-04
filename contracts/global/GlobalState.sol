@@ -3,6 +3,8 @@
 pragma solidity ^0.8.0;
 
 import "../common/structs.sol";
+import "../common/params.sol";
+
 import "../position/PositionUtils.sol";
 
 contract GlobalState is PositionUtils {
@@ -27,50 +29,46 @@ contract GlobalState is PositionUtils {
     }
 
     function updateGlobalLongPositionState(
-        bool _isIncrease,
-        uint256 _marketId,
-        uint256 _sizeDeltaAbs,
-        uint256 _marginDeltaAbs,
-        uint256 _markPrice
+        UpdateGlobalPositionStateParams memory p
     ) external {
-        globalLongPositionStates[_marketId].avgPrice = _getNextAvgPrice(
-            _isIncrease,
-            globalLongPositionStates[_marketId].totalSize,
-            globalLongPositionStates[_marketId].avgPrice,
-            _sizeDeltaAbs,
-            _markPrice
+        globalLongPositionStates[p._marketId].avgPrice = _getNextAvgPrice(
+            p._isIncrease,
+            globalLongPositionStates[p._marketId].totalSize,
+            globalLongPositionStates[p._marketId].avgPrice,
+            p._sizeDeltaAbs,
+            p._markPrice
         );
 
-        if (_isIncrease) {
-            globalLongPositionStates[_marketId].totalSize += _sizeDeltaAbs;
-            globalLongPositionStates[_marketId].totalMargin += _marginDeltaAbs;
+        if (p._isIncrease) {
+            globalLongPositionStates[p._marketId].totalSize += p._sizeDeltaAbs;
+            globalLongPositionStates[p._marketId].totalMargin += p
+                ._marginDeltaAbs;
         } else {
-            globalLongPositionStates[_marketId].totalSize -= _sizeDeltaAbs;
-            globalLongPositionStates[_marketId].totalMargin -= _marginDeltaAbs;
+            globalLongPositionStates[p._marketId].totalSize -= p._sizeDeltaAbs;
+            globalLongPositionStates[p._marketId].totalMargin -= p
+                ._marginDeltaAbs;
         }
     }
 
     function updateGlobalShortPositionState(
-        bool _isIncrease,
-        uint256 _marketId,
-        uint256 _sizeDeltaAbs,
-        uint256 _marginDeltaAbs,
-        uint256 _markPrice
+        UpdateGlobalPositionStateParams memory p
     ) external {
-        globalShortPositionStates[_marketId].avgPrice = _getNextAvgPrice(
-            _isIncrease,
-            globalShortPositionStates[_marketId].totalSize,
-            globalShortPositionStates[_marketId].avgPrice,
-            _sizeDeltaAbs,
-            _markPrice
+        globalShortPositionStates[p._marketId].avgPrice = _getNextAvgPrice(
+            p._isIncrease,
+            globalShortPositionStates[p._marketId].totalSize,
+            globalShortPositionStates[p._marketId].avgPrice,
+            p._sizeDeltaAbs,
+            p._markPrice
         );
 
-        if (_isIncrease) {
-            globalShortPositionStates[_marketId].totalSize += _sizeDeltaAbs;
-            globalShortPositionStates[_marketId].totalMargin += _marginDeltaAbs;
+        if (p._isIncrease) {
+            globalShortPositionStates[p._marketId].totalSize += p._sizeDeltaAbs;
+            globalShortPositionStates[p._marketId].totalMargin += p
+                ._marginDeltaAbs;
         } else {
-            globalShortPositionStates[_marketId].totalSize -= _sizeDeltaAbs;
-            globalShortPositionStates[_marketId].totalMargin -= _marginDeltaAbs;
+            globalShortPositionStates[p._marketId].totalSize -= p._sizeDeltaAbs;
+            globalShortPositionStates[p._marketId].totalMargin -= p
+                ._marginDeltaAbs;
         }
     }
 }

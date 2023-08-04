@@ -2,6 +2,8 @@
 
 pragma solidity ^0.8.0;
 
+import "../common/params.sol";
+
 contract PositionUtils {
     /**
      * (new avg price) * (new size) = (old avg price) * (old size) + (mark price) * (size delta)
@@ -21,7 +23,6 @@ contract PositionUtils {
                     newSize;
             return nextAvgPrice;
         } else {
-            // TODO: check - this logic needed?
             uint256 newSize = _prevSize - _sizeDeltaAbs;
             uint256 nextAvgPrice = newSize == 0
                 ? 0

@@ -2,6 +2,8 @@
 
 pragma solidity ^0.8.0;
 
+import "../common/structs.sol";
+
 import "./Market.sol";
 
 contract TokenInfo {
@@ -54,14 +56,14 @@ contract TokenInfo {
     function getBaseTokenDecimals(
         uint256 _marketId
     ) external view returns (uint256) {
-        Market.MarketInfo memory marketInfo = market.getMarketInfo(_marketId);
+        MarketInfo memory marketInfo = market.getMarketInfo(_marketId);
         return tokenDecimals[marketInfo.baseAssetId];
     }
 
     function getBaseTokenPriceBufferConstants(
         uint256 _marketId
     ) external view returns (uint256) {
-        Market.MarketInfo memory marketInfo = market.getMarketInfo(_marketId);
+        MarketInfo memory marketInfo = market.getMarketInfo(_marketId);
         return tokenPriceBufferConstants[marketInfo.baseAssetId];
     }
 }

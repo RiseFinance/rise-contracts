@@ -1,28 +1,6 @@
 import { loadFixture } from "@nomicfoundation/hardhat-network-helpers";
 import { expect } from "chai";
 import { ethers } from "hardhat";
-/**
- * struct OrderContext {
-    bool _isLong;
-    bool _isIncrease;
-    uint256 _indexAssetId;
-    uint256 _marginAssetId;
-    uint256 _sizeAbsInUsd;
-    uint256 _marginAbsInUsd;
-    uint256 _limitPrice; // empty for market orders
-}
-
-* struct OrderRequest {
-    address trader;
-    bool isLong;
-    bool isIncrease;
-    uint256 indexAssetId; // redundant?
-    uint256 marginAssetId;
-    uint256 sizeAbsInUsd;
-    uint256 marginAbsInUsd;
-    uint256 limitPrice;
-}
-*/
 
 function USD(amount: number) {
   return ethers.utils.parseUnits(amount.toString(), 20);
@@ -79,7 +57,7 @@ describe("Place Limit Order and Execute", function () {
       //   console.log(">> filling orderbook with price: ", price);
       // place 10 orders per price tick
       for (let i = 0; i < 10; i++) {
-        const orderContext = {
+        const orderParams = {
           _isLong: true,
           _isIncrease: true,
           _indexAssetId: ETH_ID,
@@ -88,7 +66,7 @@ describe("Place Limit Order and Execute", function () {
           _marginAbsInUsd: ethers.utils.parseUnits("150", USD_DECIMALS),
           _limitPrice: USD(price),
         };
-        await orderBook.placeLimitOrder(orderContext);
+        await orderBook.placeLimitOrder(orderParams);
       }
     }
   }
@@ -140,7 +118,7 @@ describe("Place Limit Order and Execute", function () {
     await configureL3Vault(l3Vault);
     await depositToTraderAccount(l3Vault, trader);
 
-    const orderContext = {
+    const orderParams = {
       _isLong: true,
       _isIncrease: true,
       _indexAssetId: ETH_ID,
@@ -150,7 +128,7 @@ describe("Place Limit Order and Execute", function () {
       _limitPrice: USD(1950),
     };
 
-    await orderRouter.connect(trader).placeLimitOrder(orderContext);
+    await orderRouter.connect(trader).placeLimitOrder(orderParams);
 
     const isBuy = true;
     const orderRequest = await orderBook.getOrderRequest(
