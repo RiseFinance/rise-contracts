@@ -3,10 +3,11 @@
 pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts/utils/math/SafeCast.sol";
+
 import "../common/structs.sol";
 import "../common/constants.sol";
-import "../risepool/RisePool.sol";
 import "../account/TraderVault.sol";
+import "../risepool/RisePool.sol";
 import "../market/Market.sol";
 
 contract PnlManager {

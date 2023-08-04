@@ -21,7 +21,6 @@ contract PositionUtils {
                     newSize;
             return nextAvgPrice;
         } else {
-            // TODO: check - this logic needed?
             uint256 newSize = _prevSize - _sizeDeltaAbs;
             uint256 nextAvgPrice = newSize == 0
                 ? 0

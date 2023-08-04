@@ -4,16 +4,6 @@ pragma solidity ^0.8.0;
 
 import "./enums.sol";
 
-// TODO: move to params.sol
-struct OrderContext {
-    bool _isLong;
-    bool _isIncrease;
-    uint256 _marketId;
-    uint256 _sizeAbs; // Token Counts
-    uint256 _marginAbs; // Token Counts
-    uint256 _limitPrice; // empty for market orders
-} // TODO: modify - size in Token Counts
-
 // Limit order only
 struct OrderRequest {
     address trader;

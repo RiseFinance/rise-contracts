@@ -2,15 +2,15 @@
 
 pragma solidity ^0.8.0;
 
-import "../order/OrderUtils.sol";
+import "../common/params.sol";
+import "../position/PositionHistory.sol";
+import "../position/PositionVault.sol";
+import "../position/PnlManager.sol";
 import "../order/OrderPriceUtils.sol";
+import "../order/OrderUtils.sol";
+import "../global/GlobalState.sol";
 import "./OrderHistory.sol";
 import "./OrderValidator.sol";
-import "../position/PositionVault.sol";
-import "../position/PositionHistory.sol";
-import "../position/PnlManager.sol";
-import "../global/GlobalState.sol";
-import "../common/params.sol";
 
 contract MarketOrder is PnlManager, OrderUtils, OrderPriceUtils {
     PositionHistory public positionHistory;
@@ -32,7 +32,7 @@ contract MarketOrder is PnlManager, OrderUtils, OrderPriceUtils {
     }
 
     function executeMarketOrder(
-        OrderContext calldata c
+        OrderParams calldata c
     ) external returns (bytes32) {
         FillMarketOrderContext memory fmc;
 
@@ -124,7 +124,7 @@ contract MarketOrder is PnlManager, OrderUtils, OrderPriceUtils {
 
     function _executeIncreasePosition(
         OrderExecType _execType,
-        OrderContext calldata c,
+        OrderParams calldata c,
         FillMarketOrderContext memory fmc
     ) private {
         traderVault.decreaseTraderBalance(
@@ -205,7 +205,7 @@ contract MarketOrder is PnlManager, OrderUtils, OrderPriceUtils {
 
     function _executeDecreasePosition(
         OrderExecType _execType,
-        OrderContext calldata c,
+        OrderParams calldata c,
         FillMarketOrderContext memory fmc
     ) private {
         // PnL settlement

@@ -5,11 +5,11 @@ pragma solidity ^0.8.0;
 import "@openzeppelin/contracts/utils/math/Math.sol";
 
 import "../common/constants.sol";
+import "../common/MathUtils.sol";
+import "../account/TraderVault.sol";
 import "../oracle/PriceManager.sol";
 import "../market/TokenInfo.sol";
 import "../market/Market.sol";
-import "../common/MathUtils.sol";
-import "../account/TraderVault.sol";
 
 contract Liquidation {
     mapping(uint256 => uint256) maintenanceMarginRatioInBasisPoints; // assetId => maintenanceMarginRatio

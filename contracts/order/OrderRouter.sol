@@ -14,7 +14,7 @@ contract OrderRouter {
         orderBook = OrderBook(_orderBook);
     }
 
-    function _validateOrder(OrderContext calldata c) internal view {
+    function _validateOrder(OrderParams calldata c) internal view {
         require(
             msg.sender != address(0),
             "OrderRouter: Invalid sender address"
@@ -44,7 +44,7 @@ contract OrderRouter {
         // call when sizeDelta = 0 (leverage up)
     }
 
-    function placeLimitOrder(OrderContext calldata c) external {
+    function placeLimitOrder(OrderParams calldata c) external {
         _validateOrder(c);
         orderBook.placeLimitOrder(c);
     }
@@ -54,7 +54,7 @@ contract OrderRouter {
     function updateLimitOrder() public {}
 
     function placeMarketOrder(
-        OrderContext calldata c
+        OrderParams calldata c
     ) external returns (bytes32) {
         _validateOrder(c);
 

@@ -2,14 +2,15 @@
 
 pragma solidity ^0.8.0;
 
-import "../account/TraderVault.sol";
-import "../position/PositionVault.sol";
-import "../position/PositionUtils.sol";
 import "../common/structs.sol";
 
+import "../position/PositionVault.sol";
+import "../position/PositionUtils.sol";
+import "../account/TraderVault.sol";
+
 contract PositionHistory is PositionUtils {
-    TraderVault public traderVault;
     PositionVault public positionVault;
+    TraderVault public traderVault;
 
     mapping(address => mapping(uint256 => PositionRecord))
         public positionRecords; // userAddress => traderPositionRecordId => PositionRecord (closed positions by trader)

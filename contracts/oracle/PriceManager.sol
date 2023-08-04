@@ -3,9 +3,10 @@
 pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts/utils/math/SafeCast.sol";
+
+import "../common/constants.sol";
 import "../orderbook/OrderBook.sol";
 import "../market/TokenInfo.sol";
-import "../common/constants.sol";
 import "hardhat/console.sol";
 
 contract PriceManager {

@@ -2,8 +2,8 @@
 
 pragma solidity ^0.8.0;
 
-import "../token/RMM.sol";
 import "../common/structs.sol";
+import "../token/RMM.sol";
 import "./Market.sol";
 
 // Deals with listing new markets and updating existing ones

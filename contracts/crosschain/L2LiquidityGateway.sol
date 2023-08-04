@@ -4,11 +4,11 @@ pragma solidity ^0.8.0;
 
 import "./interfaces/l2/IInbox.sol";
 import "./interfaces/l3/IL3Gateway.sol";
-import "../market/Market.sol";
 import "../common/structs.sol";
-import "../token/RMM.sol";
 import "../risepool/RisePoolUtils.sol";
+import "../market/Market.sol";
 import "./TransferHelper.sol";
+import "../token/RMM.sol";
 
 contract L2LiquidityGateway is TransferHelper {
     address public l3GatewayAddress;
