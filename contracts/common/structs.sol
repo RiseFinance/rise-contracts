@@ -39,12 +39,12 @@ struct OrderRecord {
 
 struct PositionRecord {
     bool isClosed;
-    int256 closingPnl; // only for closed positions
-    int256 cumulativeRealizedPnl; // cumulative realized PnL
+    int256 cumulativeRealizedPnl; // cumulative realized PnL => this value to be closingPnl for closed positions
+    uint256 cumulativeClosedSize; // FIXME: 수정사항 반영
     uint256 marketId;
     uint256 maxSize; // max open interest
     uint256 avgOpenPrice;
-    uint256 avgClosePrice; // only for closed positions
+    uint256 avgClosePrice; // updated for decreasing/closing the position
     uint256 openTimestamp;
     uint256 closeTimestamp; // only for closed positions
 }
@@ -52,7 +52,7 @@ struct PositionRecord {
 struct OpenPosition {
     address trader;
     bool isLong;
-    int256 unrealizedPnl; // current unrealized PnL
+    int256 unrealizedPnl; // current unrealized PnL => FIXME: this value should be update in real-time
     uint256 currentPositionRecordId;
     uint256 marketId;
     uint256 size; // Token Counts

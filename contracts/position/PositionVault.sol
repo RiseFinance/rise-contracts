@@ -26,25 +26,25 @@ contract PositionVault is PositionUtils {
         return openPositions[_key].size;
     }
 
-    function updateOpenPositionWithPnl(
-        int256 _interimPnlUsd,
-        UpdatePositionParams memory p
-    ) external {
-        // update cumulative PnL for the open position while decreasing position
+    // function updateOpenPositionWithPnl(
+    //     int256 _interimPnlUsd,
+    //     UpdatePositionParams memory p
+    // ) external {
+    //     // update cumulative PnL for the open position while decreasing position
 
-        // TODO: refactor
-        OpenPosition storage _position = openPositions[p._key];
-        _position.unrealizedPnl += _interimPnlUsd;
+    //     // TODO: refactor
+    //     OpenPosition storage _position = openPositions[p._key];
+    //     _position.unrealizedPnl += _interimPnlUsd;
 
-        require(
-            p._execType == OrderExecType.DecreasePosition,
-            "Invalid exec type"
-        );
+    //     require(
+    //         p._execType == OrderExecType.DecreasePosition,
+    //         "Invalid exec type"
+    //     );
 
-        // 기존에 PnL > 0이었을 경우, _traderHasProfitForInterimPnl가 true라면 PnL을 더해주고, false라면 빼준다.
+    //     // 기존에 PnL > 0이었을 경우, _traderHasProfitForInterimPnl가 true라면 PnL을 더해주고, false라면 빼준다.
 
-        updateOpenPosition(p);
-    }
+    //     updateOpenPosition(p);
+    // }
 
     function updateOpenPosition(UpdatePositionParams memory p) public {
         OpenPosition storage _position = openPositions[p._key];

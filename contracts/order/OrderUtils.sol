@@ -2,9 +2,11 @@
 
 pragma solidity ^0.8.0;
 
+import "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import "../account/TraderVault.sol";
 import "../market/Market.sol";
 import {USD_PRECISION, PARTIAL_RATIO_PRECISION} from "../common/constants.sol";
+using SafeCast for uint256;
 
 contract OrderUtils {
     PositionVault public positionVault;
@@ -55,12 +57,18 @@ contract OrderUtils {
         uint256 _averagePrice,
         uint256 _markPrice,
         bool _isLong
-    ) public pure returns (uint256, bool) {
-        uint256 pnlAbs = _markPrice >= _averagePrice
-            ? (_size * (_markPrice - _averagePrice)) / USD_PRECISION
-            : (_size * (_averagePrice - _markPrice)) / USD_PRECISION;
-        bool hasProfit = _markPrice >= _averagePrice ? _isLong : !_isLong;
-        return (pnlAbs, hasProfit);
+    ) public pure returns (int256) {
+        int256 pnl;
+        _isLong
+            ? pnl =
+                (_size.toInt256() *
+                    (_markPrice.toInt256() - _averagePrice.toInt256())) /
+                USD_PRECISION.toInt256()
+            : pnl =
+            (_size.toInt256() *
+                (_averagePrice.toInt256() - _markPrice.toInt256())) /
+            USD_PRECISION.toInt256();
+        return pnl;
     }
 
     function settlePnL(
@@ -69,8 +77,8 @@ contract OrderUtils {
         uint256 _executionPrice,
         uint256 _marketId,
         uint256 _sizeAbs,
-        uint256 _marginAbs // ) public returns (uint256, bool) {
-    ) public {
+        uint256 _marginAbs
+    ) public returns (int256) {
         OpenPosition memory position = positionVault.getPosition(_key);
         Market.MarketInfo memory marketInfo = market.getMarketInfo(_marketId);
 
@@ -80,8 +88,7 @@ contract OrderUtils {
         //     tokenInfo.getTokenDecimals(market.getMarketInfo(_marketId).baseAssetId)
         // );
 
-        // (uint256 pnlUsdAbs, bool traderHasProfit) = _calculatePnL(
-        _calculatePnL(
+        int256 pnl = _calculatePnL(
             _sizeAbs,
             position.avgOpenPrice,
             _executionPrice,
@@ -99,6 +106,6 @@ contract OrderUtils {
             ? risePool.decreaseLongReserveAmount(_marketId, _sizeAbs)
             : risePool.decreaseShortReserveAmount(_marketId, _sizeAbs);
 
-        // return (pnlUsdAbs, traderHasProfit);
+        return pnl;
     }
 }

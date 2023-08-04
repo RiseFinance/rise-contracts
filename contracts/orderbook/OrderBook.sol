@@ -52,6 +52,7 @@ contract OrderBook is OrderUtils, OrderBookBase, Modifiers, MathUtils {
         bytes32 _key;
         OpenPosition _openPosition;
         uint256 _positionRecordId;
+        int256 _pnl;
     }
 
     function getOrderRequest(
@@ -253,7 +254,6 @@ contract OrderBook is OrderUtils, OrderBookBase, Modifiers, MathUtils {
                 // TODO: validateExecution here (increase, decrease)
 
                 OrderRequest memory request = _orderRequests[i];
-
                 executeLimitOrder(
                     request,
                     ptc._avgExecutionPrice,
@@ -362,7 +362,7 @@ contract OrderBook is OrderUtils, OrderBookBase, Modifiers, MathUtils {
         if (
             flc._openPosition.size > 0 &&
             !_request.isIncrease &&
-            _request.sizeAbs != flc._openPosition.size
+            flc._sizeAbs != flc._openPosition.size
         ) {
             flc._execType = OrderExecType.DecreasePosition;
 
@@ -373,7 +373,7 @@ contract OrderBook is OrderUtils, OrderBookBase, Modifiers, MathUtils {
         if (
             flc._openPosition.size > 0 &&
             !_request.isIncrease &&
-            _request.sizeAbs == flc._openPosition.size
+            flc._sizeAbs == flc._openPosition.size
         ) {
             flc._execType = OrderExecType.ClosePosition;
 
@@ -423,11 +423,11 @@ contract OrderBook is OrderUtils, OrderBookBase, Modifiers, MathUtils {
         _request.isLong
             ? risePool.increaseLongReserveAmount(
                 flc._marginAssetId,
-                _request.sizeAbs
+                flc._sizeAbs
             )
             : risePool.increaseShortReserveAmount(
                 flc._marginAssetId,
-                _request.sizeAbs
+                flc._sizeAbs
             );
 
         if (_execType == OrderExecType.OpenPosition) {
@@ -436,7 +436,7 @@ contract OrderBook is OrderUtils, OrderBookBase, Modifiers, MathUtils {
             flc._positionRecordId = positionHistory.openPositionRecord(
                 msg.sender,
                 _request.marketId,
-                _request.sizeAbs,
+                flc._sizeAbs,
                 _request.limitPrice,
                 0
             );
@@ -450,7 +450,7 @@ contract OrderBook is OrderUtils, OrderBookBase, Modifiers, MathUtils {
                 flc._positionRecordId,
                 _request.marketId,
                 _request.limitPrice,
-                _request.sizeAbs,
+                flc._sizeAbs,
                 _request.marginAbs,
                 _request.isIncrease, // isIncreaseInSize
                 _request.isIncrease // isIncreaseInMargin
@@ -471,7 +471,7 @@ contract OrderBook is OrderUtils, OrderBookBase, Modifiers, MathUtils {
                 flc._positionRecordId,
                 _request.marketId,
                 _request.limitPrice,
-                _request.sizeAbs,
+                flc._sizeAbs,
                 _request.marginAbs,
                 _request.isIncrease, // isIncreaseInSize
                 _request.isIncrease // isIncreaseInMargin
@@ -483,7 +483,10 @@ contract OrderBook is OrderUtils, OrderBookBase, Modifiers, MathUtils {
                 msg.sender,
                 flc._key,
                 flc._positionRecordId,
-                _request.isIncrease
+                _request.isIncrease,
+                flc._pnl,
+                flc._sizeAbs,
+                _request.limitPrice
             );
         } else {
             revert("Invalid execution type");
@@ -501,7 +504,7 @@ contract OrderBook is OrderUtils, OrderBookBase, Modifiers, MathUtils {
             _request.isLong,
             _request.limitPrice,
             _request.marketId,
-            _request.sizeAbs,
+            flc._sizeAbs,
             _request.marginAbs
         );
 
@@ -517,27 +520,33 @@ contract OrderBook is OrderUtils, OrderBookBase, Modifiers, MathUtils {
                 flc._positionRecordId,
                 _request.marketId,
                 _request.limitPrice,
-                _request.sizeAbs,
+                flc._sizeAbs,
                 _request.marginAbs,
                 _request.isIncrease, // isIncreaseInSize
                 _request.isIncrease // isIncreaseInMargin
             );
 
-            positionVault.updateOpenPositionWithPnl(0, params); // FIXME: first arg is interimPnlUsd
+            // positionVault.updateOpenPositionWithPnl(0, params); // FIXME: first arg is interimPnlUsd
+            positionVault.updateOpenPosition(params);
 
             positionHistory.updatePositionRecord(
                 msg.sender,
                 flc._key,
                 flc._openPosition.currentPositionRecordId,
-                _request.isIncrease
+                _request.isIncrease,
+                flc._pnl,
+                flc._sizeAbs,
+                _request.limitPrice
             );
         } else if (_execType == OrderExecType.ClosePosition) {
             positionVault.deleteOpenPosition(flc._key);
 
             positionHistory.closePositionRecord(
                 msg.sender,
-                flc._key,
-                flc._openPosition.currentPositionRecordId
+                flc._openPosition.currentPositionRecordId,
+                flc._pnl,
+                flc._sizeAbs,
+                _request.limitPrice
             );
         } else {
             revert("Invalid execution type");

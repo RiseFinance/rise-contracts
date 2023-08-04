@@ -26,6 +26,7 @@ contract MarketOrder is OrderUtils, OrderPriceUtils {
         bytes32 key;
         OpenPosition openPosition;
         uint256 positionRecordId;
+        int256 pnl;
     }
 
     function executeMarketOrder(
@@ -54,14 +55,12 @@ contract MarketOrder is OrderUtils, OrderPriceUtils {
         // Execution type 1: open position
         if (fmc.openPosition.size == 0 && c._isIncrease) {
             fmc.execType = OrderExecType.OpenPosition;
-
             _executeIncreasePosition(fmc.execType, c, fmc);
         }
 
         // Execution type 2: increase position (update existing position)
         if (fmc.openPosition.size > 0 && c._isIncrease) {
             fmc.execType = OrderExecType.IncreasePosition;
-
             _executeIncreasePosition(fmc.execType, c, fmc);
         }
 
@@ -82,11 +81,10 @@ contract MarketOrder is OrderUtils, OrderPriceUtils {
             c._sizeAbs == fmc.openPosition.size
         ) {
             fmc.execType = OrderExecType.ClosePosition;
-
             _executeDecreasePosition(fmc.execType, c, fmc);
         }
 
-        // fill the order
+        // create order record
         orderHistory.createOrderRecord(
             msg.sender,
             OrderType.Market,
@@ -193,7 +191,10 @@ contract MarketOrder is OrderUtils, OrderPriceUtils {
                 msg.sender,
                 fmc.key,
                 fmc.positionRecordId,
-                c._isIncrease
+                c._isIncrease,
+                fmc.pnl,
+                c._sizeAbs, // not used for increasing position
+                fmc.avgExecPrice // not used for increasing position
             );
         } else {
             revert("Invalid execution type");
@@ -206,8 +207,7 @@ contract MarketOrder is OrderUtils, OrderPriceUtils {
         FillMarketOrderContext memory fmc
     ) private {
         // PnL settlement
-        // (uint256 pnlUsdAbs, bool traderHasProfit) = settlePnL(
-        settlePnL(
+        fmc.pnl = settlePnL(
             fmc.key,
             c._isLong,
             fmc.avgExecPrice,
@@ -234,21 +234,27 @@ contract MarketOrder is OrderUtils, OrderPriceUtils {
                 c._isIncrease // isIncreaseInMargin
             );
 
-            positionVault.updateOpenPositionWithPnl(0, params); // FIXME: first arg is interimPnlUsd
+            // positionVault.updateOpenPositionWithPnl(0, params); // FIXME: first arg is interimPnlUsd
+            positionVault.updateOpenPosition(params);
 
             positionHistory.updatePositionRecord(
                 msg.sender,
                 fmc.key,
                 fmc.openPosition.currentPositionRecordId,
-                c._isIncrease
+                c._isIncrease,
+                fmc.pnl,
+                c._sizeAbs,
+                fmc.avgExecPrice
             );
         } else if (_execType == OrderExecType.ClosePosition) {
             positionVault.deleteOpenPosition(fmc.key);
 
             positionHistory.closePositionRecord(
                 msg.sender,
-                fmc.key,
-                fmc.openPosition.currentPositionRecordId
+                fmc.openPosition.currentPositionRecordId,
+                fmc.pnl,
+                c._sizeAbs,
+                fmc.avgExecPrice
             );
         } else {
             revert("Invalid execution type");

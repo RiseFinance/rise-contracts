@@ -4,9 +4,10 @@ pragma solidity ^0.8.0;
 
 import "../account/TraderVault.sol";
 import "../position/PositionVault.sol";
+import "../position/PositionUtils.sol";
 import "../common/structs.sol";
 
-contract PositionHistory {
+contract PositionHistory is PositionUtils {
     TraderVault public traderVault;
     PositionVault public positionVault;
 
@@ -38,8 +39,8 @@ contract PositionHistory {
 
         positionRecords[_trader][traderPositionRecordCount] = PositionRecord(
             false, // isClosed
-            0, // closingPnl
             0, // cumulativeRealizedPnl
+            0, // cumulativeClosedSize
             _marketId,
             _maxSize,
             _avgOpenPrice,
@@ -61,7 +62,10 @@ contract PositionHistory {
         address _trader,
         bytes32 _key,
         uint256 _positionRecordId,
-        bool _isIncrease
+        bool _isIncrease,
+        int256 _pnl,
+        uint256 _sizeAbs,
+        uint256 _avgExecPrice
     ) external {
         // FIXME: increase / decrease / leveraging / deleveraging 주문 종류에 따라서 필요한 필드 업데이트
         // TODO: Enum 활용
@@ -78,32 +82,62 @@ contract PositionHistory {
             positionRecord.maxSize = openPosition.size;
         }
 
-        // update avgOpenPrice
+        // Increasing Position: update avgOpenPrice
+        // Decreasing Position: update cumulativeRealizedPnl
         if (_isIncrease) {
             positionRecord.avgOpenPrice = openPosition.avgOpenPrice;
+        } else {
+            // update avgClosePrice
+            _updateAvgClosePrice(positionRecord, _sizeAbs, _avgExecPrice);
+            _updateCumulativeRealizedPnl(positionRecord, _pnl);
         }
         // no need to update PnL for position records for decreasing position (only for closed positions)
     }
 
     function closePositionRecord(
         address _trader,
-        bytes32 _key,
-        uint256 _positionRecordId
+        uint256 _positionRecordId,
+        int256 _pnl,
+        uint256 _sizeAbs,
+        uint256 _avgExecPrice
     ) external {
         PositionRecord storage positionRecord = positionRecords[_trader][
             _positionRecordId
         ];
 
-        OpenPosition memory openPosition = positionVault.getPosition(_key);
-
-        // TODO:
         // update avgClosePrice
-        // update closingPnl
+        _updateAvgClosePrice(positionRecord, _sizeAbs, _avgExecPrice);
+
+        // update final cumulativeRealizedPnl (closingPnl)
+        _updateCumulativeRealizedPnl(positionRecord, _pnl);
 
         // update isClosed
         positionRecord.isClosed = true;
 
         // update closeTimestamp
         positionRecord.closeTimestamp = block.timestamp;
+    }
+
+    function _updateCumulativeRealizedPnl(
+        PositionRecord storage _positionRecord,
+        int256 _pnl
+    ) private {
+        _positionRecord.cumulativeRealizedPnl += _pnl;
+    }
+
+    function _updateAvgClosePrice(
+        PositionRecord storage _positionRecord,
+        uint256 _sizeDeltaAbs,
+        uint256 _decreasingPrice
+    ) private {
+        uint256 newAvgClosePrice = _getNextAvgPrice(
+            false, // _isIncreaseInSize
+            _positionRecord.cumulativeClosedSize, // _prevSize
+            _positionRecord.avgClosePrice, // _prevAvgPrice
+            _sizeDeltaAbs, // _sizeDeltaAbs
+            _decreasingPrice // _markPrice
+        );
+
+        _positionRecord.avgClosePrice = newAvgClosePrice;
     }
 }
