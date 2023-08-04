@@ -10,7 +10,7 @@ import "./Market.sol";
 // * Listing new markets
 // * Asset ID ++, market token addresses register, LP pool register, LP token generating, etc.
 
-contract MarketFactory {
+contract ListingManager {
     // TODO: create LP token contract for each market
 
     function createRisePerpsMarket(
