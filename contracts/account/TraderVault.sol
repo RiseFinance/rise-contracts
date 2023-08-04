@@ -8,6 +8,7 @@ import "hardhat/console.sol"; // test-only
 
 // TODO: check - `override` needed for function declared in the interface `IL3Vault`?
 contract TraderVault {
+    // TODO: change to marginBalances?
     mapping(address => mapping(uint256 => uint256)) public traderBalances; // userAddress => assetId => Balance
     mapping(address => uint256) public traderOrderRecordCounts; // userAddress => orderCount
     mapping(address => uint256) public traderPositionRecordCounts; // userAddress => positionCount
@@ -21,19 +22,9 @@ contract TraderVault {
     // from DA server (or from EVM storage)
     function getTraderOpenPositionKeys() public {}
 
-    // Liquidation => UnrealizedPnL, Maintenance Margin의 총합만 있으면 됨
-    // function getTraderUnrealizedPnL() public {}
-    // function getTraderMaintenanceMargin() public {}
-    // trader open positions
-    // trader open orders
-    // trader order history
-    // trader trade history
-    // trader position history
-    // trader balance
-    // trader unrealized PnL (by position / total)
-    // trader margin balance
-    // trader maintenance margin
-    // trader avbl margin
+    function getTraderTotalUnrealizedPnl() public {}
+
+    function getTraderTotalMaintenanceMargin() public {}
 
     // TODO: onlyManager
     function increaseTraderBalance(
