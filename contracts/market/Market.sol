@@ -6,7 +6,7 @@ import "../common/structs.sol";
 
 contract Market {
     mapping(uint256 => MarketInfo) public markets; // marketId => MarketInfo
-    uint256 public globalMarketIdCounter = 0;
+    uint256 public globalMarketIdCounter = 0; // TODO: choose when to update - before / after the market is created
 
     function getMarketInfo(
         uint256 _marketId
