@@ -11,7 +11,7 @@ import "../common/params.sol";
 import "../risepool/RisePoolUtils.sol";
 import "../market/Market.sol";
 import "./TransferHelper.sol";
-import "../token/RMM.sol";
+import "../token/RM.sol";
 
 contract L2LiquidityGateway is TransferHelper {
     address public l3GatewayAddress;
@@ -92,13 +92,13 @@ contract L2LiquidityGateway is TransferHelper {
                     p._gasPriceBid)
         );
 
-        // mint $RMM tokens
+        // mint $RM tokens
 
         MarketInfo memory marketInfo = market.getMarketInfo(_marketId);
-        RiseMarketMaker rmm = RiseMarketMaker(marketInfo.marketMakerToken);
-        uint256 mintAmount = risePoolUtils.getMintAmount(); // TODO: calculate AUM of MM pool & calculate the mint amount of $RMM tokens
+        RiseMarketMaker rm = RiseMarketMaker(marketInfo.marketMakerToken);
+        uint256 mintAmount = risePoolUtils.getMintAmount(); // TODO: calculate AUM of MM pool & calculate the mint amount of $RM tokens
 
-        rmm.mint(msg.sender, mintAmount);
+        rm.mint(msg.sender, mintAmount);
 
         return ticketId;
     }
@@ -147,13 +147,13 @@ contract L2LiquidityGateway is TransferHelper {
             msg.value - (p._maxSubmissionCost + p._gasLimit * p._gasPriceBid)
         );
 
-        // mint $RMM tokens
+        // mint $RM tokens
 
         MarketInfo memory marketInfo = market.getMarketInfo(_marketId);
-        RiseMarketMaker rmm = RiseMarketMaker(marketInfo.marketMakerToken);
-        uint256 mintAmount = risePoolUtils.getMintAmount(); // TODO: calculate AUM of MM pool & calculate the mint amount of $RMM tokens
+        RiseMarketMaker rm = RiseMarketMaker(marketInfo.marketMakerToken);
+        uint256 mintAmount = risePoolUtils.getMintAmount(); // TODO: calculate AUM of MM pool & calculate the mint amount of $RM tokens
 
-        rmm.mint(msg.sender, mintAmount);
+        rm.mint(msg.sender, mintAmount);
 
         return ticketId;
     }
@@ -168,12 +168,12 @@ contract L2LiquidityGateway is TransferHelper {
         uint256 _withdrawAmount,
         L2ToL3FeeParams memory p
     ) external payable returns (uint256) {
-        // TODO: check - 호출 순서 확인 및 Retryable redeem 실패 시 다시 $RMM mint 가능한지 확인
+        // TODO: check - 호출 순서 확인 및 Retryable redeem 실패 시 다시 $RM mint 가능한지 확인
         MarketInfo memory marketInfo = market.getMarketInfo(_marketId);
 
-        // burn $RMM tokens
-        RiseMarketMaker rmm = RiseMarketMaker(marketInfo.marketMakerToken);
-        rmm.burn(msg.sender, _withdrawAmount);
+        // burn $RM tokens
+        RiseMarketMaker rm = RiseMarketMaker(marketInfo.marketMakerToken);
+        rm.burn(msg.sender, _withdrawAmount);
 
         bytes memory data = abi.encodeWithSelector(
             IL3Gateway.removeLiquidityToL2.selector,

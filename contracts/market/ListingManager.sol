@@ -4,7 +4,7 @@ pragma solidity ^0.8.0;
 
 import "../common/structs.sol";
 
-import "../token/RMM.sol";
+import "../token/RM.sol";
 import "./Market.sol";
 
 // Deals with listing new markets and updating existing ones
@@ -26,7 +26,7 @@ contract ListingManager {
             )
         );
 
-        RiseMarketMaker rmm = new RiseMarketMaker{salt: salt}(); // market maker token
+        RiseMarketMaker rm = new RiseMarketMaker{salt: salt}(); // market maker token
 
         MarketInfo memory newMarket = MarketInfo(
             m.marketId,
@@ -36,7 +36,7 @@ contract ListingManager {
             m.longReserveAssetId,
             m.shortReserveAssetId,
             m.marginAssetId,
-            address(rmm)
+            address(rm)
         );
 
         return newMarket;
