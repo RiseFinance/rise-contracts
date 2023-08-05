@@ -4,7 +4,7 @@ pragma solidity ^0.8.0;
 
 import "./enums.sol";
 
-// Limit order only
+// for limit order only
 struct OrderRequest {
     address trader;
     bool isLong;
@@ -13,6 +13,20 @@ struct OrderRequest {
     uint256 sizeAbs;
     uint256 marginAbs;
     uint256 limitPrice;
+}
+
+struct OpenPosition {
+    address trader;
+    bool isLong;
+    int256 unrealizedPnl; // current unrealized PnL => FIXME: this value should be update in real-time (off-chain or front-end)
+    uint256 currentPositionRecordId;
+    uint256 marketId;
+    // uint256 leverage;
+    uint256 size; // Token Counts
+    uint256 margin; // Token Counts
+    uint256 avgOpenPrice; // TODO: check - should be coupled w/ positions link logic
+    uint256 lastUpdatedTime; // Currently not used for any validation
+    int256 entryFundingIndex;
 }
 
 struct OrderRecord {
@@ -27,6 +41,7 @@ struct OrderRecord {
     uint256 timestamp;
 }
 
+// decrease, close position에서 호출 필요
 struct PositionRecord {
     bool isClosed;
     int256 cumulativeRealizedPnl; // cumulative realized PnL => this value to be closingPnl for closed positions
@@ -37,20 +52,6 @@ struct PositionRecord {
     uint256 avgClosePrice; // updated for decreasing/closing the position
     uint256 openTimestamp;
     uint256 closeTimestamp; // only for closed positions
-}
-
-struct OpenPosition {
-    address trader;
-    bool isLong;
-    int256 unrealizedPnl; // current unrealized PnL => FIXME: this value should be update in real-time
-    uint256 currentPositionRecordId;
-    uint256 marketId;
-    // uint256 leverage;
-    uint256 size; // Token Counts
-    uint256 margin; // Token Counts
-    uint256 avgOpenPrice; // TODO: check - should be coupled w/ positions link logic
-    uint256 lastUpdatedTime; // Currently not used for any validation
-    int256 entryFundingIndex;
 }
 
 struct GlobalPositionState {

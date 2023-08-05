@@ -454,43 +454,43 @@ contract OrderBook is
                 )
             );
 
-            UpdatePositionParams memory params = UpdatePositionParams(
-                execType,
-                flc.key,
-                true, // isOpening
-                msg.sender,
-                _request.isLong,
-                flc.positionRecordId,
-                _request.marketId,
-                _request.limitPrice,
-                flc.sizeAbs,
-                _request.marginAbs,
-                _request.isIncrease, // isIncreaseInSize
-                _request.isIncrease // isIncreaseInMargin
+            positionVault.updateOpenPosition(
+                UpdatePositionParams(
+                    execType,
+                    flc.key,
+                    true, // isOpening
+                    msg.sender,
+                    _request.isLong,
+                    flc.positionRecordId,
+                    _request.marketId,
+                    _request.limitPrice,
+                    flc.sizeAbs,
+                    _request.marginAbs,
+                    _request.isIncrease, // isIncreaseInSize
+                    _request.isIncrease // isIncreaseInMargin
+                )
             );
-
-            positionVault.updateOpenPosition(params);
         } else if (execType == OrderExecType.IncreasePosition) {
             /// @dev for IncreasePosition: OpenPosition => PositionRecord
 
             flc.positionRecordId = flc.openPosition.currentPositionRecordId;
 
-            UpdatePositionParams memory params = UpdatePositionParams(
-                execType,
-                flc.key,
-                false, // isOpening
-                msg.sender,
-                _request.isLong,
-                flc.positionRecordId,
-                _request.marketId,
-                _request.limitPrice,
-                flc.sizeAbs,
-                _request.marginAbs,
-                _request.isIncrease, // isIncreaseInSize
-                _request.isIncrease // isIncreaseInMargin
+            positionVault.updateOpenPosition(
+                UpdatePositionParams(
+                    execType,
+                    flc.key,
+                    false, // isOpening
+                    msg.sender,
+                    _request.isLong,
+                    flc.positionRecordId,
+                    _request.marketId,
+                    _request.limitPrice,
+                    flc.sizeAbs,
+                    _request.marginAbs,
+                    _request.isIncrease, // isIncreaseInSize
+                    _request.isIncrease // isIncreaseInMargin
+                )
             );
-
-            positionVault.updateOpenPosition(params);
 
             positionHistory.updatePositionRecord(
                 UpdatePositionRecordParams(
