@@ -7,13 +7,13 @@ import "../common/params.sol";
 import "../position/PositionHistory.sol";
 import "../position/PositionVault.sol";
 import "../position/PnlManager.sol";
-import "../order/OrderPriceUtils.sol";
+import "../order/PriceUtils.sol";
 import "../order/OrderUtils.sol";
 import "../global/GlobalState.sol";
 import "./OrderHistory.sol";
 import "./OrderValidator.sol";
 
-contract MarketOrder is PnlManager, OrderUtils, OrderPriceUtils {
+contract MarketOrder is PnlManager, OrderUtils, PriceUtils {
     PositionHistory public positionHistory;
     PositionVault public positionVault;
     OrderValidator public orderValidator;
