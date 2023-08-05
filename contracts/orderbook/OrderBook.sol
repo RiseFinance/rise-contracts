@@ -535,7 +535,7 @@ contract OrderBook is
         FillLimitOrderContext memory flc
     ) private {
         // PnL settlement
-        settlePnL(
+        flc.pnl = settlePnL(
             flc.openPosition,
             _request.isLong,
             _request.limitPrice,
