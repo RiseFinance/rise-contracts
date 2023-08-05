@@ -12,7 +12,7 @@ import "../order/OrderUtils.sol";
 import "../market/TokenInfo.sol";
 import "../market/Market.sol";
 
-contract FundingFee {
+contract Funding {
     using SafeCast for int256;
     using SafeCast for uint256;
 

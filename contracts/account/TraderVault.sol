@@ -8,7 +8,7 @@ import "hardhat/console.sol"; // test-only
 
 // TODO: check - `override` needed for function declared in the interface `IL3Vault`?
 contract TraderVault {
-    // TODO: change to marginBalances?
+    // TODO: change to traderMarginBalances?
     mapping(address => mapping(uint256 => uint256)) public traderBalances; // userAddress => assetId => Balance
     mapping(address => uint256) public traderOrderRecordCounts; // userAddress => orderCount
     mapping(address => uint256) public traderPositionRecordCounts; // userAddress => positionCount
