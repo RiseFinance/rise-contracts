@@ -14,7 +14,9 @@ contract GlobalState is PositionUtils {
     function getOpenInterest(
         uint256 _marketId,
         bool _isLong
-    ) public view returns (uint256) {}
+    ) public view returns (uint256) {
+        // TODO: Impl.
+    }
 
     function getGlobalLongPositionState(
         uint256 _marketId
