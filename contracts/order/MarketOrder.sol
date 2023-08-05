@@ -33,58 +33,58 @@ contract MarketOrder is PnlManager, OrderUtils, OrderPriceUtils {
     }
 
     function executeMarketOrder(
-        OrderParams calldata c
+        OrderParams calldata p
     ) external returns (bytes32) {
         FillMarketOrderContext memory fmc;
 
-        fmc.marginAssetId = market.getMarketInfo(c._marketId).marginAssetId;
-        fmc.isBuy = c._isLong == c._isIncrease;
+        fmc.marginAssetId = market.getMarketInfo(p._marketId).marginAssetId;
+        fmc.isBuy = p._isLong == p._isIncrease;
 
         fmc.avgExecPrice = _getAvgExecPriceAndUpdatePriceBuffer(
-            c._marketId,
-            c._sizeAbs,
+            p._marketId,
+            p._sizeAbs,
             fmc.isBuy
         );
 
-        fmc.key = _getPositionKey(msg.sender, c._isLong, c._marketId);
+        fmc.key = _getPositionKey(msg.sender, p._isLong, p._marketId);
 
         // validations
-        c._isIncrease
-            ? orderValidator.validateIncreaseExecution(c)
-            : orderValidator.validateDecreaseExecution(c, fmc.key);
+        p._isIncrease
+            ? orderValidator.validateIncreaseExecution(p)
+            : orderValidator.validateDecreaseExecution(p, fmc.key);
 
         fmc.openPosition = positionVault.getPosition(fmc.key);
 
         // Execution type 1: open position
-        if (fmc.openPosition.size == 0 && c._isIncrease) {
+        if (fmc.openPosition.size == 0 && p._isIncrease) {
             fmc.execType = OrderExecType.OpenPosition;
-            _executeIncreasePosition(fmc.execType, c, fmc);
+            _executeIncreasePosition(fmc.execType, p, fmc);
         }
 
         // Execution type 2: increase position (update existing position)
-        if (fmc.openPosition.size > 0 && c._isIncrease) {
+        if (fmc.openPosition.size > 0 && p._isIncrease) {
             fmc.execType = OrderExecType.IncreasePosition;
-            _executeIncreasePosition(fmc.execType, c, fmc);
+            _executeIncreasePosition(fmc.execType, p, fmc);
         }
 
         // Execution type 3: decrease position
         if (
             fmc.openPosition.size > 0 &&
-            !c._isIncrease &&
-            c._sizeAbs != fmc.openPosition.size
+            !p._isIncrease &&
+            p._sizeAbs != fmc.openPosition.size
         ) {
             fmc.execType = OrderExecType.DecreasePosition;
-            _executeDecreasePosition(fmc.execType, c, fmc);
+            _executeDecreasePosition(fmc.execType, p, fmc);
         }
 
         // Execution type 4: close position
         if (
             fmc.openPosition.size > 0 &&
-            !c._isIncrease &&
-            c._sizeAbs == fmc.openPosition.size
+            !p._isIncrease &&
+            p._sizeAbs == fmc.openPosition.size
         ) {
             fmc.execType = OrderExecType.ClosePosition;
-            _executeDecreasePosition(fmc.execType, c, fmc);
+            _executeDecreasePosition(fmc.execType, p, fmc);
         }
 
         // create order record
@@ -92,35 +92,35 @@ contract MarketOrder is PnlManager, OrderUtils, OrderPriceUtils {
             CreateOrderRecordParams(
                 msg.sender,
                 OrderType.Market,
-                c._isLong,
-                c._isIncrease,
+                p._isLong,
+                p._isIncrease,
                 fmc.positionRecordId,
-                c._marketId,
-                c._sizeAbs,
-                c._marginAbs,
+                p._marketId,
+                p._sizeAbs,
+                p._marginAbs,
                 fmc.avgExecPrice
             )
         );
 
         // update global position state
 
-        if (c._isLong) {
+        if (p._isLong) {
             globalState.updateGlobalLongPositionState(
                 UpdateGlobalPositionStateParams(
-                    c._isIncrease,
-                    c._marketId,
-                    c._sizeAbs,
-                    c._marginAbs,
+                    p._isIncrease,
+                    p._marketId,
+                    p._sizeAbs,
+                    p._marginAbs,
                     fmc.avgExecPrice
                 )
             );
         } else {
             globalState.updateGlobalShortPositionState(
                 UpdateGlobalPositionStateParams(
-                    c._isIncrease,
-                    c._marketId,
-                    c._sizeAbs,
-                    c._marginAbs,
+                    p._isIncrease,
+                    p._marketId,
+                    p._sizeAbs,
+                    p._marginAbs,
                     fmc.avgExecPrice
                 )
             );
@@ -131,20 +131,20 @@ contract MarketOrder is PnlManager, OrderUtils, OrderPriceUtils {
 
     function _executeIncreasePosition(
         OrderExecType _execType,
-        OrderParams calldata c,
+        OrderParams calldata p,
         FillMarketOrderContext memory fmc
     ) private {
         traderVault.decreaseTraderBalance(
             msg.sender,
             fmc.marginAssetId,
-            c._marginAbs
+            p._marginAbs
         );
 
-        c._isLong
-            ? risePool.increaseLongReserveAmount(fmc.marginAssetId, c._sizeAbs)
+        p._isLong
+            ? risePool.increaseLongReserveAmount(fmc.marginAssetId, p._sizeAbs)
             : risePool.increaseShortReserveAmount(
                 fmc.marginAssetId,
-                c._sizeAbs
+                p._sizeAbs
             );
 
         if (_execType == OrderExecType.OpenPosition) {
@@ -153,8 +153,8 @@ contract MarketOrder is PnlManager, OrderUtils, OrderPriceUtils {
             fmc.positionRecordId = positionHistory.openPositionRecord(
                 OpenPositionRecordParams(
                     msg.sender,
-                    c._marketId,
-                    c._sizeAbs,
+                    p._marketId,
+                    p._sizeAbs,
                     fmc.avgExecPrice,
                     0
                 )
@@ -166,14 +166,14 @@ contract MarketOrder is PnlManager, OrderUtils, OrderPriceUtils {
                     fmc.key,
                     true, // isOpening
                     msg.sender,
-                    c._isLong,
+                    p._isLong,
                     fmc.positionRecordId,
-                    c._marketId,
+                    p._marketId,
                     fmc.avgExecPrice,
-                    c._sizeAbs,
-                    c._marginAbs,
-                    c._isIncrease, // isIncreaseInSize
-                    c._isIncrease // isIncreaseInMargin
+                    p._sizeAbs,
+                    p._marginAbs,
+                    p._isIncrease, // isIncreaseInSize
+                    p._isIncrease // isIncreaseInMargin
                 )
             );
         } else if (_execType == OrderExecType.IncreasePosition) {
@@ -187,14 +187,14 @@ contract MarketOrder is PnlManager, OrderUtils, OrderPriceUtils {
                     fmc.key,
                     false, // isOpening
                     msg.sender,
-                    c._isLong,
+                    p._isLong,
                     fmc.positionRecordId,
-                    c._marketId,
+                    p._marketId,
                     fmc.avgExecPrice,
-                    c._sizeAbs,
-                    c._marginAbs,
-                    c._isIncrease, // isIncreaseInSize
-                    c._isIncrease // isIncreaseInMargin
+                    p._sizeAbs,
+                    p._marginAbs,
+                    p._isIncrease, // isIncreaseInSize
+                    p._isIncrease // isIncreaseInMargin
                 )
             );
 
@@ -203,9 +203,9 @@ contract MarketOrder is PnlManager, OrderUtils, OrderPriceUtils {
                     msg.sender,
                     fmc.key,
                     fmc.positionRecordId,
-                    c._isIncrease,
+                    p._isIncrease,
                     fmc.pnl,
-                    c._sizeAbs, // not used for increasing position
+                    p._sizeAbs, // not used for increasing position
                     fmc.avgExecPrice // not used for increasing position
                 )
             );
@@ -216,17 +216,17 @@ contract MarketOrder is PnlManager, OrderUtils, OrderPriceUtils {
 
     function _executeDecreasePosition(
         OrderExecType _execType,
-        OrderParams calldata c,
+        OrderParams calldata p,
         FillMarketOrderContext memory fmc
     ) private {
         // PnL settlement
         fmc.pnl = settlePnL(
             fmc.openPosition,
-            c._isLong,
+            p._isLong,
             fmc.avgExecPrice,
-            c._marketId,
-            c._sizeAbs,
-            c._marginAbs
+            p._marketId,
+            p._sizeAbs,
+            p._marginAbs
         );
 
         fmc.positionRecordId = fmc.openPosition.currentPositionRecordId;
@@ -238,14 +238,14 @@ contract MarketOrder is PnlManager, OrderUtils, OrderPriceUtils {
                     fmc.key,
                     false, // isOpening
                     msg.sender,
-                    c._isLong,
+                    p._isLong,
                     fmc.positionRecordId,
-                    c._marketId,
+                    p._marketId,
                     fmc.avgExecPrice,
-                    c._sizeAbs,
-                    c._marginAbs,
-                    c._isIncrease, // isIncreaseInSize
-                    c._isIncrease // isIncreaseInMargin
+                    p._sizeAbs,
+                    p._marginAbs,
+                    p._isIncrease, // isIncreaseInSize
+                    p._isIncrease // isIncreaseInMargin
                 )
             );
 
@@ -254,9 +254,9 @@ contract MarketOrder is PnlManager, OrderUtils, OrderPriceUtils {
                     msg.sender,
                     fmc.key,
                     fmc.openPosition.currentPositionRecordId,
-                    c._isIncrease,
+                    p._isIncrease,
                     fmc.pnl,
-                    c._sizeAbs,
+                    p._sizeAbs,
                     fmc.avgExecPrice
                 )
             );
@@ -268,7 +268,7 @@ contract MarketOrder is PnlManager, OrderUtils, OrderPriceUtils {
                     msg.sender,
                     fmc.openPosition.currentPositionRecordId,
                     fmc.pnl,
-                    c._sizeAbs,
+                    p._sizeAbs,
                     fmc.avgExecPrice
                 )
             );
