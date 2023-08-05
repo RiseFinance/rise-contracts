@@ -45,7 +45,7 @@ struct OrderRecord {
 struct PositionRecord {
     bool isClosed;
     int256 cumulativeRealizedPnl; // cumulative realized PnL => this value to be closingPnl for closed positions
-    uint256 cumulativeClosedSize; // FIXME: 수정사항 반영
+    uint256 cumulativeClosedSize;
     uint256 marketId;
     uint256 maxSize; // max open interest
     uint256 avgOpenPrice;

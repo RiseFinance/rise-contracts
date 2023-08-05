@@ -61,7 +61,7 @@ contract OrderBook is
         uint256 partialRatio;
         uint256 sizeAbs;
         uint256 marginAbs;
-        uint256 _positionSize;
+        uint256 positionSize; // FIXME:
         uint256 positionRecordId;
     }
 

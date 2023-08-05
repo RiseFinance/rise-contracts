@@ -79,8 +79,13 @@ contract PositionHistory is PositionUtils {
         if (p._isIncrease) {
             positionRecord.avgOpenPrice = openPosition.avgOpenPrice;
         } else {
+            // update cumulativeClosedSize
+            _updateCumulativeClosedSize(positionRecord, p._sizeAbs);
+
             // update avgClosePrice
             _updateAvgClosePrice(positionRecord, p._sizeAbs, p._avgExecPrice);
+
+            // update cumulativeRealizedPnl
             _updateCumulativeRealizedPnl(positionRecord, p._pnl);
         }
         // no need to update PnL for position records for decreasing positzion (only for closed positions)
@@ -90,6 +95,9 @@ contract PositionHistory is PositionUtils {
         PositionRecord storage positionRecord = positionRecords[p._trader][
             p._positionRecordId
         ];
+
+        // update cumulativeClosedSize
+        _updateCumulativeClosedSize(positionRecord, p._sizeAbs);
 
         // update avgClosePrice
         _updateAvgClosePrice(positionRecord, p._sizeAbs, p._avgExecPrice);
@@ -102,6 +110,13 @@ contract PositionHistory is PositionUtils {
 
         // update closeTimestamp
         positionRecord.closeTimestamp = block.timestamp;
+    }
+
+    function _updateCumulativeClosedSize(
+        PositionRecord storage _positionRecord,
+        uint256 _sizeDeltaAbs
+    ) private {
+        _positionRecord.cumulativeClosedSize += _sizeDeltaAbs;
     }
 
     function _updateCumulativeRealizedPnl(

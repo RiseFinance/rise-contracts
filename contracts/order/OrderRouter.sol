@@ -44,6 +44,8 @@ contract OrderRouter {
         // call when sizeDelta = 0 (leverage up)
     }
 
+    function adjustLeverage() external {}
+
     function placeLimitOrder(OrderParams calldata p) external {
         _validateOrder(p);
         orderBook.placeLimitOrder(p);
