@@ -23,13 +23,13 @@ contract MarketOrder is PnlManager, OrderUtils, OrderPriceUtils {
     struct FillMarketOrderContext {
         OpenPosition openPosition;
         OrderExecType execType;
-        bytes32 key;
         bool isBuy;
         bool isOpen;
-        int256 pnl;
+        bytes32 key;
         uint256 positionRecordId;
         uint256 marginAssetId;
         uint256 avgExecPrice;
+        int256 pnl;
     }
 
     function executeMarketOrder(
@@ -58,12 +58,14 @@ contract MarketOrder is PnlManager, OrderUtils, OrderPriceUtils {
         // Execution type 1: open position
         if (fmc.openPosition.size == 0 && p._isIncrease) {
             fmc.execType = OrderExecType.OpenPosition;
+
             _executeIncreasePosition(fmc.execType, p, fmc);
         }
 
         // Execution type 2: increase position (update existing position)
         if (fmc.openPosition.size > 0 && p._isIncrease) {
             fmc.execType = OrderExecType.IncreasePosition;
+
             _executeIncreasePosition(fmc.execType, p, fmc);
         }
 
@@ -74,6 +76,7 @@ contract MarketOrder is PnlManager, OrderUtils, OrderPriceUtils {
             p._sizeAbs != fmc.openPosition.size
         ) {
             fmc.execType = OrderExecType.DecreasePosition;
+
             _executeDecreasePosition(fmc.execType, p, fmc);
         }
 
@@ -84,6 +87,7 @@ contract MarketOrder is PnlManager, OrderUtils, OrderPriceUtils {
             p._sizeAbs == fmc.openPosition.size
         ) {
             fmc.execType = OrderExecType.ClosePosition;
+
             _executeDecreasePosition(fmc.execType, p, fmc);
         }
 

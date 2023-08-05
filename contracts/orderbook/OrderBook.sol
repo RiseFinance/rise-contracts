@@ -13,8 +13,9 @@ import "../position/PositionHistory.sol";
 import "../position/PositionVault.sol";
 import "../position/PnlManager.sol";
 import "../global/GlobalState.sol";
-import "../market/TokenInfo.sol";
+import "../order/OrderHistory.sol";
 import "../order/OrderUtils.sol";
+import "../market/TokenInfo.sol";
 import "./OrderBookBase.sol";
 
 import "hardhat/console.sol";
@@ -31,6 +32,7 @@ contract OrderBook is
 
     PositionHistory public positionHistory;
     PositionVault public positionVault;
+    OrderHistory public orderHistory;
     GlobalState public globalState;
     TokenInfo public tokenInfo;
 
@@ -52,17 +54,17 @@ contract OrderBook is
     }
 
     struct FillLimitOrderContext {
-        OrderExecType execType;
         OpenPosition openPosition;
+        OrderExecType execType;
         bool isPartial;
-        bytes32 key;
-        int256 pnl;
-        uint256 marginAssetId;
         uint256 partialRatio;
+        bytes32 key;
+        uint256 positionRecordId;
+        uint256 marginAssetId;
         uint256 sizeAbs;
         uint256 marginAbs;
         uint256 positionSize; // FIXME:
-        uint256 positionRecordId;
+        int256 pnl;
     }
 
     function getOrderRequest(
@@ -264,6 +266,7 @@ contract OrderBook is
                 // TODO: validateExecution here (increase, decrease)
 
                 OrderRequest memory request = _orderRequests[i];
+
                 executeLimitOrder(
                     request,
                     ptc.avgExecutionPrice,
@@ -319,6 +322,7 @@ contract OrderBook is
             console.log("+++++++++ interimMarkPrice: ", ic.interimMarkPrice);
             console.log("+++++++++ updated loopCondition: ", ic.loopCondition);
         }
+
         return ic.interimMarkPrice; // price impact (buffer size)
     }
 
@@ -351,6 +355,8 @@ contract OrderBook is
             _request.isLong,
             _request.marketId
         );
+
+        // TODO: validations
 
         flc.openPosition = positionVault.getPosition(flc.key);
 
@@ -389,6 +395,21 @@ contract OrderBook is
 
             _executeDecreasePosition(flc.execType, _request, flc);
         }
+
+        // create order record
+        orderHistory.createOrderRecord(
+            CreateOrderRecordParams(
+                msg.sender,
+                OrderType.Limit,
+                _request.isLong,
+                _request.isIncrease,
+                flc.positionRecordId,
+                _request.marketId,
+                _request.sizeAbs,
+                _request.marginAbs,
+                _request.limitPrice // TODO: check - also applying avgExecPrice for Limit Orders?
+            )
+        );
 
         if (_request.isLong) {
             globalState.updateGlobalLongPositionState(
