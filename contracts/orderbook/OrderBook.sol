@@ -4,10 +4,10 @@ pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts/utils/math/SafeCast.sol";
 
-import "../common/Modifiers.sol";
-import "../common/MathUtils.sol";
 import "../common/constants.sol";
 import "../common/params.sol";
+import "../utils/Modifiers.sol";
+import "../utils/MathUtils.sol";
 
 import "../position/PositionHistory.sol";
 import "../position/PositionVault.sol";

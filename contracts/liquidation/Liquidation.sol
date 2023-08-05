@@ -5,7 +5,7 @@ pragma solidity ^0.8.0;
 import "@openzeppelin/contracts/utils/math/Math.sol";
 
 import "../common/constants.sol";
-import "../common/MathUtils.sol";
+import "../utils/MathUtils.sol";
 
 import "../account/TraderVault.sol";
 import "../oracle/PriceManager.sol";
