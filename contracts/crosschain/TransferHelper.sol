@@ -8,6 +8,7 @@ import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 contract TransferHelper {
     using SafeERC20 for IERC20;
 
+    // TODO: check unused functions
     // ETH transafer functions
 
     function _transferEth(address payable _to, uint256 _amount) internal {
@@ -16,7 +17,7 @@ contract TransferHelper {
     }
 
     // ERC-20 transfer functions
-    function _transferIn(
+    function _transferInERC20(
         address _account,
         address _token,
         uint256 _amount
@@ -24,7 +25,7 @@ contract TransferHelper {
         IERC20(_token).safeTransferFrom(_account, address(this), _amount);
     }
 
-    function _transferOut(
+    function _transferOutERC20(
         address _token,
         uint256 _amount,
         address _receiver

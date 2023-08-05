@@ -12,10 +12,12 @@ import "../risepool/RisePoolUtils.sol";
 import "../market/Market.sol";
 import "./TransferHelper.sol";
 import "../token/RM.sol";
+import "./L2Vault.sol";
 
 contract L2LiquidityGateway is TransferHelper {
     address public l3GatewayAddress;
     RisePoolUtils public risePoolUtils;
+    L2Vault public l2Vault;
     Market public market;
     IInbox public inbox;
 
@@ -26,7 +28,7 @@ contract L2LiquidityGateway is TransferHelper {
         bool allowed;
     }
 
-    mapping(address => InOutInfo) private allowedBridgesMap;
+    mapping(address => InOutInfo) private allowedBridgesMap; // TODO: add setter
 
     // event RetryableTicketCreated(uint256 indexed ticketId);
 
@@ -61,6 +63,9 @@ contract L2LiquidityGateway is TransferHelper {
                     p._gasPriceBid,
             "L2Gateway: insufficient msg.value"
         );
+
+        // transfer ETH to L2Vault
+        _transferEth(payable(address(l2Vault)), _addAmount); // TODO: check if `payable` is necessary
 
         bytes memory data = abi.encodeWithSelector(
             IL3Gateway.addLiquidity.selector,
@@ -119,7 +124,7 @@ contract L2LiquidityGateway is TransferHelper {
         // MarketInfo memory marketInfo = market.getMarketInfo(_marketId);
         // TODO: check if marketId matches the token address
 
-        _transferIn(msg.sender, _token, _addAmount);
+        l2Vault._transferInERC20ToL2Vault(msg.sender, _token, _addAmount);
 
         bytes memory data = abi.encodeWithSelector(
             IL3Gateway.addLiquidity.selector,
@@ -209,7 +214,7 @@ contract L2LiquidityGateway is TransferHelper {
         if (!allowedBridgesMap[msg.sender].allowed)
             revert NotBridge(msg.sender);
 
-        _transferEth(payable(_recipient), _amount);
+        l2Vault._transferOutEthFromL2Vault(payable(_recipient), _amount);
     }
 
     /**
@@ -223,6 +228,6 @@ contract L2LiquidityGateway is TransferHelper {
         if (!allowedBridgesMap[msg.sender].allowed)
             revert NotBridge(msg.sender);
 
-        _transferOut(_token, _amount, _recipient);
+        l2Vault._trasferOutERC20FromL2Vault(_token, _amount, _recipient); // FIXME: funds should be transferred from the L2Vault
     }
 }

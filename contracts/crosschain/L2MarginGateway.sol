@@ -9,11 +9,13 @@ import "../common/params.sol";
 
 import "../market/TokenInfo.sol";
 import "./TransferHelper.sol";
+import "./L2Vault.sol";
 import {ETH_ID} from "../common/constants.sol";
 
 contract L2MarginGateway is TransferHelper {
     address public l3GatewayAddress;
     TokenInfo public tokenInfo;
+    L2Vault public l2Vault;
     IInbox public inbox;
 
     error NotBridge(address sender); // TODO: move to errors
@@ -73,6 +75,9 @@ contract L2MarginGateway is TransferHelper {
             "L2Gateway: insufficient msg.value"
         );
 
+        // transfer ETH to L2Vault
+        _transferEth(payable(address(l2Vault)), _depositAmount); // TODO: check if `payable` is necessary
+
         bytes memory data = abi.encodeWithSelector(
             IL3Gateway.increaseTraderBalance.selector,
             msg.sender, // _trader
@@ -124,7 +129,7 @@ contract L2MarginGateway is TransferHelper {
             "L2Gateway: insufficient msg.value"
         );
 
-        _transferIn(msg.sender, _token, _depositAmount);
+        l2Vault._transferInERC20ToL2Vault(msg.sender, _token, _depositAmount);
 
         uint256 assetId = tokenInfo.getAssetIdFromTokenAddress(_token);
 
@@ -207,7 +212,7 @@ contract L2MarginGateway is TransferHelper {
         if (!allowedBridgesMap[msg.sender].allowed)
             revert NotBridge(msg.sender);
 
-        _transferEth(payable(_recipient), _amount);
+        l2Vault._transferOutEthFromL2Vault(payable(_recipient), _amount);
     }
 
     /**
@@ -221,6 +226,6 @@ contract L2MarginGateway is TransferHelper {
         if (!allowedBridgesMap[msg.sender].allowed)
             revert NotBridge(msg.sender);
 
-        _transferOut(_token, _amount, _recipient);
+        l2Vault._trasferOutERC20FromL2Vault(_token, _amount, _recipient);
     }
 }
