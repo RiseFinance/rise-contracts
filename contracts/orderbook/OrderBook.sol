@@ -14,6 +14,7 @@ import "../position/PositionVault.sol";
 import "../position/PnlManager.sol";
 import "../global/GlobalState.sol";
 import "../order/OrderHistory.sol";
+import "../order/OrderExecutor.sol";
 import "../order/OrderUtils.sol";
 import "../market/TokenInfo.sol";
 import "./OrderBookBase.sol";
@@ -22,7 +23,7 @@ import "hardhat/console.sol";
 
 contract OrderBook is
     OrderBookBase,
-    PnlManager,
+    OrderExecutor,
     OrderUtils,
     Modifiers,
     MathUtils
@@ -30,8 +31,6 @@ contract OrderBook is
     using SafeCast for int256;
     using SafeCast for uint256;
 
-    PositionHistory public positionHistory;
-    PositionVault public positionVault;
     OrderHistory public orderHistory;
     GlobalState public globalState;
     TokenInfo public tokenInfo;
@@ -56,18 +55,6 @@ contract OrderBook is
     struct FillLimitOrderContext {
         bool isPartial;
         uint256 partialRatio;
-    }
-
-    struct ExecutionContext {
-        OpenPosition openPosition;
-        OrderExecType execType;
-        bytes32 key;
-        uint256 marginAssetId;
-        uint256 sizeAbs;
-        uint256 marginAbs;
-        uint256 positionRecordId;
-        uint256 avgExecPrice;
-        int256 pnl;
     }
 
     function getOrderRequest(
@@ -351,6 +338,8 @@ contract OrderBook is
             ? (req.marginAbs * flc.partialRatio) / PARTIAL_RATIO_PRECISION
             : req.marginAbs;
 
+        ec.avgExecPrice = req.limitPrice;
+
         // update position
         ec.key = _getPositionKey(req.trader, req.isLong, req.marketId);
 
@@ -439,150 +428,6 @@ contract OrderBook is
             req.marginAbs -= ec.marginAbs;
         } else {
             dequeueOrderBook(req, _isBuy); // TODO: check - if the target order is the first one in the queue
-        }
-    }
-
-    function _executeIncreasePosition(
-        OrderRequest memory req,
-        ExecutionContext memory ec
-    ) private {
-        traderVault.decreaseTraderBalance(
-            msg.sender,
-            ec.marginAssetId,
-            ec.marginAbs
-        );
-
-        req.isLong
-            ? risePool.increaseLongReserveAmount(ec.marginAssetId, ec.sizeAbs)
-            : risePool.increaseShortReserveAmount(ec.marginAssetId, ec.sizeAbs);
-
-        if (ec.execType == OrderExecType.OpenPosition) {
-            /// @dev for OpenPosition: PositionRecord => OpenPosition
-
-            ec.positionRecordId = positionHistory.openPositionRecord(
-                OpenPositionRecordParams(
-                    msg.sender,
-                    req.marketId,
-                    ec.sizeAbs,
-                    req.limitPrice,
-                    0
-                )
-            );
-
-            positionVault.updateOpenPosition(
-                UpdatePositionParams(
-                    ec.execType,
-                    ec.key,
-                    true, // isOpening
-                    msg.sender,
-                    req.isLong,
-                    ec.positionRecordId,
-                    req.marketId,
-                    req.limitPrice,
-                    ec.sizeAbs,
-                    req.marginAbs,
-                    req.isIncrease, // isIncreaseInSize
-                    req.isIncrease // isIncreaseInMargin
-                )
-            );
-        } else if (ec.execType == OrderExecType.IncreasePosition) {
-            /// @dev for IncreasePosition: OpenPosition => PositionRecord
-
-            ec.positionRecordId = ec.openPosition.currentPositionRecordId;
-
-            positionVault.updateOpenPosition(
-                UpdatePositionParams(
-                    ec.execType,
-                    ec.key,
-                    false, // isOpening
-                    msg.sender,
-                    req.isLong,
-                    ec.positionRecordId,
-                    req.marketId,
-                    req.limitPrice,
-                    ec.sizeAbs,
-                    req.marginAbs,
-                    req.isIncrease, // isIncreaseInSize
-                    req.isIncrease // isIncreaseInMargin
-                )
-            );
-
-            positionHistory.updatePositionRecord(
-                UpdatePositionRecordParams(
-                    msg.sender,
-                    ec.key,
-                    ec.positionRecordId,
-                    req.isIncrease,
-                    ec.pnl,
-                    ec.sizeAbs,
-                    req.limitPrice
-                )
-            );
-        } else {
-            revert("Invalid execution type");
-        }
-    }
-
-    function _executeDecreasePosition(
-        OrderRequest memory req,
-        ExecutionContext memory ec
-    ) private {
-        // PnL settlement
-        ec.pnl = settlePnL(
-            ec.openPosition,
-            req.isLong,
-            req.limitPrice,
-            req.marketId,
-            ec.sizeAbs,
-            req.marginAbs
-        );
-
-        ec.positionRecordId = ec.openPosition.currentPositionRecordId;
-
-        if (ec.execType == OrderExecType.DecreasePosition) {
-            UpdatePositionParams memory params = UpdatePositionParams(
-                ec.execType,
-                ec.key,
-                false, // isOpening
-                msg.sender,
-                req.isLong,
-                ec.positionRecordId,
-                req.marketId,
-                req.limitPrice,
-                ec.sizeAbs,
-                req.marginAbs,
-                req.isIncrease, // isIncreaseInSize
-                req.isIncrease // isIncreaseInMargin
-            );
-
-            // positionVault.updateOpenPositionWithPnl(0, params); // FIXME: first arg is interimPnlUsd
-            positionVault.updateOpenPosition(params);
-
-            positionHistory.updatePositionRecord(
-                UpdatePositionRecordParams(
-                    msg.sender,
-                    ec.key,
-                    ec.openPosition.currentPositionRecordId,
-                    req.isIncrease,
-                    ec.pnl,
-                    ec.sizeAbs,
-                    req.limitPrice
-                )
-            );
-        } else if (ec.execType == OrderExecType.ClosePosition) {
-            positionVault.deleteOpenPosition(ec.key);
-
-            positionHistory.closePositionRecord(
-                ClosePositionRecordParams(
-                    msg.sender,
-                    ec.openPosition.currentPositionRecordId,
-                    ec.pnl,
-                    ec.sizeAbs,
-                    req.limitPrice
-                )
-            );
-        } else {
-            revert("Invalid execution type");
         }
     }
 }

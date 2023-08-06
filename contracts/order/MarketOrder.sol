@@ -6,31 +6,17 @@ import "../common/structs.sol";
 
 import "../position/PositionHistory.sol";
 import "../position/PositionVault.sol";
-import "../position/PnlManager.sol";
+import "../order/OrderExecutor.sol";
 import "../order/PriceUtils.sol";
 import "../order/OrderUtils.sol";
 import "../global/GlobalState.sol";
 import "./OrderHistory.sol";
 import "./OrderValidator.sol";
 
-contract MarketOrder is PnlManager, OrderUtils, PriceUtils {
-    PositionHistory public positionHistory;
-    PositionVault public positionVault;
+contract MarketOrder is OrderExecutor, OrderUtils, PriceUtils {
     OrderValidator public orderValidator;
     OrderHistory public orderHistory;
     GlobalState public globalState;
-
-    struct ExecutionContext {
-        OpenPosition openPosition;
-        OrderExecType execType;
-        bytes32 key;
-        uint256 marginAssetId;
-        uint256 sizeAbs;
-        uint256 marginAbs;
-        uint256 positionRecordId;
-        uint256 avgExecPrice;
-        int256 pnl;
-    }
 
     function executeMarketOrder(
         OrderRequest calldata req
@@ -38,12 +24,15 @@ contract MarketOrder is PnlManager, OrderUtils, PriceUtils {
         // MarketOrderContext memory moc;
         ExecutionContext memory ec;
 
+        ec.sizeAbs = ec.sizeAbs;
+        ec.marginAbs = ec.marginAbs;
+
         ec.marginAssetId = market.getMarketInfo(req.marketId).marginAssetId;
         // moc.isBuy = req.isLong == req.isIncrease;
 
         ec.avgExecPrice = _getAvgExecPriceAndUpdatePriceBuffer(
             req.marketId,
-            req.sizeAbs,
+            ec.sizeAbs,
             // moc.isBuy
             req.isLong == req.isIncrease // isBuy
         );
@@ -75,7 +64,7 @@ contract MarketOrder is PnlManager, OrderUtils, PriceUtils {
         if (
             ec.openPosition.size > 0 &&
             !req.isIncrease &&
-            req.sizeAbs != ec.openPosition.size
+            ec.sizeAbs != ec.openPosition.size
         ) {
             ec.execType = OrderExecType.DecreasePosition;
 
@@ -86,7 +75,7 @@ contract MarketOrder is PnlManager, OrderUtils, PriceUtils {
         if (
             ec.openPosition.size > 0 &&
             !req.isIncrease &&
-            req.sizeAbs == ec.openPosition.size
+            ec.sizeAbs == ec.openPosition.size
         ) {
             ec.execType = OrderExecType.ClosePosition;
 
@@ -102,8 +91,8 @@ contract MarketOrder is PnlManager, OrderUtils, PriceUtils {
                 req.isIncrease,
                 ec.positionRecordId,
                 req.marketId,
-                req.sizeAbs,
-                req.marginAbs,
+                ec.sizeAbs,
+                ec.marginAbs,
                 ec.avgExecPrice
             )
         );
@@ -115,8 +104,8 @@ contract MarketOrder is PnlManager, OrderUtils, PriceUtils {
                 UpdateGlobalPositionStateParams(
                     req.isIncrease,
                     req.marketId,
-                    req.sizeAbs,
-                    req.marginAbs,
+                    ec.sizeAbs,
+                    ec.marginAbs,
                     ec.avgExecPrice
                 )
             );
@@ -125,159 +114,13 @@ contract MarketOrder is PnlManager, OrderUtils, PriceUtils {
                 UpdateGlobalPositionStateParams(
                     req.isIncrease,
                     req.marketId,
-                    req.sizeAbs,
-                    req.marginAbs,
+                    ec.sizeAbs,
+                    ec.marginAbs,
                     ec.avgExecPrice
                 )
             );
         }
 
         return ec.key;
-    }
-
-    function _executeIncreasePosition(
-        OrderRequest calldata req,
-        ExecutionContext memory ec
-    ) private {
-        traderVault.decreaseTraderBalance(
-            msg.sender,
-            ec.marginAssetId,
-            req.marginAbs
-        );
-
-        req.isLong
-            ? risePool.increaseLongReserveAmount(ec.marginAssetId, req.sizeAbs)
-            : risePool.increaseShortReserveAmount(
-                ec.marginAssetId,
-                req.sizeAbs
-            );
-
-        if (ec.execType == OrderExecType.OpenPosition) {
-            /// @dev for OpenPosition: PositionRecord => OpenPosition
-
-            ec.positionRecordId = positionHistory.openPositionRecord(
-                OpenPositionRecordParams(
-                    msg.sender,
-                    req.marketId,
-                    req.sizeAbs,
-                    ec.avgExecPrice,
-                    0
-                )
-            );
-
-            positionVault.updateOpenPosition(
-                UpdatePositionParams(
-                    ec.execType,
-                    ec.key,
-                    true, // isOpening
-                    msg.sender,
-                    req.isLong,
-                    ec.positionRecordId,
-                    req.marketId,
-                    ec.avgExecPrice,
-                    req.sizeAbs,
-                    req.marginAbs,
-                    req.isIncrease, // isIncreaseInSize
-                    req.isIncrease // isIncreaseInMargin
-                )
-            );
-        } else if (ec.execType == OrderExecType.IncreasePosition) {
-            /// @dev for IncreasePosition: OpenPosition => PositionRecord
-
-            ec.positionRecordId = ec.openPosition.currentPositionRecordId;
-
-            positionVault.updateOpenPosition(
-                UpdatePositionParams(
-                    ec.execType,
-                    ec.key,
-                    false, // isOpening
-                    msg.sender,
-                    req.isLong,
-                    ec.positionRecordId,
-                    req.marketId,
-                    ec.avgExecPrice,
-                    req.sizeAbs,
-                    req.marginAbs,
-                    req.isIncrease, // isIncreaseInSize
-                    req.isIncrease // isIncreaseInMargin
-                )
-            );
-
-            positionHistory.updatePositionRecord(
-                UpdatePositionRecordParams(
-                    msg.sender,
-                    ec.key,
-                    ec.positionRecordId,
-                    req.isIncrease,
-                    ec.pnl,
-                    req.sizeAbs, // not used for increasing position
-                    ec.avgExecPrice // not used for increasing position
-                )
-            );
-        } else {
-            revert("Invalid execution type");
-        }
-    }
-
-    function _executeDecreasePosition(
-        OrderRequest calldata req,
-        ExecutionContext memory ec
-    ) private {
-        // PnL settlement
-        ec.pnl = settlePnL(
-            ec.openPosition,
-            req.isLong,
-            ec.avgExecPrice,
-            req.marketId,
-            req.sizeAbs,
-            req.marginAbs
-        );
-
-        ec.positionRecordId = ec.openPosition.currentPositionRecordId;
-
-        if (ec.execType == OrderExecType.DecreasePosition) {
-            positionVault.updateOpenPosition(
-                UpdatePositionParams(
-                    ec.execType,
-                    ec.key,
-                    false, // isOpening
-                    msg.sender,
-                    req.isLong,
-                    ec.positionRecordId,
-                    req.marketId,
-                    ec.avgExecPrice,
-                    req.sizeAbs,
-                    req.marginAbs,
-                    req.isIncrease, // isIncreaseInSize
-                    req.isIncrease // isIncreaseInMargin
-                )
-            );
-
-            positionHistory.updatePositionRecord(
-                UpdatePositionRecordParams(
-                    msg.sender,
-                    ec.key,
-                    ec.openPosition.currentPositionRecordId,
-                    req.isIncrease,
-                    ec.pnl,
-                    req.sizeAbs,
-                    ec.avgExecPrice
-                )
-            );
-        } else if (ec.execType == OrderExecType.ClosePosition) {
-            positionVault.deleteOpenPosition(ec.key);
-
-            positionHistory.closePositionRecord(
-                ClosePositionRecordParams(
-                    msg.sender,
-                    ec.openPosition.currentPositionRecordId,
-                    ec.pnl,
-                    req.sizeAbs,
-                    ec.avgExecPrice
-                )
-            );
-        } else {
-            revert("Invalid execution type");
-        }
     }
 }
