@@ -12,7 +12,7 @@ struct OrderRequest {
     uint256 marketId;
     uint256 sizeAbs;
     uint256 marginAbs;
-    uint256 limitPrice;
+    uint256 limitPrice; // empty for market orders
 }
 
 struct OpenPosition {

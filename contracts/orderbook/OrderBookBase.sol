@@ -38,99 +38,71 @@ abstract contract OrderBookBase {
         minAskPrice[_marketId] = _price;
     }
 
-    function enqueueOrderBook(
-        OrderRequest memory _request,
-        bool _isBuy
-    ) public {
+    function enqueueOrderBook(OrderRequest memory req, bool _isBuy) public {
         if (_isBuy) {
             // If it is the first order added in the queue, set the first index to 1
             // for the last index, added below
-            if (buyLastIndex[_request.marketId][_request.limitPrice] == 0) {
-                buyFirstIndex[_request.marketId][_request.limitPrice] = 1;
+            if (buyLastIndex[req.marketId][req.limitPrice] == 0) {
+                buyFirstIndex[req.marketId][req.limitPrice] = 1;
             }
 
-            uint256 buyLast = ++buyLastIndex[_request.marketId][
-                _request.limitPrice
-            ];
+            uint256 buyLast = ++buyLastIndex[req.marketId][req.limitPrice];
 
-            buyOrderBook[_request.marketId][_request.limitPrice][
-                buyLast
-            ] = _request;
+            buyOrderBook[req.marketId][req.limitPrice][buyLast] = req;
         } else {
             // If it is the first order added in the queue, set the first index to 1
             // for the last index, added below
-            if (sellLastIndex[_request.marketId][_request.limitPrice] == 0) {
-                sellFirstIndex[_request.marketId][_request.limitPrice] = 1;
+            if (sellLastIndex[req.marketId][req.limitPrice] == 0) {
+                sellFirstIndex[req.marketId][req.limitPrice] = 1;
             }
 
-            uint256 sellLast = ++sellLastIndex[_request.marketId][
-                _request.limitPrice
-            ];
-            sellOrderBook[_request.marketId][_request.limitPrice][
-                sellLast
-            ] = _request;
+            uint256 sellLast = ++sellLastIndex[req.marketId][req.limitPrice];
+            sellOrderBook[req.marketId][req.limitPrice][sellLast] = req;
         }
-        orderSizeForPriceTick[_request.marketId][
-            _request.limitPrice
-        ] += _request.sizeAbs;
+        orderSizeForPriceTick[req.marketId][req.limitPrice] += req.sizeAbs;
     }
 
-    function dequeueOrderBook(
-        OrderRequest memory _request,
-        bool _isBuy
-    ) public {
+    function dequeueOrderBook(OrderRequest memory req, bool _isBuy) public {
         if (_isBuy) {
-            uint256 buyLast = buyLastIndex[_request.marketId][
-                _request.limitPrice
-            ];
-            uint256 buyFirst = buyFirstIndex[_request.marketId][
-                _request.limitPrice
-            ];
+            uint256 buyLast = buyLastIndex[req.marketId][req.limitPrice];
+            uint256 buyFirst = buyFirstIndex[req.marketId][req.limitPrice];
 
             require(
                 buyLast > 0 && buyFirst > 0,
                 "BaseOrderBook: buyOrderBook queue is empty"
             );
-            delete buyOrderBook[_request.marketId][_request.limitPrice][
-                buyFirst
-            ];
+            delete buyOrderBook[req.marketId][req.limitPrice][buyFirst];
 
             // If the queue is empty after the deletion, set the first & last index to 0
             // for the next order added
             if (
-                buyLastIndex[_request.marketId][_request.limitPrice] ==
-                buyFirstIndex[_request.marketId][_request.limitPrice]
+                buyLastIndex[req.marketId][req.limitPrice] ==
+                buyFirstIndex[req.marketId][req.limitPrice]
             ) {
-                buyLastIndex[_request.marketId][_request.limitPrice] = 0;
-                buyFirstIndex[_request.marketId][_request.limitPrice] = 0;
+                buyLastIndex[req.marketId][req.limitPrice] = 0;
+                buyFirstIndex[req.marketId][req.limitPrice] = 0;
             } else {
-                buyFirstIndex[_request.marketId][_request.limitPrice]++;
+                buyFirstIndex[req.marketId][req.limitPrice]++;
             }
         } else {
-            uint256 sellLast = sellLastIndex[_request.marketId][
-                _request.limitPrice
-            ];
-            uint256 sellFirst = sellFirstIndex[_request.marketId][
-                _request.limitPrice
-            ];
+            uint256 sellLast = sellLastIndex[req.marketId][req.limitPrice];
+            uint256 sellFirst = sellFirstIndex[req.marketId][req.limitPrice];
             require(
                 sellLast > 0 && sellFirst > 0,
                 "BaseOrderBook: sellOrderBook queue is empty"
             );
-            delete sellOrderBook[_request.marketId][_request.limitPrice][
-                sellFirst
-            ];
+            delete sellOrderBook[req.marketId][req.limitPrice][sellFirst];
 
             // If the queue is empty after the deletion, set the first & last index to 0
             // for the next order added
             if (
-                sellLastIndex[_request.marketId][_request.limitPrice] ==
-                sellFirstIndex[_request.marketId][_request.limitPrice]
+                sellLastIndex[req.marketId][req.limitPrice] ==
+                sellFirstIndex[req.marketId][req.limitPrice]
             ) {
-                sellLastIndex[_request.marketId][_request.limitPrice] = 0;
-                sellFirstIndex[_request.marketId][_request.limitPrice] = 0;
+                sellLastIndex[req.marketId][req.limitPrice] = 0;
+                sellFirstIndex[req.marketId][req.limitPrice] = 0;
             } else {
-                sellFirstIndex[_request.marketId][_request.limitPrice]++;
+                sellFirstIndex[req.marketId][req.limitPrice]++;
             }
         }
     }

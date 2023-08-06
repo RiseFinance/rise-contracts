@@ -54,16 +54,19 @@ contract OrderBook is
     }
 
     struct FillLimitOrderContext {
-        OpenPosition openPosition;
-        OrderExecType execType;
         bool isPartial;
         uint256 partialRatio;
+    }
+
+    struct ExecutionContext {
+        OpenPosition openPosition;
+        OrderExecType execType;
         bytes32 key;
-        uint256 positionRecordId;
         uint256 marginAssetId;
         uint256 sizeAbs;
         uint256 marginAbs;
-        uint256 positionSize; // FIXME:
+        uint256 positionRecordId;
+        uint256 avgExecPrice;
         int256 pnl;
     }
 
@@ -80,19 +83,19 @@ contract OrderBook is
         }
     }
 
-    function placeLimitOrder(OrderParams calldata p) external {
+    function placeLimitOrder(OrderRequest calldata req) external {
         // FIXME: orderSizeForPriceTick 업데이트
         // TODO: max cap 등 validation?
         // FIXME: TODO: Limit Order place or fill 할 때 traderBalance, poolAmount, reserveAmount 업데이트 필요
 
         OrderRequest memory orderRequest = OrderRequest(
             tx.origin,
-            p._isLong,
-            p._isIncrease,
-            p._marketId,
-            p._sizeAbs,
-            p._marginAbs,
-            p._limitPrice
+            req.isLong,
+            req.isIncrease,
+            req.marketId,
+            req.sizeAbs,
+            req.marginAbs,
+            req.limitPrice
         );
 
         pendingOrders[tx.origin][
@@ -100,19 +103,19 @@ contract OrderBook is
         ] = orderRequest;
         traderOrderRequestCounts[tx.origin]++;
 
-        bool _isBuy = p._isLong == p._isIncrease;
+        bool _isBuy = req.isLong == req.isIncrease;
 
         if (_isBuy) {
             // TODO: do not update if outlier
-            if (p._limitPrice > maxBidPrice[p._marketId]) {
-                maxBidPrice[p._marketId] = p._limitPrice;
+            if (req.limitPrice > maxBidPrice[req.marketId]) {
+                maxBidPrice[req.marketId] = req.limitPrice;
             }
         } else {
             if (
-                p._limitPrice < minAskPrice[p._marketId] ||
-                minAskPrice[p._marketId] == 0
+                req.limitPrice < minAskPrice[req.marketId] ||
+                minAskPrice[req.marketId] == 0
             ) {
-                minAskPrice[p._marketId] = p._limitPrice;
+                minAskPrice[req.marketId] = req.limitPrice;
             }
         }
         // return order index
@@ -327,73 +330,68 @@ contract OrderBook is
     }
 
     function executeLimitOrder(
-        OrderRequest memory _request,
+        OrderRequest memory req,
         uint256 _avgExecPrice,
         uint256 sizeCap,
         bool _isBuy // bool isPartial
     ) private {
         FillLimitOrderContext memory flc;
+        ExecutionContext memory ec;
 
-        flc.marginAssetId = market
-            .getMarketInfo(_request.marketId)
-            .marginAssetId;
+        ec.marginAssetId = market.getMarketInfo(req.marketId).marginAssetId;
 
-        flc.isPartial = _request.sizeAbs > sizeCap;
+        flc.isPartial = req.sizeAbs > sizeCap;
         flc.partialRatio = flc.isPartial
-            ? (sizeCap / _request.sizeAbs) * PARTIAL_RATIO_PRECISION
+            ? (sizeCap / req.sizeAbs) * PARTIAL_RATIO_PRECISION
             : 1 * PARTIAL_RATIO_PRECISION;
 
-        flc.sizeAbs = flc.isPartial ? sizeCap : _request.sizeAbs;
+        ec.sizeAbs = flc.isPartial ? sizeCap : req.sizeAbs;
 
-        flc.marginAbs = flc.isPartial
-            ? (_request.marginAbs * flc.partialRatio) / PARTIAL_RATIO_PRECISION
-            : _request.marginAbs;
+        ec.marginAbs = flc.isPartial
+            ? (req.marginAbs * flc.partialRatio) / PARTIAL_RATIO_PRECISION
+            : req.marginAbs;
 
         // update position
-        flc.key = _getPositionKey(
-            _request.trader,
-            _request.isLong,
-            _request.marketId
-        );
+        ec.key = _getPositionKey(req.trader, req.isLong, req.marketId);
 
         // TODO: validations
 
-        flc.openPosition = positionVault.getPosition(flc.key);
+        ec.openPosition = positionVault.getPosition(ec.key);
 
         // Execution type 1: open position
-        if (flc.openPosition.size == 0 && _request.isIncrease) {
-            flc.execType = OrderExecType.OpenPosition;
+        if (ec.openPosition.size == 0 && req.isIncrease) {
+            ec.execType = OrderExecType.OpenPosition;
 
-            _executeIncreasePosition(flc.execType, _request, flc);
+            _executeIncreasePosition(req, ec);
         }
 
         // Execution type 2: increase position (update existing position)
-        if (flc.openPosition.size > 0 && _request.isIncrease) {
-            flc.execType = OrderExecType.IncreasePosition;
+        if (ec.openPosition.size > 0 && req.isIncrease) {
+            ec.execType = OrderExecType.IncreasePosition;
 
-            _executeIncreasePosition(flc.execType, _request, flc);
+            _executeIncreasePosition(req, ec);
         }
 
         // Execution type 3: decrease position
         if (
-            flc.openPosition.size > 0 &&
-            !_request.isIncrease &&
-            flc.sizeAbs != flc.openPosition.size
+            ec.openPosition.size > 0 &&
+            !req.isIncrease &&
+            ec.sizeAbs != ec.openPosition.size
         ) {
-            flc.execType = OrderExecType.DecreasePosition;
+            ec.execType = OrderExecType.DecreasePosition;
 
-            _executeDecreasePosition(flc.execType, _request, flc);
+            _executeDecreasePosition(req, ec);
         }
 
         // Execution type 4: close position
         if (
-            flc.openPosition.size > 0 &&
-            !_request.isIncrease &&
-            flc.sizeAbs == flc.openPosition.size
+            ec.openPosition.size > 0 &&
+            !req.isIncrease &&
+            ec.sizeAbs == ec.openPosition.size
         ) {
-            flc.execType = OrderExecType.ClosePosition;
+            ec.execType = OrderExecType.ClosePosition;
 
-            _executeDecreasePosition(flc.execType, _request, flc);
+            _executeDecreasePosition(req, ec);
         }
 
         // create order record
@@ -401,127 +399,123 @@ contract OrderBook is
             CreateOrderRecordParams(
                 msg.sender,
                 OrderType.Limit,
-                _request.isLong,
-                _request.isIncrease,
-                flc.positionRecordId,
-                _request.marketId,
-                _request.sizeAbs,
-                _request.marginAbs,
-                _request.limitPrice // TODO: check - also applying avgExecPrice for Limit Orders?
+                req.isLong,
+                req.isIncrease,
+                ec.positionRecordId,
+                req.marketId,
+                req.sizeAbs,
+                req.marginAbs,
+                req.limitPrice // TODO: check - also applying avgExecPrice for Limit Orders?
             )
         );
 
-        if (_request.isLong) {
+        if (req.isLong) {
             globalState.updateGlobalLongPositionState(
                 UpdateGlobalPositionStateParams(
-                    _request.isIncrease,
-                    _request.marketId,
-                    flc.sizeAbs,
-                    flc.marginAbs,
+                    req.isIncrease,
+                    req.marketId,
+                    ec.sizeAbs,
+                    ec.marginAbs,
                     _avgExecPrice
                 )
             );
         } else {
             globalState.updateGlobalShortPositionState(
                 UpdateGlobalPositionStateParams(
-                    _request.isIncrease,
-                    _request.marketId,
-                    flc.sizeAbs,
-                    flc.marginAbs,
+                    req.isIncrease,
+                    req.marketId,
+                    ec.sizeAbs,
+                    ec.marginAbs,
                     _avgExecPrice
                 )
             );
         }
 
-        sizeCap -= flc.sizeAbs; // TODO: validation - assert(sum(request.sizeAbs) == orderSizeInUsdForPriceTick[_marketId][_limitPriceIterator])
+        sizeCap -= ec.sizeAbs; // TODO: validation - assert(sum(request.sizeAbs) == orderSizeInUsdForPriceTick[_marketId][_limitPriceIterator])
 
         // delete or update (isPartial) limit order from the orderbook
         if (flc.isPartial) {
-            _request.sizeAbs -= flc.sizeAbs;
-            _request.marginAbs -= flc.marginAbs;
+            req.sizeAbs -= ec.sizeAbs;
+            req.marginAbs -= ec.marginAbs;
         } else {
-            dequeueOrderBook(_request, _isBuy); // TODO: check - if the target order is the first one in the queue
+            dequeueOrderBook(req, _isBuy); // TODO: check - if the target order is the first one in the queue
         }
     }
 
     function _executeIncreasePosition(
-        OrderExecType execType,
-        OrderRequest memory _request,
-        FillLimitOrderContext memory flc
+        OrderRequest memory req,
+        ExecutionContext memory ec
     ) private {
         traderVault.decreaseTraderBalance(
             msg.sender,
-            flc.marginAssetId,
-            flc.marginAbs
+            ec.marginAssetId,
+            ec.marginAbs
         );
 
-        _request.isLong
-            ? risePool.increaseLongReserveAmount(flc.marginAssetId, flc.sizeAbs)
-            : risePool.increaseShortReserveAmount(
-                flc.marginAssetId,
-                flc.sizeAbs
-            );
+        req.isLong
+            ? risePool.increaseLongReserveAmount(ec.marginAssetId, ec.sizeAbs)
+            : risePool.increaseShortReserveAmount(ec.marginAssetId, ec.sizeAbs);
 
-        if (execType == OrderExecType.OpenPosition) {
+        if (ec.execType == OrderExecType.OpenPosition) {
             /// @dev for OpenPosition: PositionRecord => OpenPosition
 
-            flc.positionRecordId = positionHistory.openPositionRecord(
+            ec.positionRecordId = positionHistory.openPositionRecord(
                 OpenPositionRecordParams(
                     msg.sender,
-                    _request.marketId,
-                    flc.sizeAbs,
-                    _request.limitPrice,
+                    req.marketId,
+                    ec.sizeAbs,
+                    req.limitPrice,
                     0
                 )
             );
 
             positionVault.updateOpenPosition(
                 UpdatePositionParams(
-                    execType,
-                    flc.key,
+                    ec.execType,
+                    ec.key,
                     true, // isOpening
                     msg.sender,
-                    _request.isLong,
-                    flc.positionRecordId,
-                    _request.marketId,
-                    _request.limitPrice,
-                    flc.sizeAbs,
-                    _request.marginAbs,
-                    _request.isIncrease, // isIncreaseInSize
-                    _request.isIncrease // isIncreaseInMargin
+                    req.isLong,
+                    ec.positionRecordId,
+                    req.marketId,
+                    req.limitPrice,
+                    ec.sizeAbs,
+                    req.marginAbs,
+                    req.isIncrease, // isIncreaseInSize
+                    req.isIncrease // isIncreaseInMargin
                 )
             );
-        } else if (execType == OrderExecType.IncreasePosition) {
+        } else if (ec.execType == OrderExecType.IncreasePosition) {
             /// @dev for IncreasePosition: OpenPosition => PositionRecord
 
-            flc.positionRecordId = flc.openPosition.currentPositionRecordId;
+            ec.positionRecordId = ec.openPosition.currentPositionRecordId;
 
             positionVault.updateOpenPosition(
                 UpdatePositionParams(
-                    execType,
-                    flc.key,
+                    ec.execType,
+                    ec.key,
                     false, // isOpening
                     msg.sender,
-                    _request.isLong,
-                    flc.positionRecordId,
-                    _request.marketId,
-                    _request.limitPrice,
-                    flc.sizeAbs,
-                    _request.marginAbs,
-                    _request.isIncrease, // isIncreaseInSize
-                    _request.isIncrease // isIncreaseInMargin
+                    req.isLong,
+                    ec.positionRecordId,
+                    req.marketId,
+                    req.limitPrice,
+                    ec.sizeAbs,
+                    req.marginAbs,
+                    req.isIncrease, // isIncreaseInSize
+                    req.isIncrease // isIncreaseInMargin
                 )
             );
 
             positionHistory.updatePositionRecord(
                 UpdatePositionRecordParams(
                     msg.sender,
-                    flc.key,
-                    flc.positionRecordId,
-                    _request.isIncrease,
-                    flc.pnl,
-                    flc.sizeAbs,
-                    _request.limitPrice
+                    ec.key,
+                    ec.positionRecordId,
+                    req.isIncrease,
+                    ec.pnl,
+                    ec.sizeAbs,
+                    req.limitPrice
                 )
             );
         } else {
@@ -530,36 +524,35 @@ contract OrderBook is
     }
 
     function _executeDecreasePosition(
-        OrderExecType execType,
-        OrderRequest memory _request,
-        FillLimitOrderContext memory flc
+        OrderRequest memory req,
+        ExecutionContext memory ec
     ) private {
         // PnL settlement
-        flc.pnl = settlePnL(
-            flc.openPosition,
-            _request.isLong,
-            _request.limitPrice,
-            _request.marketId,
-            flc.sizeAbs,
-            _request.marginAbs
+        ec.pnl = settlePnL(
+            ec.openPosition,
+            req.isLong,
+            req.limitPrice,
+            req.marketId,
+            ec.sizeAbs,
+            req.marginAbs
         );
 
-        flc.positionRecordId = flc.openPosition.currentPositionRecordId;
+        ec.positionRecordId = ec.openPosition.currentPositionRecordId;
 
-        if (execType == OrderExecType.DecreasePosition) {
+        if (ec.execType == OrderExecType.DecreasePosition) {
             UpdatePositionParams memory params = UpdatePositionParams(
-                execType,
-                flc.key,
+                ec.execType,
+                ec.key,
                 false, // isOpening
                 msg.sender,
-                _request.isLong,
-                flc.positionRecordId,
-                _request.marketId,
-                _request.limitPrice,
-                flc.sizeAbs,
-                _request.marginAbs,
-                _request.isIncrease, // isIncreaseInSize
-                _request.isIncrease // isIncreaseInMargin
+                req.isLong,
+                ec.positionRecordId,
+                req.marketId,
+                req.limitPrice,
+                ec.sizeAbs,
+                req.marginAbs,
+                req.isIncrease, // isIncreaseInSize
+                req.isIncrease // isIncreaseInMargin
             );
 
             // positionVault.updateOpenPositionWithPnl(0, params); // FIXME: first arg is interimPnlUsd
@@ -568,24 +561,24 @@ contract OrderBook is
             positionHistory.updatePositionRecord(
                 UpdatePositionRecordParams(
                     msg.sender,
-                    flc.key,
-                    flc.openPosition.currentPositionRecordId,
-                    _request.isIncrease,
-                    flc.pnl,
-                    flc.sizeAbs,
-                    _request.limitPrice
+                    ec.key,
+                    ec.openPosition.currentPositionRecordId,
+                    req.isIncrease,
+                    ec.pnl,
+                    ec.sizeAbs,
+                    req.limitPrice
                 )
             );
-        } else if (execType == OrderExecType.ClosePosition) {
-            positionVault.deleteOpenPosition(flc.key);
+        } else if (ec.execType == OrderExecType.ClosePosition) {
+            positionVault.deleteOpenPosition(ec.key);
 
             positionHistory.closePositionRecord(
                 ClosePositionRecordParams(
                     msg.sender,
-                    flc.openPosition.currentPositionRecordId,
-                    flc.pnl,
-                    flc.sizeAbs,
-                    _request.limitPrice
+                    ec.openPosition.currentPositionRecordId,
+                    ec.pnl,
+                    ec.sizeAbs,
+                    req.limitPrice
                 )
             );
         } else {

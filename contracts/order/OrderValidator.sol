@@ -11,52 +11,54 @@ contract OrderValidator {
     GlobalState public globalState;
     RisePool public risePool;
 
-    function validateIncreaseExecution(OrderParams calldata p) external view {
-        uint256 poolAmount = p._isLong
-            ? risePool.getLongPoolAmount(p._marketId)
-            : risePool.getShortPoolAmount(p._marketId);
+    function validateIncreaseExecution(
+        OrderRequest calldata req
+    ) external view {
+        uint256 poolAmount = req.isLong
+            ? risePool.getLongPoolAmount(req.marketId)
+            : risePool.getShortPoolAmount(req.marketId);
 
-        uint256 reserveAmount = p._isLong
-            ? risePool.getLongReserveAmount(p._marketId)
-            : risePool.getShortReserveAmount(p._marketId);
+        uint256 reserveAmount = req.isLong
+            ? risePool.getLongReserveAmount(req.marketId)
+            : risePool.getShortReserveAmount(req.marketId);
 
-        uint256 maxLongCapacity = positionVault.maxLongCapacity(p._marketId);
-        uint256 maxShortCapacity = positionVault.maxShortCapacity(p._marketId);
+        uint256 maxLongCapacity = positionVault.maxLongCapacity(req.marketId);
+        uint256 maxShortCapacity = positionVault.maxShortCapacity(req.marketId);
 
         require(
-            poolAmount >= reserveAmount + p._sizeAbs,
+            poolAmount >= reserveAmount + req.sizeAbs,
             "OrderValidator: Not enough token pool amount"
         );
 
-        uint256 totalSize = p._isLong
-            ? globalState.getGlobalLongPositionState(p._marketId).totalSize
-            : globalState.getGlobalShortPositionState(p._marketId).totalSize;
+        uint256 totalSize = req.isLong
+            ? globalState.getGlobalLongPositionState(req.marketId).totalSize
+            : globalState.getGlobalShortPositionState(req.marketId).totalSize;
 
-        if (p._isLong) {
+        if (req.isLong) {
             require(
-                maxLongCapacity >= totalSize + p._sizeAbs,
+                maxLongCapacity >= totalSize + req.sizeAbs,
                 "OrderValidator: Exceeds max long capacity"
             );
         } else {
             require(
-                maxShortCapacity >= totalSize + p._sizeAbs,
+                maxShortCapacity >= totalSize + req.sizeAbs,
                 "OrderValidator: Exceeds max short capacity"
             );
         }
     }
 
     function validateDecreaseExecution(
-        OrderParams calldata p,
+        OrderRequest calldata req,
         bytes32 _key // uint256 _markPrice
     ) external view {
         OpenPosition memory position = positionVault.getPosition(_key);
 
         require(
-            position.size >= p._sizeAbs,
+            position.size >= req.sizeAbs,
             "OrderValidator: Not enough position size"
         );
         require(
-            position.margin >= p._marginAbs,
+            position.margin >= req.marginAbs,
             "OrderValidator: Not enough margin size"
         );
     }

@@ -14,7 +14,7 @@ contract OrderRouter {
         orderBook = OrderBook(_orderBook);
     }
 
-    function _validateOrder(OrderParams calldata p) internal view {
+    function _validateOrder(OrderRequest calldata req) internal view {
         require(
             msg.sender != address(0),
             "OrderRouter: Invalid sender address"
@@ -32,8 +32,8 @@ contract OrderRouter {
         //         c._marginAbsInUsd,
         //     "OrderRouter: Not enough balance"
         // );
-        require(p._sizeAbs >= 0, "OrderRouter: Invalid size");
-        require(p._marginAbs >= 0, "OrderRouter: Invalid margin size");
+        require(req.sizeAbs >= 0, "OrderRouter: Invalid size");
+        require(req.marginAbs >= 0, "OrderRouter: Invalid margin size");
     }
 
     function increaseMargin() external {
@@ -46,9 +46,9 @@ contract OrderRouter {
 
     function adjustLeverage() external {}
 
-    function placeLimitOrder(OrderParams calldata p) external {
-        _validateOrder(p);
-        orderBook.placeLimitOrder(p);
+    function placeLimitOrder(OrderRequest calldata req) external {
+        _validateOrder(req);
+        orderBook.placeLimitOrder(req);
     }
 
     function cancelLimitOrder() public {}
@@ -56,10 +56,10 @@ contract OrderRouter {
     function updateLimitOrder() public {}
 
     function placeMarketOrder(
-        OrderParams calldata p
+        OrderRequest calldata req
     ) external returns (bytes32) {
-        _validateOrder(p);
+        _validateOrder(req);
 
-        return marketOrder.executeMarketOrder(p);
+        return marketOrder.executeMarketOrder(req);
     }
 }
