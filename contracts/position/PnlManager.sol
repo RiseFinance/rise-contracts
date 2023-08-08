@@ -11,12 +11,14 @@ import "../common/params.sol";
 import "../account/TraderVault.sol";
 import "../risepool/RisePool.sol";
 import "../market/Market.sol";
+import "../fee/Funding.sol";
 
 contract PnlManager {
     using SafeCast for uint256;
 
     TraderVault public traderVault;
     RisePool public risePool;
+    Funding public funding;
     Market public market;
 
     function settlePnL(
@@ -35,6 +37,7 @@ contract PnlManager {
         //     tokenInfo.getTokenDecimals(market.getMarketInfo(_marketId).baseAssetId)
         // );
 
+        int256 fundingFeeToPay = funding.getFundingFeeToPay(_position);
         int256 pnl = _calculatePnL(
             _sizeAbs,
             _position.avgOpenPrice,
@@ -53,7 +56,7 @@ contract PnlManager {
             ? risePool.decreaseLongReserveAmount(_marketId, _sizeAbs)
             : risePool.decreaseShortReserveAmount(_marketId, _sizeAbs);
 
-        return pnl;
+        return pnl - fundingFeeToPay;
     }
 
     function _calculatePnL(
