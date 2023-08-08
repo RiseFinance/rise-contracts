@@ -22,43 +22,47 @@ contract Funding {
     TokenInfo public tokenInfo;
     OrderUtils public orderUtils;
 
-    int256 public constant FUNDING_FEE_CONSTANT = 1;
+    // int256 public constant FUNDING_FEE_CONSTANT = 1;
     int256 public constant FUNDING_FEE_PRECISION = 1e26;
     // TODO: FUNDING_FEE_CONSTANT, FUNDING_FEE_PRECISION 값 확인 필요
-    mapping(uint256 => int256) latestFundingIndex; // assetId => cumulativeFundingRate
+    mapping(uint256 => int256) latestFundingIndex; // assetId => fundingIndex
     mapping(uint256 => uint256) latestFundingTimestamp; // assetId => timestamp
 
-    function updateCumulativeFundingRate(uint256 _marketId) external {
+    function getFundingIndex(uint256 _marketId) public view returns (int256) {
         int256 fundingIndexDelta = getFundingRate(_marketId) *
             (block.timestamp - latestFundingTimestamp[_marketId]).toInt256();
-        latestFundingIndex[_marketId] =
-            latestFundingIndex[_marketId] +
-            fundingIndexDelta;
+        return latestFundingIndex[_marketId] + fundingIndexDelta;
+    }
+
+    function updateFundingIndex(uint256 _marketId) public {
+        int256 fundingIndex = getFundingIndex(_marketId);
+        latestFundingIndex[_marketId] = fundingIndex;
         latestFundingTimestamp[_marketId] = block.timestamp;
     }
 
     function getFundingRate(uint256 _marketId) public view returns (int256) {
         int256 priceBuffer = priceManager.getPriceBuffer(_marketId);
-        return FUNDING_FEE_CONSTANT * priceBuffer;
+        return
+            market.getMarketInfo(_marketId).fundingFeeMultiplier * priceBuffer;
     }
 
     function getFundingFeeToPay(
-        uint256 _marketId,
         OpenPosition calldata _position
     ) public view returns (int256) {
-        uint256 markPrice = priceManager.getMarkPrice(_marketId);
+        uint256 marketId = _position.marketId;
+        uint256 markPrice = priceManager.getMarkPrice(marketId);
 
-        uint256 sizeInUsd = orderUtils._tokenToUsd(
-            _position.size,
-            markPrice,
-            tokenInfo.getTokenDecimals(
-                market.getMarketInfo(_marketId).baseAssetId
+        int256 sizeInUsd = orderUtils
+            ._tokenToUsd(
+                _position.size,
+                markPrice,
+                tokenInfo.getTokenDecimals(
+                    market.getMarketInfo(marketId).baseAssetId
+                )
             )
-        );
-
-        int256 fundingFeeToPay = ((sizeInUsd).toInt256() *
-            (latestFundingIndex[_marketId] - _position.entryFundingIndex)) /
-            FUNDING_FEE_PRECISION;
+            .toInt256();
+        int256 fundingFeeToPay = ((getFundingIndex(marketId) -
+            _position.entryFundingIndex) * sizeInUsd) / FUNDING_FEE_PRECISION;
         // TODO: position에 entryFundingIndex 추가
         return fundingFeeToPay;
     }

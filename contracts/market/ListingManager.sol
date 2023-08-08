@@ -37,6 +37,7 @@ contract ListingManager {
             m.longReserveAssetId,
             m.shortReserveAssetId,
             m.marginAssetId,
+            m.fundingFeeMultiplier,
             address(rm)
         );
 
