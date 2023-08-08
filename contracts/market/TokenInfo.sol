@@ -48,9 +48,7 @@ contract TokenInfo {
         uint256 _assetId,
         uint256 _multiplier
     ) public {
-        TokenData storage tokenData = sizeToPriceBufferDeltaMultiplier[
-            _assetId
-        ];
+        TokenData storage tokenData = assetIdToTokenData[_assetId];
         tokenData.sizeToPriceBufferDeltaMultiplier = _multiplier;
     }
 
@@ -62,9 +60,9 @@ contract TokenInfo {
     ) external {
         uint256 assetId = globalTokenIdCounter;
         TokenData storage tokenData = assetIdToTokenData[assetId];
-        tokenData[assetId] = _tokenDecimals;
+        tokenData.decimals = _tokenDecimals;
         tokenAddressToAssetId[_tokenAddress] = assetId;
-        tokenData[assetId] = _tokenAddress;
+        tokenData.tokenAddress = _tokenAddress;
 
         globalTokenIdCounter++;
     }

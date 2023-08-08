@@ -5,10 +5,10 @@ pragma solidity ^0.8.0;
 import "../oracle/PriceManager.sol";
 
 contract PriceUtils {
-    PriceManager priceManager;
+    PriceManager public priceManager;
 
     function _getAvgExecPrice(
-        uint256 _assetId,
+        uint256 _marketId,
         uint256 _size,
         bool _isLong
     ) internal returns (uint256) {
@@ -16,6 +16,14 @@ contract PriceUtils {
          * // TODO: impl
          * @dev Jae Yoon
          */
-        return priceManager.getAvgExecPrice(_assetId, _size, _isLong);
+        return priceManager.getAvgExecPrice(_marketId, _size, _isLong);
+    }
+
+    function _getMarkPrice(uint256 _marketId) internal returns (uint256) {
+        return priceManager.getMarkPrice(_marketId);
+    }
+
+    function _getIndexPrice(uint256 _marketId) internal returns (uint256) {
+        return priceManager.getIndexPrice(_marketId);
     }
 }

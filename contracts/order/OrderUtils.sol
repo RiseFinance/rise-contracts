@@ -32,14 +32,15 @@ contract OrderUtils {
         return keccak256(abi.encodePacked(_account, _isLong, _marketId));
     }
 
-    function _getAvgExecutionPrice(
-        uint256 _basePrice,
-        uint256 _priceImpactInUsd,
-        bool _isIncrease
-    ) internal pure returns (uint256) {
-        return
-            _isIncrease
-                ? _basePrice + (_priceImpactInUsd / 2)
-                : _basePrice - (_priceImpactInUsd / 2);
-    }
+    // TODO: delete
+    // function _getAvgExecutionPrice(
+    //     uint256 _basePrice,
+    //     uint256 _priceImpactInUsd,
+    //     bool _isIncrease
+    // ) internal pure returns (uint256) {
+    //     return
+    //         _isIncrease
+    //             ? _basePrice + (_priceImpactInUsd / 2)
+    //             : _basePrice - (_priceImpactInUsd / 2);
+    // }
 }

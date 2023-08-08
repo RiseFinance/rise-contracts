@@ -12,10 +12,11 @@ import "../utils/MathUtils.sol";
 import "../position/PositionHistory.sol";
 import "../position/PositionVault.sol";
 import "../position/PnlManager.sol";
-import "../global/GlobalState.sol";
-import "../order/OrderHistory.sol";
 import "../order/OrderExecutor.sol";
+import "../order/OrderHistory.sol";
+import "../order/PriceUtils.sol";
 import "../order/OrderUtils.sol";
+import "../global/GlobalState.sol";
 import "../market/TokenInfo.sol";
 import "./OrderBookBase.sol";
 
@@ -25,6 +26,7 @@ contract OrderBook is
     OrderBookBase,
     OrderExecutor,
     OrderUtils,
+    PriceUtils,
     Modifiers,
     MathUtils
 {
@@ -33,6 +35,7 @@ contract OrderBook is
 
     OrderHistory public orderHistory;
     GlobalState public globalState;
+    PriceUtils public priceUtils;
     TokenInfo public tokenInfo;
 
     struct IterationContext {
@@ -113,8 +116,6 @@ contract OrderBook is
      *
      * @param _isBuy used to determine which orderbook to iterate
      * @param _marketId index asset
-     * @param _currentMarkPrice mark price from PriceManager before price impacts from limit orders execution
-     * @return uint256  markPriceWithLimitOrderPriceImpact
      *
      * @dev iterate buy/sell orderbooks and execute limit orders until the mark price with price impact reaches the limit price levels.
      * primary iteration - while loop for limit price ticks in the orderbook
@@ -180,29 +181,34 @@ contract OrderBook is
             // note: this is the right place for the variable `sizeCap` declaration +
             // `sizeCap` maintains its context within the while loop
 
-            ptc.sizeCapInUsd =
-                (_abs(
+            // ptc.sizeCapInUsd =
+            //     (_abs(
+            //         (ic.limitPriceIterator).toInt256() -
+            //             (ic.interimMarkPrice).toInt256()
+            //     ) *
+            //         100000 *
+            //         100 *
+            //         1e20) / // 100000 USD per // 1% price buffer
+            //     (ic.interimMarkPrice);
+
+            // ptc.sizeCap = _usdToToken(
+            //     ptc.sizeCapInUsd,
+            //     ic.limitPriceIterator,
+            //     tokenInfo.getTokenDecimals(
+            //         market.getMarketInfo(_marketId).baseAssetId
+            //     )
+            // );
+
+            ptc.sizeCap = ((SIZE_TO_PRICE_BUFFER_PRECISION *
+                _abs(
                     (ic.limitPriceIterator).toInt256() -
                         (ic.interimMarkPrice).toInt256()
-                ) *
-                    100000 *
-                    100 *
-                    1e20) / // 100000 USD per // 1% price buffer
-                (ic.interimMarkPrice);
+                )) /
+                tokenInfo.getBaseTokenSizeToPriceBufferDeltaMultiplier(
+                    _marketId
+                ) /
+                _getIndexPrice(_marketId));
 
-            ptc.sizeCap = _usdToToken(
-                ptc.sizeCapInUsd,
-                ic.limitPriceIterator,
-                tokenInfo.getTokenDecimals(
-                    market.getMarketInfo(_marketId).baseAssetId
-                )
-            );
-
-            console.log(
-                "\n>>> Enter Price Tick Iteration / sizeCapInUsd: ",
-                ptc.sizeCapInUsd / 1e20,
-                "USD"
-            );
             console.log("Price: ", ic.limitPriceIterator / 1e20, "USD\n");
 
             ptc.isPartialForThePriceTick =
@@ -308,8 +314,6 @@ contract OrderBook is
             console.log("+++++++++ interimMarkPrice: ", ic.interimMarkPrice);
             console.log("+++++++++ updated loopCondition: ", ic.loopCondition);
         }
-
-        return ic.interimMarkPrice; // price impact (buffer size)
     }
 
     function executeLimitOrder(
@@ -334,7 +338,8 @@ contract OrderBook is
             ? (req.marginAbs * flc.partialRatio) / PARTIAL_RATIO_PRECISION
             : req.marginAbs;
 
-        ec.avgExecPrice = req.limitPrice;
+        // ec.avgExecPrice = req.limitPrice;
+        ec.avgExecPrice = _avgExecPrice;
 
         // update position
         ec.key = _getPositionKey(req.trader, req.isLong, req.marketId);
