@@ -6,7 +6,7 @@ import "../common/structs.sol";
 
 import "hardhat/console.sol";
 
-abstract contract OrderBookBase {
+contract OrderBookBase {
     mapping(address => uint256) public traderOrderRequestCounts; // userAddress => orderRequestCount (limit order)
 
     mapping(address => mapping(uint256 => OrderRequest)) public pendingOrders; // userAddress => traderOrderRequestCounts => Order (pending orders by trader)

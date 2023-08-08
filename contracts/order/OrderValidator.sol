@@ -11,6 +11,16 @@ contract OrderValidator {
     GlobalState public globalState;
     RisePool public risePool;
 
+    constructor(
+        address _positionVault,
+        address _globalState,
+        address _risePool
+    ) {
+        positionVault = PositionVault(_positionVault);
+        globalState = GlobalState(_globalState);
+        risePool = RisePool(_risePool);
+    }
+
     function validateIncreaseExecution(
         OrderRequest calldata req
     ) external view {

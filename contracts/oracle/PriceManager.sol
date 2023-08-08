@@ -16,9 +16,9 @@ contract PriceManager {
     using SafeCast for int256;
     using SafeCast for uint256;
 
+    GlobalState public globalState;
     OrderBook public orderBook;
     TokenInfo public tokenInfo;
-    GlobalState public globalState;
 
     mapping(address => bool) public isPriceKeeper;
     mapping(uint256 => uint256) public indexPrices;
@@ -27,8 +27,15 @@ contract PriceManager {
 
     event Execution(uint256 marketId, int256 price);
 
-    constructor(address _orderBook, address _keeperAddress) {
+    constructor(
+        address _globalState,
+        address _orderBook,
+        address _tokenInfo,
+        address _keeperAddress
+    ) {
+        globalState = GlobalState(_globalState);
         orderBook = OrderBook(_orderBook);
+        tokenInfo = TokenInfo(_tokenInfo);
         isPriceKeeper[_keeperAddress] = true;
     }
 

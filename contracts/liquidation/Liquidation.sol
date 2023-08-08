@@ -13,13 +13,26 @@ import "../market/TokenInfo.sol";
 import "../market/Market.sol";
 
 contract Liquidation {
+    PriceManager public priceManager;
+    TraderVault public traderVault;
+    TokenInfo public tokenInfo;
+    Market public market;
+
     mapping(uint256 => uint256) maintenanceMarginRatioInBasisPoints; // assetId => maintenanceMarginRatio
     uint256 maintenanceMarginRatioPrecision = 1e18;
     uint256 public constant BASIS_POINTS_PRECISION = 1e4;
-    PriceManager public priceManager;
-    TokenInfo public tokenInfo;
-    Market public market;
-    TraderVault public traderVault;
+
+    constructor(
+        address _priceManager,
+        address _traderVault,
+        address _tokenInfo,
+        address _market
+    ) {
+        priceManager = PriceManager(_priceManager);
+        traderVault = TraderVault(_traderVault);
+        tokenInfo = TokenInfo(_tokenInfo);
+        market = Market(_market);
+    }
 
     function mulDiv(
         uint256 x,

@@ -28,6 +28,11 @@ contract PositionHistory is PositionUtils {
      * 4) Decrease in Margin (Leveraging)
      */
 
+    constructor(address _positionVault, address _traderVault) {
+        positionVault = PositionVault(_positionVault);
+        traderVault = TraderVault(_traderVault);
+    }
+
     function openPositionRecord(
         OpenPositionRecordParams memory p
     ) external returns (uint256) {

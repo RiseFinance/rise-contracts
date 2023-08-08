@@ -18,6 +18,29 @@ contract MarketOrder is OrderExecutor, OrderUtils, PriceUtils {
     OrderHistory public orderHistory;
     GlobalState public globalState;
 
+    constructor(
+        address _traderVault,
+        address _risePool,
+        address _market,
+        address _positionHistory,
+        address _positionVault,
+        address _orderValidator,
+        address _orderHistory,
+        address _globalState
+    )
+        OrderExecutor(
+            _traderVault,
+            _risePool,
+            _market,
+            _positionHistory,
+            _positionVault
+        )
+    {
+        orderValidator = OrderValidator(_orderValidator);
+        orderHistory = OrderHistory(_orderHistory);
+        globalState = GlobalState(_globalState);
+    }
+
     function executeMarketOrder(
         OrderRequest calldata req
     ) external returns (bytes32) {

@@ -32,8 +32,16 @@ contract L2LiquidityGateway is TransferHelper {
 
     // event RetryableTicketCreated(uint256 indexed ticketId);
 
-    constructor(address _inboxAddress) {
-        inbox = IInbox(_inboxAddress);
+    constructor(
+        address _inbox,
+        address _l2Vault,
+        address _market,
+        address _risePoolUtils
+    ) {
+        inbox = IInbox(_inbox);
+        l2Vault = L2Vault(_l2Vault);
+        market = Market(_market);
+        risePoolUtils = RisePoolUtils(_risePoolUtils);
     }
 
     function initialize(address _l3GatewayAddress) external {

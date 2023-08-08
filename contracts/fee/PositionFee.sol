@@ -14,6 +14,10 @@ contract PositionFee {
 
     // TODO : POSITION_FEE_CONSTANT , POSITION_FEE_PRECISION 값 확인 필요
 
+    constructor(address _traderVault) {
+        traderVault = TraderVault(_traderVault);
+    }
+
     function getLimitPositionFee(
         uint256 _sizeAbs
     ) public pure returns (uint256) {

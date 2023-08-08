@@ -60,6 +60,22 @@ contract OrderBook is
         uint256 partialRatio;
     }
 
+    constructor(
+        address _traderVault,
+        address _risePool,
+        address _market,
+        address _positionHistory,
+        address _positionVault
+    )
+        OrderExecutor(
+            _traderVault,
+            _risePool,
+            _market,
+            _positionHistory,
+            _positionVault
+        )
+    {}
+
     function getOrderRequest(
         bool _isBuy,
         uint256 _marketId,
