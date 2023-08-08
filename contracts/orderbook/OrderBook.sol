@@ -124,17 +124,15 @@ contract OrderBook is
      * if the order is partially filled, the order is updated with the remaining size
      *
      */
-    function executeLimitOrdersAndGetFinalMarkPrice(
+    function executeLimitOrders(
         bool _isBuy,
-        uint256 _marketId,
-        uint256 _currentIndexPrice,
-        uint256 _currentMarkPrice
-    ) external onlyKeeper returns (uint256) {
+        uint256 _marketId
+    ) external onlyKeeper {
         // FIXME: 주문 체결 후 호가 창 빌 때마다 maxBidPrice, minAskPrice 업데이트
 
         IterationContext memory ic;
 
-        ic.interimMarkPrice = _currentMarkPrice; // initialize
+        ic.interimMarkPrice = priceManager.getMarkPrice(_marketId); // initialize
 
         // uint256 _limitPriceIterator = maxBidPrice[_marketId]; // intialize
 
@@ -219,15 +217,15 @@ contract OrderBook is
             // 이번 price tick에서 발생할 price impact
             // price impact is calculated based on the index price
             // to avoid cumulative price impact
-            ptc.priceImpactInUsd =
-                (_currentIndexPrice * ptc.fillAmount) /
-                (100000 * 100 * 1e20);
+            // ptc.priceImpactInUsd =
+            //     (_currentIndexPrice * ptc.fillAmount) /
+            //     (100000 * 100 * 1e20);
 
-            console.log(">>> ptc.priceImpactInUsd: ", ptc.priceImpactInUsd);
+            // console.log(">>> ptc.priceImpactInUsd: ", ptc.priceImpactInUsd);
 
-            ptc.avgExecutionPrice = _getAvgExecutionPrice(
-                ic.interimMarkPrice,
-                ptc.priceImpactInUsd,
+            ptc.avgExecutionPrice = _getAvgExecPrice(
+                _marketId,
+                ptc.fillAmount,
                 _isBuy
             );
 
@@ -292,9 +290,7 @@ contract OrderBook is
             }
             // Note: if `isPartial = true` in this while loop,  sizeCap will be 0 after the for loop
 
-            ic.interimMarkPrice = _isBuy
-                ? ic.interimMarkPrice + ptc.priceImpactInUsd
-                : ic.interimMarkPrice - ptc.priceImpactInUsd; // 이번 price tick 주문 iteration 이후 Price Impact를 interimPrice에 적용
+            ic.interimMarkPrice = priceManager.getMarkPrice(_marketId); // 이번 price tick 주문 iteration 이후 Price Impact를 interimPrice에 적용
 
             ic.limitPriceIterator = _isBuy
                 ? ic.limitPriceIterator - market.getPriceTickSize(_marketId)

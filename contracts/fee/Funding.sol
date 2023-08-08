@@ -22,8 +22,8 @@ contract Funding {
     TokenInfo public tokenInfo;
     OrderUtils public orderUtils;
 
-    int256 FUNDING_FEE_CONSTANT = 1e18;
-    int256 FUNDING_FEE_PRECISION = 1e18;
+    int256 public constant FUNDING_FEE_CONSTANT = 1;
+    int256 public constant FUNDING_FEE_PRECISION = 1e26;
     // TODO: FUNDING_FEE_CONSTANT, FUNDING_FEE_PRECISION 값 확인 필요
     mapping(uint256 => int256) latestFundingIndex; // assetId => cumulativeFundingRate
     mapping(uint256 => uint256) latestFundingTimestamp; // assetId => timestamp
@@ -38,21 +38,8 @@ contract Funding {
     }
 
     function getFundingRate(uint256 _marketId) public view returns (int256) {
-        uint256 longOpenInterest = globalState.getOpenInterest(_marketId, true);
-        uint256 shortOpenInterest = globalState.getOpenInterest(
-            _marketId,
-            false
-        );
-        // TODO: getOpenInterest 구현 필요
-        require(
-            longOpenInterest < 2 ** 255 && shortOpenInterest < 2 ** 255,
-            "FundingFee: open interest overflow"
-        );
-        return
-            (FUNDING_FEE_CONSTANT *
-                ((longOpenInterest).toInt256() -
-                    (shortOpenInterest).toInt256())) /
-            ((longOpenInterest).toInt256() + (shortOpenInterest).toInt256());
+        int256 priceBuffer = priceManager.getPriceBuffer(_marketId);
+        return FUNDING_FEE_CONSTANT * priceBuffer;
     }
 
     function getFundingFeeToPay(

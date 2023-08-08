@@ -30,7 +30,7 @@ contract MarketOrder is OrderExecutor, OrderUtils, PriceUtils {
         ec.marginAssetId = market.getMarketInfo(req.marketId).marginAssetId;
         // moc.isBuy = req.isLong == req.isIncrease;
 
-        ec.avgExecPrice = _getAvgExecPriceAndUpdatePriceBuffer(
+        ec.avgExecPrice = _getAvgExecPrice(
             req.marketId,
             ec.sizeAbs,
             // moc.isBuy

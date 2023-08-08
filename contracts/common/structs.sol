@@ -71,3 +71,10 @@ struct MarketInfo {
     uint256 marginAssetId;
     address marketMakerToken;
 }
+struct TokenData {
+    uint256 decimals;
+    uint256 sizeToPriceBufferDeltaMultiplier;
+    address tokenAddress;
+    // string symbol;
+    // string name;
+}
