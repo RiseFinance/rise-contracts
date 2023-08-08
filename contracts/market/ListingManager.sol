@@ -13,6 +13,7 @@ import "./Market.sol";
 
 contract ListingManager {
     // TODO: create LP token contract for each market
+    // TODO: register token if not registered
 
     function createRisePerpsMarket(
         MarketInfo memory m

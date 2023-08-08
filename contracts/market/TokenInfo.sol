@@ -15,6 +15,10 @@ contract TokenInfo {
     mapping(uint256 => address) private assetIdToTokenAddress;
     mapping(uint256 => uint256) private tokenPriceBufferConstants;
 
+    constructor(address _market) {
+        market = Market(_market);
+    }
+
     function getTokenDecimals(
         uint256 _assetId
     ) external view returns (uint256) {

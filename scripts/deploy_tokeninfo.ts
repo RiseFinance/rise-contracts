@@ -9,22 +9,16 @@ async function main() {
   console.log("Account balance:", (await deployer.getBalance()).toString());
 
   // ==================== Set Contract Factory & Constructor ====================
-  const PriceFeedContract = await ethers.getContractFactory("PriceFeed");
-  const L3VaultContract = await ethers.getContractFactory("L3Vault");
+  const TokenInfoContract = await ethers.getContractFactory("TokenInfo");
   console.log(">>> got contract factories");
 
   // ==================== Deploy Contracts ====================
-  const priceFeedContract = await PriceFeedContract.deploy();
-  console.log(">>> PriceFeed Deployment in progress...");
-  await priceFeedContract.deployed();
-  console.log(`Deployed PriceFeed Contract: ${priceFeedContract.address}`);
 
-  const l3VaultContract = await L3VaultContract.deploy(
-    priceFeedContract.address
-  );
-  console.log("\n>>> L3Vault Deployment in progress...");
-  await l3VaultContract.deployed();
-  console.log(`Deployed L3Vault Contract: ${l3VaultContract.address}`);
+  const _marketAddress = "0xC78D420557C42467a760A8792739BF982c9144B5";
+  const tokenInfoContract = await TokenInfoContract.deploy(_marketAddress);
+  console.log("\n>>> TokenInfo Deployment in progress...");
+  await tokenInfoContract.deployed();
+  console.log(`Deployed TokenInfo Contract: ${tokenInfoContract.address}`);
 }
 
 // We recommend this pattern to be able to use async/await everywhere

@@ -29,8 +29,10 @@ contract L2MarginGateway is TransferHelper {
 
     // event RetryableTicketCreated(uint256 indexed ticketId);
 
-    constructor(address _inboxAddress) {
-        inbox = IInbox(_inboxAddress);
+    constructor(address _inbox, address _l2Vault, address _tokenInfo) {
+        inbox = IInbox(_inbox);
+        l2Vault = L2Vault(_l2Vault);
+        tokenInfo = TokenInfo(_tokenInfo);
     }
 
     function initialize(address _l3GatewayAddress) external {
