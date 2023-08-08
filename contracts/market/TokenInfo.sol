@@ -16,6 +16,10 @@ contract TokenInfo {
     // mapping(uint256 => uint256) private sizeToPriceBufferDeltaMultiplier;
     mapping(uint256 => TokenData) private assetIdToTokenData;
 
+    constructor(address _market) {
+        market = Market(_market);
+    }
+
     function getTokenData(
         uint256 _assetId
     ) public view returns (TokenData memory) {
