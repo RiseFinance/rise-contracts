@@ -125,8 +125,8 @@ contract Liquidation {
                     _position.size,
                     SP
                 ),
-                tokenInfo.getTokenPriceBufferConstants(baseAssetId),
-                TOKEN_PRICE_BUFFER_CONSTANT_PRECISION
+                tokenInfo.getSizeToPriceBufferDeltaMultiplier(baseAssetId),
+                SIZE_TO_PRICE_BUFFER_PRECISION
             ) /
             2;
         return (lefthandSide, righthandSide);

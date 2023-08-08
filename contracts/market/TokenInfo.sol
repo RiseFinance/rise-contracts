@@ -10,37 +10,50 @@ contract TokenInfo {
     Market public market;
     uint256 globalTokenIdCounter;
 
-    mapping(uint256 => uint256) private tokenDecimals; // TODO: listing restriction needed
+    // mapping(uint256 => uint256) private tokenDecimals; // TODO: listing restriction needed
     mapping(address => uint256) private tokenAddressToAssetId;
-    mapping(uint256 => address) private assetIdToTokenAddress;
-    mapping(uint256 => uint256) private tokenPriceBufferConstants;
+    // mapping(uint256 => address) private assetIdToTokenAddress;
+    // mapping(uint256 => uint256) private sizeToPriceBufferDeltaMultiplier;
+    mapping(uint256 => TokenData) private assetIdToTokenData;
 
     constructor(address _market) {
         market = Market(_market);
     }
 
-    function getTokenDecimals(
+    function getTokenData(
         uint256 _assetId
-    ) external view returns (uint256) {
-        return tokenDecimals[_assetId];
+    ) public view returns (TokenData memory) {
+        return assetIdToTokenData[_assetId];
+    }
+
+    function getTokenDecimals(uint256 _assetId) public view returns (uint256) {
+        return getTokenData(_assetId).decimals;
     }
 
     function getAssetIdFromTokenAddress(
         address _tokenAddress
-    ) external view returns (uint256) {
+    ) public view returns (uint256) {
         return tokenAddressToAssetId[_tokenAddress];
     }
 
     function getTokenAddressFromAssetId(
         uint256 _assetId
-    ) external view returns (address) {
-        return assetIdToTokenAddress[_assetId];
+    ) public view returns (address) {
+        return getTokenData(_assetId).tokenAddress;
     }
 
-    function getTokenPriceBufferConstants(
+    function getSizeToPriceBufferDeltaMultiplier(
         uint256 _assetId
-    ) external view returns (uint256) {
-        return tokenPriceBufferConstants[_assetId];
+    ) public view returns (uint256) {
+        return getTokenData(_assetId).sizeToPriceBufferDeltaMultiplier;
+    }
+
+    function setSizeToPriceBufferDeltaMultiplier(
+        uint256 _assetId,
+        uint256 _multiplier
+    ) public {
+        TokenData storage tokenData = assetIdToTokenData[_assetId];
+        tokenData.sizeToPriceBufferDeltaMultiplier = _multiplier;
     }
 
     // TODO: onlyAdmin
@@ -50,9 +63,10 @@ contract TokenInfo {
         uint256 _tokenDecimals
     ) external {
         uint256 assetId = globalTokenIdCounter;
-        tokenDecimals[assetId] = _tokenDecimals;
+        TokenData storage tokenData = assetIdToTokenData[assetId];
+        tokenData.decimals = _tokenDecimals;
         tokenAddressToAssetId[_tokenAddress] = assetId;
-        assetIdToTokenAddress[assetId] = _tokenAddress;
+        tokenData.tokenAddress = _tokenAddress;
 
         globalTokenIdCounter++;
     }
@@ -61,13 +75,13 @@ contract TokenInfo {
         uint256 _marketId
     ) external view returns (uint256) {
         MarketInfo memory marketInfo = market.getMarketInfo(_marketId);
-        return tokenDecimals[marketInfo.baseAssetId];
+        return getTokenDecimals(marketInfo.baseAssetId);
     }
 
-    function getBaseTokenPriceBufferConstants(
+    function getBaseTokenSizeToPriceBufferDeltaMultiplier(
         uint256 _marketId
     ) external view returns (uint256) {
         MarketInfo memory marketInfo = market.getMarketInfo(_marketId);
-        return tokenPriceBufferConstants[marketInfo.baseAssetId];
+        return getSizeToPriceBufferDeltaMultiplier(marketInfo.baseAssetId);
     }
 }

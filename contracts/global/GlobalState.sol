@@ -15,7 +15,11 @@ contract GlobalState is PositionUtils {
         uint256 _marketId,
         bool _isLong
     ) public view returns (uint256) {
-        // TODO: Impl.
+        if (_isLong) {
+            return globalLongPositionStates[_marketId].totalSize;
+        } else {
+            return globalShortPositionStates[_marketId].totalSize;
+        }
     }
 
     function getGlobalLongPositionState(
