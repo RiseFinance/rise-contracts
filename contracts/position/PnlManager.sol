@@ -21,6 +21,12 @@ contract PnlManager {
     Funding public funding;
     Market public market;
 
+    constructor(address _traderVault, address _risePool, address _market) {
+        traderVault = TraderVault(_traderVault);
+        risePool = RisePool(_risePool);
+        market = Market(_market);
+    }
+
     function settlePnL(
         OpenPosition memory _position,
         bool _isLong,

@@ -26,6 +26,17 @@ contract OrderExecutor is PnlManager {
         int256 pnl;
     }
 
+    constructor(
+        address _traderVault,
+        address _risePool,
+        address _market,
+        address _positionHistory,
+        address _positionVault
+    ) PnlManager(_traderVault, _risePool, _market) {
+        positionHistory = PositionHistory(_positionHistory);
+        positionVault = PositionVault(_positionVault);
+    }
+
     function _executeIncreasePosition(
         OrderRequest memory req,
         ExecutionContext memory ec

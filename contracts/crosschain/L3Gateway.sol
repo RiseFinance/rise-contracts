@@ -25,12 +25,18 @@ contract L3Gateway is IL3Gateway {
 
     constructor(
         address _traderVault,
+        address _tokenInfo,
+        address _risePool,
+        address _market,
         address _l2MarginGateway,
         address _l2LiquidityGateway
     ) {
         traderVault = TraderVault(_traderVault);
-        l2MarginGatewayAddress = _l2MarginGateway;
-        l2LiquidityGatewayAddress = _l2LiquidityGateway;
+        tokenInfo = TokenInfo(_tokenInfo);
+        risePool = RisePool(_risePool);
+        market = Market(_market);
+        l2MarginGatewayAddress = _l2MarginGateway; // L2 address
+        l2LiquidityGatewayAddress = _l2LiquidityGateway; // L2 address
     }
 
     // -------------------- Call L3 Contracts --------------------

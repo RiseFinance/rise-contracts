@@ -17,6 +17,18 @@ contract PositionManager {
 
     // iteration over the trader's open positions => (2 * listed market num) for each trader
 
+    constructor(
+        address _positionVault,
+        address _pnlManager,
+        address _orderUtils,
+        address _market
+    ) {
+        positionVault = PositionVault(_positionVault);
+        pnlManager = PnlManager(_pnlManager);
+        orderUtils = OrderUtils(_orderUtils);
+        market = Market(_market);
+    }
+
     function getTraderTotalUnrealizedPnl(
         address _trader,
         uint256[] calldata _markPrices // marketId as index
