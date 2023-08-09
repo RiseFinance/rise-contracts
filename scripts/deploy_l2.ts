@@ -1,4 +1,5 @@
 import { ethers } from "hardhat";
+import { deployContract } from "../utils/deployer";
 
 async function main() {
   const [deployer] = await ethers.getSigners();
@@ -7,29 +8,6 @@ async function main() {
     await deployer.getAddress()
   );
   console.log("Account balance:", (await deployer.getBalance()).toString());
-
-  // ==================== Set Contract Factory & Constructor ====================
-  const L2MarginGatewayContract = await ethers.getContractFactory(
-    "L2MarginGateway"
-  );
-  console.log(">>> got contract factories");
-
-  // ==================== Deploy Contracts ====================
-
-  //   const _inbox = "0x0A0dD8845C0064f03728F7f145B7DDA05FD0Ccc6";
-  //   const _l2Vault = "";
-  //   const _tokenInfo = "";
-
-  //   const l2MarginGatewayContract = await L2MarginGatewayContract.deploy(
-  //     _inbox,
-  //     _l2Vault,
-  //     _tokenInfo
-  //   );
-  //   console.log("\n>>> TokenInfo Deployment in progress...");
-  //   await l2MarginGatewayContract.deployed();
-  //   console.log(
-  //     `Deployed TokenInfo Contract: ${l2MarginGatewayContract.address}`
-  //   );
 
   await deployL2Contracts();
 }
@@ -41,63 +19,34 @@ async function deployL2Contracts() {
   const _inbox = "0x0A0dD8845C0064f03728F7f145B7DDA05FD0Ccc6";
 
   // test USDC
-  const Usdc = await ethers.getContractFactory("USDC");
-  const usdc = await Usdc.deploy();
-  console.log(">>> test USDC Deployment in progress...");
-  await usdc.deployed();
-  console.log(">>> test USDC Deployed.");
+  const usdc = await deployContract("USDC");
 
   // Market
-  const Market = await ethers.getContractFactory("Market");
-  const market = await Market.deploy();
-  console.log(">>> Market Deployment in progress...");
-  await market.deployed();
-  console.log(">>> Market Deployed.");
+  const market = await deployContract("Market");
 
   // TokenInfo
-  const TokenInfo = await ethers.getContractFactory("TokenInfo");
-  const tokenInfo = await TokenInfo.deploy(market.address);
-  console.log(">>> TokenInfo Deployment in progress...");
-  await tokenInfo.deployed();
-  console.log(">>> TokenInfo Deployed.");
+  const tokenInfo = await deployContract("TokenInfo", [market.address]);
 
   // L2Vault
-  const L2Vault = await ethers.getContractFactory("L2Vault");
-  const l2Vault = await L2Vault.deploy();
-  console.log(">>> L2Vault Deployment in progress...");
-  await l2Vault.deployed();
-  console.log(">>> L2Vault Deployed.");
+  const l2Vault = await deployContract("L2Vault");
 
   //L2MarginGateway
-  const L2MarginGateway = await ethers.getContractFactory("L2MarginGateway");
-  const l2MarginGateway = await L2MarginGateway.deploy(
+  const l2MarginGateway = await deployContract("L2MarginGateway", [
     _inbox,
     l2Vault.address,
-    tokenInfo.address
-  );
-  console.log(">>> L2MarginGateway Deployment in progress...");
-  await l2MarginGateway.deployed();
-  console.log(">>> L2MarginGateway Deployed.");
+    tokenInfo.address,
+  ]);
 
   // RisePoolUtils
-  const RisePoolUtils = await ethers.getContractFactory("RisePoolUtils");
-  const risePoolUtils = await RisePoolUtils.deploy();
-  console.log(">>> RisePoolUtils Deployment in progress...");
-  await risePoolUtils.deployed();
-  console.log(">>> RisePoolUtils Deployed.");
+  const risePoolUtils = await deployContract("RisePoolUtils");
 
   //L2LiquidityGateway
-  const L2LiquidityGateway = await ethers.getContractFactory(
-    "L2LiquidityGateway"
-  );
-  const l2LiquidityGateway = await L2LiquidityGateway.deploy(
+  const l2LiquidityGateway = await deployContract("L2LiquidityGateway", [
     _inbox,
     l2Vault.address,
     market.address,
-    risePoolUtils.address
-  );
-  console.log(">>> L2LiquidityGateway Deployment in progress...");
-  await l2LiquidityGateway.deployed();
+    risePoolUtils.address,
+  ]);
   console.log(">>> L2LiquidityGateway Deployed.");
 
   console.log("---------------------------------------------");
