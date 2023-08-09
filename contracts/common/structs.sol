@@ -69,7 +69,7 @@ struct MarketInfo {
     uint256 longReserveAssetId; // real liquidity
     uint256 shortReserveAssetId; // real liquidity
     uint256 marginAssetId;
-    int256 fundingFeeMultiplier;
+    int256 fundingRateMultiplier;
     address marketMakerToken;
 }
 struct TokenData {

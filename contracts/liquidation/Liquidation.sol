@@ -69,7 +69,7 @@ contract Liquidation {
     function _isTraderLiquidationValid(
         address _trader
     ) internal view returns (bool) {
-        // TODO : getWalletBalance 구현 필요(펀딩피 제외한 만큼)
+        // TODO : getWalletBalance 구현 필요
         // uint256 lefthandSide = traderVault.getWalletBalance(_trader);
         uint256 lefthandSide = 0; // 임시
         uint256 righthandSide = 0;

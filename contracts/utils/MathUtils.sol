@@ -16,4 +16,12 @@ contract MathUtils {
     function _abs(int256 x) public pure returns (uint256) {
         return x >= 0 ? x.toUint256() : (-x).toUint256();
     }
+
+    function _clamp(
+        int256 x,
+        int256 min,
+        int256 max
+    ) public pure returns (int256) {
+        return x < min ? min : x > max ? max : x;
+    }
 }
