@@ -15,6 +15,7 @@ import "../fee/Funding.sol";
 
 contract PnlManager {
     using SafeCast for uint256;
+    using SafeCast for int256;
 
     TraderVault public traderVault;
     RisePool public risePool;
@@ -62,7 +63,24 @@ contract PnlManager {
             ? risePool.decreaseLongReserveAmount(_marketId, _sizeAbs)
             : risePool.decreaseShortReserveAmount(_marketId, _sizeAbs);
 
-        return pnl - fundingFeeToPay;
+        // FIXME: TODO: funding fee 포함하여 Margin 잔고가 충분한지 검증하는 로직
+        // FIXME: TODO: pnl을 token 수량으로 할지 USD로 할지 결정 (코드 미반영)
+
+        int256 pnlAfterFundingFee = pnl - fundingFeeToPay;
+
+        pnlAfterFundingFee >= 0
+            ? traderVault.increaseTraderBalance(
+                _position.trader,
+                marketInfo.marginAssetId,
+                (pnlAfterFundingFee).toUint256()
+            )
+            : traderVault.decreaseTraderBalance(
+                _position.trader,
+                marketInfo.marginAssetId,
+                (-pnlAfterFundingFee).toUint256()
+            );
+
+        return pnlAfterFundingFee;
     }
 
     function _calculatePnL(
