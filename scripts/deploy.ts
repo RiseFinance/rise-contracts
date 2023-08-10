@@ -1,8 +1,9 @@
 import { ethers } from "hardhat";
 
+import { deployLibraries } from "./deploy_libraries";
 import { deployL2Contracts } from "./deploy_l2";
 import { deployL3Contracts } from "./deploy_l3";
-import { initialize } from "./initialize_gateways";
+import { initialize } from "./initialize_contracts";
 
 async function main() {
   const [deployer] = await ethers.getSigners();
@@ -10,11 +11,32 @@ async function main() {
     "Deploying the contracts with the account:",
     await deployer.getAddress()
   );
-  console.log("Account balance:", (await deployer.getBalance()).toString());
+  console.log(
+    "Account balance:",
+    ethers.utils.formatEther((await deployer.getBalance()).toString()),
+    "ETH"
+  );
+  console.log("---------------------------------------------");
 
-  await deployL2Contracts();
-  await deployL3Contracts();
-  await initialize();
+  const _inbox = "0x0A0dD8845C0064f03728F7f145B7DDA05FD0Ccc6";
+  const _keeper = "0xDe264e2133963c9f40e07f290E1D852f7e4e4c7c";
+
+  const mathUtils = await deployLibraries();
+  const [l2MarginGateway, l2LiquidityGateway] = await deployL2Contracts(_inbox);
+  const [l3Gateway, priceManager, orderBook] = await deployL3Contracts(
+    mathUtils.address,
+    l2MarginGateway.address,
+    l2LiquidityGateway.address,
+    _keeper
+  );
+  // not for local test
+  // await initialize(
+  //   l2MarginGateway.address,
+  //   l2LiquidityGateway.address,
+  //   l3Gateway.address,
+  //   priceManager.address,
+  //   orderBook.address
+  // );
 }
 
 main().catch((error) => {

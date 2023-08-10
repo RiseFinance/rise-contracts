@@ -21,6 +21,10 @@ contract PositionVault is PositionUtils {
     mapping(uint256 => uint256) public maxLongCapacity; // marketId => tokenCountq
     mapping(uint256 => uint256) public maxShortCapacity; // marketId => tokenCount // TODO: check - is it for stablecoins?
 
+    constructor(address _funding) {
+        funding = Funding(_funding);
+    }
+
     function getPosition(
         bytes32 _key
     ) external view returns (OpenPosition memory) {

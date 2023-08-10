@@ -27,24 +27,27 @@ contract PriceManager {
 
     event Execution(uint256 marketId, int256 price);
 
-    constructor(
-        address _globalState,
-        address _orderBook,
-        address _tokenInfo,
-        address _keeperAddress
-    ) {
-        globalState = GlobalState(_globalState);
-        orderBook = OrderBook(_orderBook);
-        tokenInfo = TokenInfo(_tokenInfo);
-        isPriceKeeper[_keeperAddress] = true;
-    }
-
     modifier onlyPriceKeeper() {
         require(
             isPriceKeeper[msg.sender],
             "PriceManager: Should be called by keeper"
         );
         _;
+    }
+
+    constructor(
+        address _globalState,
+        address _tokenInfo,
+        address _keeperAddress
+    ) {
+        globalState = GlobalState(_globalState);
+        tokenInfo = TokenInfo(_tokenInfo);
+        isPriceKeeper[_keeperAddress] = true;
+    }
+
+    function initialize(address _orderBook) external {
+        require(_orderBook == address(0), "PriceManager: already initialized");
+        orderBook = OrderBook(_orderBook);
     }
 
     function setPrice(

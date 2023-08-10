@@ -2,7 +2,6 @@
 
 pragma solidity ^0.8.0;
 
-import "../common/params.sol";
 import "../utils/MathUtils.sol";
 
 contract PositionUtils {
@@ -31,6 +30,7 @@ contract PositionUtils {
         //             newSize;
         //     return nextAvgPrice;
         // }
+
         return
             MathUtils._weightedAverage(
                 _prevAvgPrice,

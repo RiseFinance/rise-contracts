@@ -1,9 +1,6 @@
 import { deployContract } from "../utils/deployer";
 
-export async function deployL2Contracts() {
-  // Nitro Contracts
-  const _inbox = "0x0A0dD8845C0064f03728F7f145B7DDA05FD0Ccc6";
-
+export async function deployL2Contracts(_inbox: string) {
   // test USDC
   const usdc = await deployContract("USDC");
 
@@ -36,13 +33,15 @@ export async function deployL2Contracts() {
   console.log(">>> L2LiquidityGateway Deployed.");
 
   console.log("---------------------------------------------");
-  console.log(">>> L2 Contracts Deployed.");
-  console.log(">>> test USDC: ", usdc.address);
-  console.log(">>> Market: ", market.address);
-  console.log(">>> TokenInfo: ", tokenInfo.address);
-  console.log(">>> L2Vault: ", l2Vault.address);
-  console.log(">>> L2MarginGateway: ", l2MarginGateway.address);
-  console.log(">>> RisePoolUtils: ", risePoolUtils.address);
-  console.log(">>> L2LiquidityGateway: ", l2LiquidityGateway.address);
+  console.log(">>> L2 Contracts Deployed:");
+  console.log("test USDC: ", usdc.address);
+  console.log("Market: ", market.address);
+  console.log("TokenInfo: ", tokenInfo.address);
+  console.log("L2Vault: ", l2Vault.address);
+  console.log("L2MarginGateway: ", l2MarginGateway.address);
+  console.log("RisePoolUtils: ", risePoolUtils.address);
+  console.log("L2LiquidityGateway: ", l2LiquidityGateway.address);
   console.log("---------------------------------------------");
+
+  return [l2MarginGateway, l2LiquidityGateway];
 }

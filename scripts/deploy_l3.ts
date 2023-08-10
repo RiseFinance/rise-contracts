@@ -1,9 +1,11 @@
 import { deployContract } from "../utils/deployer";
 
-export async function deployL3Contracts() {
-  const _l2MarginGateway = "0xDc64a140Aa3E981100a9becA4E685f962f0cF6C9"; // FIXME:
-  const _l2LiquidityGateway = "0x0165878A594ca255338adfa4d48449f69242Eb8F"; // FIXME:
-
+export async function deployL3Contracts(
+  _mathUtils: string, // library
+  _l2MarginGateway: string,
+  _l2LiquidityGateway: string,
+  _keeper: string
+) {
   // TraderVault
   const traderVault = await deployContract("TraderVault");
 
@@ -16,6 +18,9 @@ export async function deployL3Contracts() {
   // RisePool
   const risePool = await deployContract("RisePool");
 
+  // GlobalState
+  const globalState = await deployContract("GlobalState", [], _mathUtils);
+
   // L3Gateway
   const l3Gateway = await deployContract("L3Gateway", [
     traderVault.address,
@@ -26,11 +31,31 @@ export async function deployL3Contracts() {
     _l2LiquidityGateway,
   ]);
 
-  // PositionVault
-  const positionVault = await deployContract("PositionVault");
+  // PriceManager
+  const priceManager = await deployContract("PriceManager", [
+    globalState.address,
+    tokenInfo.address,
+    _keeper, // _keeperAddress
+  ]);
 
-  // GlobalState
-  const globalState = await deployContract("GlobalState");
+  // Funding
+  const funding = await deployContract(
+    "Funding",
+    [
+      priceManager.address,
+      globalState.address,
+      tokenInfo.address,
+      market.address,
+    ],
+    _mathUtils
+  );
+
+  // PositionVault
+  const positionVault = await deployContract(
+    "PositionVault",
+    [funding.address],
+    _mathUtils
+  );
 
   // OrderValidator
   const orderValidator = await deployContract("OrderValidator", [
@@ -45,10 +70,11 @@ export async function deployL3Contracts() {
   ]);
 
   // PositionHistory
-  const positionHistory = await deployContract("PositionHistory", [
-    positionVault.address,
-    traderVault.address,
-  ]);
+  const positionHistory = await deployContract(
+    "PositionHistory",
+    [positionVault.address, traderVault.address],
+    _mathUtils
+  );
 
   // MarketOrder
   const marketOrder = await deployContract("MarketOrder", [
@@ -63,13 +89,17 @@ export async function deployL3Contracts() {
   ]);
 
   // OrderBook
-  const orderBook = await deployContract("OrderBook", [
-    traderVault.address,
-    risePool.address,
-    market.address,
-    positionHistory.address,
-    positionVault.address,
-  ]);
+  const orderBook = await deployContract(
+    "OrderBook",
+    [
+      traderVault.address,
+      risePool.address,
+      market.address,
+      positionHistory.address,
+      positionVault.address,
+    ],
+    _mathUtils
+  );
 
   // OrderRouter
   const orderRouter = await deployContract("OrderRouter", [
@@ -78,19 +108,21 @@ export async function deployL3Contracts() {
   ]);
 
   console.log("---------------------------------------------");
-  console.log(">>> L3 Contracts Deployed.");
-  console.log(">>> TraderVault: ", traderVault.address);
-  console.log(">>> Market: ", market.address);
-  console.log(">>> TokenInfo: ", tokenInfo.address);
-  console.log(">>> RisePool: ", risePool.address);
-  console.log(">>> L3Gateway: ", l3Gateway.address);
-  console.log(">>> PositionVault: ", positionVault.address);
-  console.log(">>> GlobalState: ", globalState.address);
-  console.log(">>> OrderValidator: ", orderValidator.address);
-  console.log(">>> OrderHistory: ", orderHistory.address);
-  console.log(">>> PositionHistory: ", positionHistory.address);
-  console.log(">>> MarketOrder: ", marketOrder.address);
-  console.log(">>> OrderBook: ", orderBook.address);
-  console.log(">>> OrderRouter: ", orderRouter.address);
+  console.log(">>> L3 Contracts Deployed:");
+  console.log("TraderVault: ", traderVault.address);
+  console.log("Market: ", market.address);
+  console.log("TokenInfo: ", tokenInfo.address);
+  console.log("RisePool: ", risePool.address);
+  console.log("L3Gateway: ", l3Gateway.address);
+  console.log("PositionVault: ", positionVault.address);
+  console.log("GlobalState: ", globalState.address);
+  console.log("OrderValidator: ", orderValidator.address);
+  console.log("OrderHistory: ", orderHistory.address);
+  console.log("PositionHistory: ", positionHistory.address);
+  console.log("MarketOrder: ", marketOrder.address);
+  console.log("OrderBook: ", orderBook.address);
+  console.log("OrderRouter: ", orderRouter.address);
   console.log("---------------------------------------------");
+
+  return [l3Gateway, priceManager, orderBook];
 }

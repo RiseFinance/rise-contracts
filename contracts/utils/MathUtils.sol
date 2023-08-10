@@ -5,6 +5,8 @@ pragma solidity ^0.8.0;
 import "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import "@openzeppelin/contracts/utils/math/Math.sol";
 
+import "../common/params.sol";
+
 import "hardhat/console.sol"; // test-only
 
 library MathUtils {

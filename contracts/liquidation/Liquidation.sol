@@ -17,6 +17,7 @@ contract Liquidation {
     TraderVault public traderVault;
     TokenInfo public tokenInfo;
     Market public market;
+
     using MathUtils for uint256;
 
     mapping(uint256 => uint256) maintenanceMarginRatioInBasisPoints; // assetId => maintenanceMarginRatio
