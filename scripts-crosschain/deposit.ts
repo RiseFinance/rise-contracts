@@ -1,9 +1,5 @@
-import { ethers } from "ethers";
-import * as path from "path";
-import * as fs from "fs";
-import dotenv from "dotenv";
-
-dotenv.config();
+import { ethers } from "hardhat";
+import { getContract } from "../utils/getContract";
 
 async function main() {
   try {
@@ -13,23 +9,12 @@ async function main() {
     // ===========================================================
 
     const privateKey = process.env.CHARLIE_PRIVATE_KEY as string;
-
     const l2Provider = new ethers.providers.JsonRpcProvider(
       "https://goerli-rollup.arbitrum.io/rpc"
     );
-    const l3Provider = new ethers.providers.JsonRpcProvider(
-      "http://localhost:8449"
-    );
-
     const l2Wallet = new ethers.Wallet(privateKey, l2Provider);
 
-    const abiPath = path.join(
-      `artifacts/contracts/${contractName}.sol/${contractName}.json`
-    );
-    const abiObject = JSON.parse(fs.readFileSync(abiPath).toString());
-    const abi = abiObject["abi"];
-    const contract = new ethers.Contract(contractAddress, abi, l2Wallet);
-
+    const contract = await getContract(contractName, contractAddress, l2Wallet);
     // ==================== Call Contract Functions ====================
     const usdcAddress = "0x7B32B8ef823D63cA9E5ee3dB84FF1576549C45ed";
 

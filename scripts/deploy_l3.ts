@@ -1,20 +1,6 @@
-import { ethers } from "hardhat";
 import { deployContract } from "../utils/deployer";
 
-async function main() {
-  const [deployer] = await ethers.getSigners();
-  console.log(
-    "Deploying the contracts with the account:",
-    await deployer.getAddress()
-  );
-  console.log("Account balance:", (await deployer.getBalance()).toString());
-
-  await deployL3Contracts();
-}
-
-// L3 Contracts
-
-async function deployL3Contracts() {
+export async function deployL3Contracts() {
   const _l2MarginGateway = "0xDc64a140Aa3E981100a9becA4E685f962f0cF6C9"; // FIXME:
   const _l2LiquidityGateway = "0x0165878A594ca255338adfa4d48449f69242Eb8F"; // FIXME:
 
@@ -108,10 +94,3 @@ async function deployL3Contracts() {
   console.log(">>> OrderRouter: ", orderRouter.address);
   console.log("---------------------------------------------");
 }
-
-// We recommend this pattern to be able to use async/await everywhere
-// and properly handle errors.
-main().catch((error) => {
-  console.error(error);
-  process.exitCode = 1;
-});
