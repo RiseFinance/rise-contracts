@@ -24,8 +24,8 @@ contract MarketOrder is OrderExecutor, OrderUtils, PriceUtils {
         // MarketOrderContext memory moc;
         ExecutionContext memory ec;
 
-        ec.sizeAbs = ec.sizeAbs;
-        ec.marginAbs = ec.marginAbs;
+        ec.sizeAbs = req.sizeAbs;
+        ec.marginAbs = req.marginAbs;
 
         ec.marginAssetId = market.getMarketInfo(req.marketId).marginAssetId;
         // moc.isBuy = req.isLong == req.isIncrease;

@@ -2,6 +2,7 @@
 
 pragma solidity ^0.8.0;
 
+import "../common/constants.sol";
 import "../common/structs.sol";
 import "../common/params.sol";
 import "../position/PositionHistory.sol";
@@ -9,10 +10,12 @@ import "../position/PositionVault.sol";
 import "../position/PnlManager.sol";
 import "../account/TraderVault.sol";
 import "../risepool/RisePool.sol";
+import "../fee/PositionFee.sol";
 
 contract OrderExecutor is PnlManager {
     PositionHistory public positionHistory;
     PositionVault public positionVault;
+    PositionFee public positionFee;
 
     struct ExecutionContext {
         OpenPosition openPosition;
@@ -30,8 +33,15 @@ contract OrderExecutor is PnlManager {
         OrderRequest memory req,
         ExecutionContext memory ec
     ) internal {
+        positionFee.payPositionFee(
+            tx.origin,
+            ec.sizeAbs,
+            ec.avgExecPrice,
+            ec.marginAssetId,
+            req.orderType
+        );
         traderVault.decreaseTraderBalance(
-            msg.sender,
+            tx.origin,
             ec.marginAssetId,
             ec.marginAbs
         );
@@ -111,6 +121,13 @@ contract OrderExecutor is PnlManager {
         OrderRequest memory req,
         ExecutionContext memory ec
     ) internal {
+        positionFee.payPositionFee(
+            tx.origin,
+            ec.sizeAbs,
+            ec.avgExecPrice,
+            ec.marginAssetId,
+            req.orderType
+        );
         // PnL settlement
         ec.pnl = settlePnL(
             ec.openPosition,

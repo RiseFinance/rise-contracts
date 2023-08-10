@@ -82,6 +82,7 @@ contract OrderBook is
             tx.origin,
             req.isLong,
             req.isIncrease,
+            req.orderType,
             req.marketId,
             req.sizeAbs,
             req.marginAbs,

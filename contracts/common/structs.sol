@@ -4,11 +4,11 @@ pragma solidity ^0.8.0;
 
 import "./enums.sol";
 
-// for limit order only
 struct OrderRequest {
     address trader;
     bool isLong;
     bool isIncrease;
+    OrderType orderType;
     uint256 marketId;
     uint256 sizeAbs;
     uint256 marginAbs;
