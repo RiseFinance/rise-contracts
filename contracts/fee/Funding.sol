@@ -5,12 +5,14 @@ pragma solidity ^0.8.0;
 import "@openzeppelin/contracts/utils/math/SafeCast.sol";
 
 import "../common/structs.sol";
+import "../common/constants.sol";
 
 import "../oracle/PriceManager.sol";
 import "../global/GlobalState.sol";
 import "../order/OrderUtils.sol";
 import "../market/TokenInfo.sol";
 import "../market/Market.sol";
+import "../utils/MathUtils.sol";
 
 contract Funding {
     using SafeCast for int256;
@@ -22,9 +24,12 @@ contract Funding {
     TokenInfo public tokenInfo;
     OrderUtils public orderUtils;
 
-    // int256 public constant FUNDING_FEE_CONSTANT = 1;
-    int256 public constant FUNDING_FEE_PRECISION = 1e26;
-    // TODO: FUNDING_FEE_CONSTANT, FUNDING_FEE_PRECISION 값 확인 필요
+    // int256 public constant FUNDING_RATE_CONSTANT = 1;
+    int256 public constant FUNDING_RATE_PRECISION = 1e26;
+    int256 public interestRate = FUNDING_RATE_PRECISION / 100000 / 3600; // 0.001% per hour
+    int256 public fundingRateDamper = FUNDING_RATE_PRECISION / 100000 / 3600; // 0.005% per
+
+    // TODO: FUNDING_RATE_CONSTANT, FUNDING_RATE_PRECISION 값 확인 필요
     mapping(uint256 => int256) latestFundingIndex; // assetId => fundingIndex
     mapping(uint256 => uint256) latestFundingTimestamp; // assetId => timestamp
 
@@ -40,10 +45,24 @@ contract Funding {
         latestFundingTimestamp[_marketId] = block.timestamp;
     }
 
-    function getFundingRate(uint256 _marketId) public view returns (int256) {
+    function getPriceBufferRate(
+        uint256 _marketId
+    ) public view returns (int256) {
         int256 priceBuffer = priceManager.getPriceBuffer(_marketId);
         return
-            market.getMarketInfo(_marketId).fundingFeeMultiplier * priceBuffer;
+            (market.getMarketInfo(_marketId).fundingRateMultiplier *
+                priceBuffer) / PRICE_BUFFER_PRECISION.toInt256();
+    }
+
+    function getFundingRate(uint256 _marketId) public view returns (int256) {
+        int256 priceBufferRate = getPriceBufferRate(_marketId);
+        return
+            priceBufferRate +
+            MathUtils._clamp(
+                interestRate - priceBufferRate,
+                -fundingRateDamper,
+                fundingRateDamper
+            );
     }
 
     function getFundingFeeToPay(
@@ -62,8 +81,8 @@ contract Funding {
             )
             .toInt256();
         int256 fundingFeeToPay = ((getFundingIndex(marketId) -
-            _position.entryFundingIndex) * sizeInUsd) / FUNDING_FEE_PRECISION;
-        // TODO: position에 entryFundingIndex 추가
+            _position.avgEntryFundingIndex) * sizeInUsd) /
+            FUNDING_RATE_PRECISION;
         return fundingFeeToPay;
     }
 }

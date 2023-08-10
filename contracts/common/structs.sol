@@ -4,11 +4,11 @@ pragma solidity ^0.8.0;
 
 import "./enums.sol";
 
-// for limit order only
 struct OrderRequest {
     address trader;
     bool isLong;
     bool isIncrease;
+    OrderType orderType;
     uint256 marketId;
     uint256 sizeAbs;
     uint256 marginAbs;
@@ -26,7 +26,7 @@ struct OpenPosition {
     uint256 margin; // Token Counts
     uint256 avgOpenPrice; // TODO: check - should be coupled w/ positions link logic
     uint256 lastUpdatedTime; // Currently not used for any validation
-    int256 entryFundingIndex;
+    int256 avgEntryFundingIndex;
 }
 
 struct OrderRecord {
@@ -69,7 +69,7 @@ struct MarketInfo {
     uint256 longReserveAssetId; // real liquidity
     uint256 shortReserveAssetId; // real liquidity
     uint256 marginAssetId;
-    int256 fundingFeeMultiplier;
+    int256 fundingRateMultiplier;
     address marketMakerToken;
 }
 struct TokenData {

@@ -6,11 +6,14 @@ import "@openzeppelin/contracts/utils/math/SafeCast.sol";
 
 import "../common/structs.sol";
 import "../common/params.sol";
+import "../fee/Funding.sol";
 
 import "./PositionUtils.sol";
 
 contract PositionVault is PositionUtils {
     using SafeCast for uint256;
+
+    Funding public funding;
 
     // TODO: open <> close 사이의 position을 하나로 연결하여 기록
     mapping(bytes32 => OpenPosition) public openPositions; // positionHash => Position
@@ -57,6 +60,9 @@ contract PositionVault is PositionUtils {
             _position.isLong = p._isLong;
             _position.currentPositionRecordId = p._currentPositionRecordId;
             _position.marketId = p._marketId;
+            _position.avgEntryFundingIndex = funding.getFundingIndex(
+                p._marketId
+            );
         }
 
         if (p._sizeDeltaAbs > 0 && p._isIncreaseInSize) {
@@ -66,6 +72,13 @@ contract PositionVault is PositionUtils {
                 _position.avgOpenPrice,
                 p._sizeDeltaAbs,
                 p._executionPrice
+            );
+            _position.avgEntryFundingIndex = _getNextAvgEntryFundingIndex(
+                p._isIncreaseInSize,
+                _position.size,
+                _position.avgEntryFundingIndex,
+                p._sizeDeltaAbs,
+                funding.getFundingIndex(p._marketId)
             );
         }
         _position.size = p._isIncreaseInSize
