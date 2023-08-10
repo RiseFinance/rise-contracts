@@ -1,3 +1,4 @@
+import fs from "fs";
 import { deployContract } from "../utils/deployer";
 
 export async function deployL3Contracts(
@@ -123,6 +124,27 @@ export async function deployL3Contracts(
   console.log("OrderBook: ", orderBook.address);
   console.log("OrderRouter: ", orderRouter.address);
   console.log("---------------------------------------------");
+
+  const l3Contracts = {
+    traderVault: traderVault.address,
+    market: market.address,
+    tokenInfo: tokenInfo.address,
+    risePool: risePool.address,
+    l3Gateway: l3Gateway.address,
+    positionVault: positionVault.address,
+    globalState: globalState.address,
+    orderValidator: orderValidator.address,
+    orderHistory: orderHistory.address,
+    positionHistory: positionHistory.address,
+    marketOrder: marketOrder.address,
+    orderBook: orderBook.address,
+    orderRouter: orderRouter.address,
+  };
+
+  fs.writeFileSync(
+    __dirname + "/output/l3Contracts.json",
+    JSON.stringify(l3Contracts, null, 2)
+  );
 
   return [l3Gateway, priceManager, orderBook];
 }

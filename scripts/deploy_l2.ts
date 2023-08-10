@@ -1,3 +1,4 @@
+import fs from "fs";
 import { deployContract } from "../utils/deployer";
 
 export async function deployL2Contracts(_inbox: string) {
@@ -42,6 +43,21 @@ export async function deployL2Contracts(_inbox: string) {
   console.log("RisePoolUtils: ", risePoolUtils.address);
   console.log("L2LiquidityGateway: ", l2LiquidityGateway.address);
   console.log("---------------------------------------------");
+
+  const l2Contracts = {
+    usdc: usdc.address,
+    market: market.address,
+    tokenInfo: tokenInfo.address,
+    l2Vault: l2Vault.address,
+    l2MarginGateway: l2MarginGateway.address,
+    risePoolUtils: risePoolUtils.address,
+    l2LiquidityGateway: l2LiquidityGateway.address,
+  };
+
+  fs.writeFileSync(
+    __dirname + "/output/l2Contracts.json",
+    JSON.stringify(l2Contracts, null, 2)
+  );
 
   return [l2MarginGateway, l2LiquidityGateway];
 }
