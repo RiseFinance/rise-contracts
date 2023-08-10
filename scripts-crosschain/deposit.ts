@@ -1,22 +1,29 @@
 import { ethers } from "hardhat";
 import { getContract } from "../utils/getContract";
+import { getContractAddress } from "../utils/getContractAddress";
+import * as fs from "fs";
 
 async function main() {
   try {
     // ==================== Set Contract Name ====================
     const contractName = "L2MarginGateway";
-    const contractAddress = "";
+    const contractAddress = getContractAddress(contractName);
     // ===========================================================
 
-    const privateKey = process.env.CHARLIE_PRIVATE_KEY as string;
+    const privateKey = process.env.DEPLOY_PRIVATE_KEY as string;
     const l2Provider = new ethers.providers.JsonRpcProvider(
       "https://goerli-rollup.arbitrum.io/rpc"
     );
     const l2Wallet = new ethers.Wallet(privateKey, l2Provider);
 
-    const contract = await getContract(contractName, contractAddress, l2Wallet);
+    const contract = await getContract(
+      contractName,
+      contractName,
+      contractAddress,
+      l2Wallet
+    );
     // ==================== Call Contract Functions ====================
-    const usdcAddress = "0x7B32B8ef823D63cA9E5ee3dB84FF1576549C45ed";
+    const usdcAddress = getContractAddress("USDC");
 
     const depositAmount = ethers.utils.parseUnits("350", 6); // 350 USDC
     const _maxSubmissionCost = ethers.utils.parseEther("0.1");

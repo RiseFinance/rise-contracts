@@ -1,12 +1,30 @@
-import fs from "fs";
+import * as fs from "fs";
 import { deployContract } from "../utils/deployer";
+
+export type L3Addresses = {
+  TraderVault: string;
+  Market: string;
+  TokenInfo: string;
+  RisePool: string;
+  GlobalState: string;
+  L3Gateway: string;
+  PriceManager: string;
+  Funding: string;
+  PositionVault: string;
+  OrderValidator: string;
+  OrderHistory: string;
+  PositionHistory: string;
+  MarketOrder: string;
+  OrderBook: string;
+  OrderRouter: string;
+};
 
 export async function deployL3Contracts(
   _mathUtils: string, // library
   _l2MarginGateway: string,
   _l2LiquidityGateway: string,
   _keeper: string
-) {
+): Promise<L3Addresses> {
   // TraderVault
   const traderVault = await deployContract("TraderVault");
 
@@ -114,9 +132,11 @@ export async function deployL3Contracts(
   console.log("Market: ", market.address);
   console.log("TokenInfo: ", tokenInfo.address);
   console.log("RisePool: ", risePool.address);
-  console.log("L3Gateway: ", l3Gateway.address);
-  console.log("PositionVault: ", positionVault.address);
   console.log("GlobalState: ", globalState.address);
+  console.log("L3Gateway: ", l3Gateway.address);
+  console.log("PriceManager: ", priceManager.address);
+  console.log("Funding: ", funding.address);
+  console.log("PositionVault: ", positionVault.address);
   console.log("OrderValidator: ", orderValidator.address);
   console.log("OrderHistory: ", orderHistory.address);
   console.log("PositionHistory: ", positionHistory.address);
@@ -125,26 +145,28 @@ export async function deployL3Contracts(
   console.log("OrderRouter: ", orderRouter.address);
   console.log("---------------------------------------------");
 
-  const l3Contracts = {
-    traderVault: traderVault.address,
-    market: market.address,
-    tokenInfo: tokenInfo.address,
-    risePool: risePool.address,
-    l3Gateway: l3Gateway.address,
-    positionVault: positionVault.address,
-    globalState: globalState.address,
-    orderValidator: orderValidator.address,
-    orderHistory: orderHistory.address,
-    positionHistory: positionHistory.address,
-    marketOrder: marketOrder.address,
-    orderBook: orderBook.address,
-    orderRouter: orderRouter.address,
+  const l3Addresses = {
+    TraderVault: traderVault.address,
+    Market: market.address,
+    TokenInfo: tokenInfo.address,
+    RisePool: risePool.address,
+    GlobalState: globalState.address,
+    L3Gateway: l3Gateway.address,
+    PriceManager: priceManager.address,
+    Funding: funding.address,
+    PositionVault: positionVault.address,
+    OrderValidator: orderValidator.address,
+    OrderHistory: orderHistory.address,
+    PositionHistory: positionHistory.address,
+    MarketOrder: marketOrder.address,
+    OrderBook: orderBook.address,
+    OrderRouter: orderRouter.address,
   };
 
-  fs.writeFileSync(
-    __dirname + "/output/l3Contracts.json",
-    JSON.stringify(l3Contracts, null, 2)
-  );
+  return l3Addresses;
 
-  return [l3Gateway, priceManager, orderBook];
+  // fs.writeFileSync(
+  //   __dirname + "/output/l3Contracts.json",
+  //   JSON.stringify(l3Contracts, null, 2)
+  // );
 }
