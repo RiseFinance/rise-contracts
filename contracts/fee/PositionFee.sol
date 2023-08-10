@@ -2,13 +2,16 @@
 
 pragma solidity ^0.8.0;
 
+import "../common/constants.sol";
+import "../common/enums.sol";
+
 import "../account/TraderVault.sol";
 
 contract PositionFee {
     TraderVault public traderVault;
 
-    uint256 public constant MARKET_POSITION_FEE_CONSTANT = 5;
-    uint256 public constant LIMIT_POSITION_FEE_CONSTANT = 5;
+    uint256 public constant MARKET_POSITION_FEE_MULTIPLIER = 5;
+    uint256 public constant LIMIT_POSITION_FEE_MULTIPLIER = 5;
     uint256 public constant POSITION_FEE_PRECISION = 1e4;
     uint256 public collectedPositionFees = 0;
 
@@ -18,36 +21,26 @@ contract PositionFee {
         traderVault = TraderVault(_traderVault);
     }
 
-    function getLimitPositionFee(
-        uint256 _sizeAbs
+    function getPositionFee(
+        uint256 _sizeAbsInUsd,
+        OrderType _orderType
     ) public pure returns (uint256) {
-        return
-            (LIMIT_POSITION_FEE_CONSTANT * _sizeAbs) / POSITION_FEE_PRECISION;
+        uint256 feeMultiplier = (_orderType == OrderType.Market ||
+            _orderType == OrderType.StopMarket)
+            ? MARKET_POSITION_FEE_MULTIPLIER
+            : LIMIT_POSITION_FEE_MULTIPLIER;
+        return (feeMultiplier * _sizeAbsInUsd) / POSITION_FEE_PRECISION;
     }
 
-    function payLimitPositionFee(
+    function payPositionFee(
         address _trader,
+        uint256 _sizeAbs,
+        uint256 _avgExecPrice,
         uint256 _feeAssetId,
-        uint256 _sizeAbs
+        OrderType _orderType
     ) external {
-        uint256 fee = getLimitPositionFee(_sizeAbs);
-        traderVault.decreaseTraderBalance(_trader, _feeAssetId, fee);
-        collectedPositionFees += fee;
-    }
-
-    function getMarketPositionFee(
-        uint256 _sizeAbs
-    ) public pure returns (uint256) {
-        return
-            (MARKET_POSITION_FEE_CONSTANT * _sizeAbs) / POSITION_FEE_PRECISION;
-    }
-
-    function payMarketPositionFee(
-        address _trader,
-        uint256 _feeAssetId,
-        uint256 _sizeAbs
-    ) external {
-        uint256 fee = getMarketPositionFee(_sizeAbs);
+        uint256 sizeAbsInUsd = (_sizeAbs * _avgExecPrice) / USD_PRECISION;
+        uint256 fee = getPositionFee(sizeAbsInUsd, _orderType);
         traderVault.decreaseTraderBalance(_trader, _feeAssetId, fee);
         collectedPositionFees += fee;
     }
