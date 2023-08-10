@@ -1,5 +1,7 @@
 import * as fs from "fs";
 import { deployContract } from "../utils/deployer";
+import { getContractAddress } from "../utils/getContractAddress";
+import { getPresetAddress } from "../utils/getPresetAddress";
 
 export type L3Addresses = {
   TraderVault: string;
@@ -19,14 +21,16 @@ export type L3Addresses = {
   OrderRouter: string;
 };
 
-export async function deployL3Contracts(
-  _mathUtils: string, // library
-  _l2MarginGateway: string,
-  _l2LiquidityGateway: string,
-  _keeper: string
-): Promise<L3Addresses> {
-  console.log(">>> _l2MarginGateway: ", _l2MarginGateway);
-  console.log(">>> _l2LiquidityGateway: ", _l2LiquidityGateway);
+async function main() {
+  await deployL3Contracts();
+}
+
+async function deployL3Contracts(): Promise<L3Addresses> {
+  const mathUtils = await getContractAddress("MathUtils"); // library
+  const l2MarginGateway = await getContractAddress("L2MarginGateway");
+  const l2LiquidityGateway = await getContractAddress("L2LiquidityGateway");
+  const keeper = await getPresetAddress("keeper");
+
   // TraderVault
   const traderVault = await deployContract("TraderVault");
 
@@ -40,7 +44,7 @@ export async function deployL3Contracts(
   const risePool = await deployContract("RisePool");
 
   // GlobalState
-  const globalState = await deployContract("GlobalState", [], _mathUtils);
+  const globalState = await deployContract("GlobalState", [], mathUtils);
 
   // L3Gateway
   const l3Gateway = await deployContract("L3Gateway", [
@@ -48,15 +52,15 @@ export async function deployL3Contracts(
     tokenInfo.address,
     risePool.address,
     market.address,
-    _l2MarginGateway,
-    _l2LiquidityGateway,
+    l2MarginGateway,
+    l2LiquidityGateway,
   ]);
 
   // PriceManager
   const priceManager = await deployContract("PriceManager", [
     globalState.address,
     tokenInfo.address,
-    _keeper, // _keeperAddress
+    keeper, // _keeperAddress
   ]);
 
   // Funding
@@ -68,14 +72,14 @@ export async function deployL3Contracts(
       tokenInfo.address,
       market.address,
     ],
-    _mathUtils
+    mathUtils
   );
 
   // PositionVault
   const positionVault = await deployContract(
     "PositionVault",
     [funding.address],
-    _mathUtils
+    mathUtils
   );
 
   // OrderValidator
@@ -94,7 +98,7 @@ export async function deployL3Contracts(
   const positionHistory = await deployContract(
     "PositionHistory",
     [positionVault.address, traderVault.address],
-    _mathUtils
+    mathUtils
   );
 
   // MarketOrder
@@ -119,7 +123,7 @@ export async function deployL3Contracts(
       positionHistory.address,
       positionVault.address,
     ],
-    _mathUtils
+    mathUtils
   );
 
   // OrderRouter
@@ -166,15 +170,15 @@ export async function deployL3Contracts(
   };
 
   const libraryAddresses = JSON.parse(
-    fs.readFileSync(__dirname + "/output/Addresses.json").toString()
+    fs.readFileSync(__dirname + "/output/contractAddresses.json").toString()
   )["Library"];
 
   const l2Addresses = JSON.parse(
-    fs.readFileSync(__dirname + "/output/Addresses.json").toString()
+    fs.readFileSync(__dirname + "/output/contractAddresses.json").toString()
   )["L2"];
 
   fs.writeFileSync(
-    __dirname + "/output/Addresses.json",
+    __dirname + "/output/contractAddresses.json",
     JSON.stringify(
       { Library: libraryAddresses, L2: l2Addresses, L3: l3Addresses },
       null,
@@ -185,3 +189,8 @@ export async function deployL3Contracts(
 
   return l3Addresses;
 }
+
+main().catch((error) => {
+  console.error(error);
+  process.exitCode = 1;
+});

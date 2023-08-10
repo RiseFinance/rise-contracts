@@ -1,5 +1,6 @@
 import * as fs from "fs";
 import { deployContract } from "../utils/deployer";
+import { getPresetAddress } from "../utils/getPresetAddress";
 
 export type L2Addresses = {
   USDC: string;
@@ -11,7 +12,13 @@ export type L2Addresses = {
   L2LiquidityGateway: string;
 };
 
-export async function deployL2Contracts(_inbox: string): Promise<L2Addresses> {
+async function main() {
+  await deployL2Contracts();
+}
+
+async function deployL2Contracts(): Promise<L2Addresses> {
+  const _inbox = await getPresetAddress("inbox");
+
   // test USDC
   const usdc = await deployContract("USDC");
 
@@ -65,14 +72,19 @@ export async function deployL2Contracts(_inbox: string): Promise<L2Addresses> {
   };
 
   const libraryAddresses = JSON.parse(
-    fs.readFileSync(__dirname + "/output/Addresses.json").toString()
+    fs.readFileSync(__dirname + "/output/contractAddresses.json").toString()
   )["Library"];
 
   fs.writeFileSync(
-    __dirname + "/output/Addresses.json",
+    __dirname + "/output/contractAddresses.json",
     JSON.stringify({ Library: libraryAddresses, L2: l2Addresses }, null, 2),
     { flag: "w" }
   );
 
   return l2Addresses;
 }
+
+main().catch((error) => {
+  console.error(error);
+  process.exitCode = 1;
+});
