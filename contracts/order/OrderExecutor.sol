@@ -137,7 +137,6 @@ contract OrderExecutor is PnlManager {
             ec.sizeAbs,
             ec.marginAbs
         );
-
         ec.positionRecordId = ec.openPosition.currentPositionRecordId;
 
         if (ec.execType == OrderExecType.DecreasePosition) {

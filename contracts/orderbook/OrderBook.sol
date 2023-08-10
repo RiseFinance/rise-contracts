@@ -27,11 +27,11 @@ contract OrderBook is
     OrderExecutor,
     OrderUtils,
     PriceUtils,
-    Modifiers,
-    MathUtils
+    Modifiers
 {
-    using SafeCast for int256;
+    using MathUtils for int256;
     using SafeCast for uint256;
+    using SafeCast for int256;
 
     OrderHistory public orderHistory;
     GlobalState public globalState;
@@ -201,10 +201,8 @@ contract OrderBook is
             // );
 
             ptc.sizeCap = ((SIZE_TO_PRICE_BUFFER_PRECISION *
-                _abs(
-                    (ic.limitPriceIterator).toInt256() -
-                        (ic.interimMarkPrice).toInt256()
-                )) /
+                ((ic.limitPriceIterator).toInt256() -
+                    (ic.interimMarkPrice).toInt256())._abs()) /
                 tokenInfo.getBaseTokenSizeToPriceBufferDeltaMultiplier(
                     _marketId
                 ) /

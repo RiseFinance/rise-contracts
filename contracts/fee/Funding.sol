@@ -23,7 +23,6 @@ contract Funding {
     Market public market;
     TokenInfo public tokenInfo;
     OrderUtils public orderUtils;
-    MathUtils public mathUtils;
 
     // int256 public constant FUNDING_RATE_CONSTANT = 1;
     int256 public constant FUNDING_RATE_PRECISION = 1e26;
@@ -59,7 +58,7 @@ contract Funding {
         int256 priceBufferRate = getPriceBufferRate(_marketId);
         return
             priceBufferRate +
-            mathUtils._clamp(
+            MathUtils._clamp(
                 interestRate - priceBufferRate,
                 -fundingRateDamper,
                 fundingRateDamper
@@ -82,7 +81,8 @@ contract Funding {
             )
             .toInt256();
         int256 fundingFeeToPay = ((getFundingIndex(marketId) -
-            _position.entryFundingIndex) * sizeInUsd) / FUNDING_RATE_PRECISION;
+            _position.avgEntryFundingIndex) * sizeInUsd) /
+            FUNDING_RATE_PRECISION;
         return fundingFeeToPay;
     }
 }

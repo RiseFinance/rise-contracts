@@ -13,6 +13,8 @@ import "../market/TokenInfo.sol";
 import "../market/Market.sol";
 
 contract Liquidation {
+    using MathUtils for uint256;
+
     mapping(uint256 => uint256) maintenanceMarginRatioInBasisPoints; // assetId => maintenanceMarginRatio
     uint256 maintenanceMarginRatioPrecision = 1e18;
     uint256 public constant BASIS_POINTS_PRECISION = 1e4;
@@ -20,14 +22,6 @@ contract Liquidation {
     TokenInfo public tokenInfo;
     Market public market;
     TraderVault public traderVault;
-
-    function mulDiv(
-        uint256 x,
-        uint256 y,
-        uint256 denominator
-    ) internal pure returns (uint256) {
-        return Math.mulDiv(x, y, denominator);
-    }
 
     function executeLiquidations(
         OpenPosition[] calldata _positions,
@@ -104,30 +98,20 @@ contract Liquidation {
         uint256 p2 = _position.isLong
             ? _position.avgOpenPrice
             : priceManager.getMarkPrice(baseAssetId);
-        uint256 lefthandSide = mulDiv(p1, _position.size, SP);
-        uint256 righthandSide = mulDiv(p2, _position.size, SP) +
-            mulDiv(
-                mulDiv(
-                    priceManager.getMarkPrice(baseAssetId),
-                    _position.size,
-                    SP
-                ),
-                maintenanceMarginRatioInBasisPoints[baseAssetId],
-                RP
-            ) +
-            mulDiv(
-                mulDiv(
-                    mulDiv(
-                        priceManager.getIndexPrice(baseAssetId),
-                        _position.size,
-                        SP
-                    ),
-                    _position.size,
-                    SP
-                ),
-                tokenInfo.getSizeToPriceBufferDeltaMultiplier(baseAssetId),
-                SIZE_TO_PRICE_BUFFER_PRECISION
-            ) /
+        uint256 lefthandSide = p1.mulDiv(_position.size, SP);
+        uint256 righthandSide = p2.mulDiv(_position.size, SP) +
+            priceManager
+                .getMarkPrice(baseAssetId)
+                .mulDiv(_position.size, SP)
+                .mulDiv(maintenanceMarginRatioInBasisPoints[baseAssetId], RP) +
+            priceManager
+                .getIndexPrice(baseAssetId)
+                .mulDiv(_position.size, SP)
+                .mulDiv(_position.size, SP)
+                .mulDiv(
+                    tokenInfo.getSizeToPriceBufferDeltaMultiplier(baseAssetId),
+                    SIZE_TO_PRICE_BUFFER_PRECISION
+                ) /
             2;
         return (lefthandSide, righthandSide);
     }
