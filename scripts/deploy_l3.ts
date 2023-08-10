@@ -25,6 +25,8 @@ export async function deployL3Contracts(
   _l2LiquidityGateway: string,
   _keeper: string
 ): Promise<L3Addresses> {
+  console.log(">>> _l2MarginGateway: ", _l2MarginGateway);
+  console.log(">>> _l2LiquidityGateway: ", _l2LiquidityGateway);
   // TraderVault
   const traderVault = await deployContract("TraderVault");
 
@@ -163,10 +165,23 @@ export async function deployL3Contracts(
     OrderRouter: orderRouter.address,
   };
 
-  return l3Addresses;
+  const libraryAddresses = JSON.parse(
+    fs.readFileSync(__dirname + "/output/Addresses.json").toString()
+  )["Library"];
 
-  // fs.writeFileSync(
-  //   __dirname + "/output/l3Contracts.json",
-  //   JSON.stringify(l3Contracts, null, 2)
-  // );
+  const l2Addresses = JSON.parse(
+    fs.readFileSync(__dirname + "/output/Addresses.json").toString()
+  )["L2"];
+
+  fs.writeFileSync(
+    __dirname + "/output/Addresses.json",
+    JSON.stringify(
+      { Library: libraryAddresses, L2: l2Addresses, L3: l3Addresses },
+      null,
+      2
+    ),
+    { flag: "w" }
+  );
+
+  return l3Addresses;
 }

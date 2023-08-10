@@ -7,7 +7,10 @@ export function getContractAddress(contractName: string) {
 
   let contractAddress;
 
-  if (addressesObject["L3"][contractName] === undefined) {
+  // check Library first then L2 then L3
+  if (addressesObject["Library"][contractName] !== undefined) {
+    contractAddress = addressesObject["Library"][contractName];
+  } else if (addressesObject["L2"][contractName] !== undefined) {
     contractAddress = addressesObject["L2"][contractName];
   } else {
     contractAddress = addressesObject["L3"][contractName];

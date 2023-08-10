@@ -1,3 +1,4 @@
+import * as fs from "fs";
 import { deployContract } from "../utils/deployer";
 
 export type L2Addresses = {
@@ -62,6 +63,16 @@ export async function deployL2Contracts(_inbox: string): Promise<L2Addresses> {
     RisePoolUtils: risePoolUtils.address,
     L2LiquidityGateway: l2LiquidityGateway.address,
   };
+
+  const libraryAddresses = JSON.parse(
+    fs.readFileSync(__dirname + "/output/Addresses.json").toString()
+  )["Library"];
+
+  fs.writeFileSync(
+    __dirname + "/output/Addresses.json",
+    JSON.stringify({ Library: libraryAddresses, L2: l2Addresses }, null, 2),
+    { flag: "w" }
+  );
 
   return l2Addresses;
 }
