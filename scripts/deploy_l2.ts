@@ -1,6 +1,24 @@
+import * as fs from "fs";
 import { deployContract } from "../utils/deployer";
+import { getPresetAddress } from "../utils/getPresetAddress";
 
-export async function deployL2Contracts(_inbox: string) {
+export type L2Addresses = {
+  USDC: string;
+  Market: string;
+  TokenInfo: string;
+  L2Vault: string;
+  L2MarginGateway: string;
+  RisePoolUtils: string;
+  L2LiquidityGateway: string;
+};
+
+async function main() {
+  await deployL2Contracts();
+}
+
+async function deployL2Contracts(): Promise<L2Addresses> {
+  const _inbox = await getPresetAddress("inbox");
+
   // test USDC
   const usdc = await deployContract("USDC");
 
@@ -43,5 +61,30 @@ export async function deployL2Contracts(_inbox: string) {
   console.log("L2LiquidityGateway: ", l2LiquidityGateway.address);
   console.log("---------------------------------------------");
 
-  return [l2MarginGateway, l2LiquidityGateway];
+  const l2Addresses = {
+    USDC: usdc.address,
+    Market: market.address,
+    TokenInfo: tokenInfo.address,
+    L2Vault: l2Vault.address,
+    L2MarginGateway: l2MarginGateway.address,
+    RisePoolUtils: risePoolUtils.address,
+    L2LiquidityGateway: l2LiquidityGateway.address,
+  };
+
+  const libraryAddresses = JSON.parse(
+    fs.readFileSync(__dirname + "/output/contractAddresses.json").toString()
+  )["Library"];
+
+  fs.writeFileSync(
+    __dirname + "/output/contractAddresses.json",
+    JSON.stringify({ Library: libraryAddresses, L2: l2Addresses }, null, 2),
+    { flag: "w" }
+  );
+
+  return l2Addresses;
 }
+
+main().catch((error) => {
+  console.error(error);
+  process.exitCode = 1;
+});
