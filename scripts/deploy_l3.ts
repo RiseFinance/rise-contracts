@@ -124,7 +124,7 @@ async function deployL3Contracts(): Promise<L3Addresses> {
     ],
     mathUtils
   );
-  
+
   // OrderRouter
   const orderRouter = await deployContract("OrderRouter", [
     marketOrder.address,
@@ -135,7 +135,7 @@ async function deployL3Contracts(): Promise<L3Addresses> {
   const priceRouter = await deployContract("PriceRouter", [
     priceManager.address,
     orderBook.address,
-    _keeper  // price keeper
+    keeper, // price keeper
   ]);
 
   console.log("---------------------------------------------");
@@ -174,6 +174,7 @@ async function deployL3Contracts(): Promise<L3Addresses> {
     MarketOrder: marketOrder.address,
     OrderBook: orderBook.address,
     OrderRouter: orderRouter.address,
+    PriceRouter: priceRouter.address,
   };
 
   const libraryAddresses = JSON.parse(
