@@ -35,7 +35,6 @@ export async function deployL3Contracts(
   const priceManager = await deployContract("PriceManager", [
     globalState.address,
     tokenInfo.address,
-    _keeper, // _keeperAddress
   ]);
 
   // Funding
@@ -101,10 +100,18 @@ export async function deployL3Contracts(
     _mathUtils
   );
 
+  
   // OrderRouter
   const orderRouter = await deployContract("OrderRouter", [
     marketOrder.address,
     orderBook.address,
+  ]);
+
+  // PriceRouter
+  const priceRouter = await deployContract("PriceRouter", [
+    priceManager.address,
+    orderBook.address,
+    _keeper  // price keeper
   ]);
 
   console.log("---------------------------------------------");
@@ -122,6 +129,7 @@ export async function deployL3Contracts(
   console.log("MarketOrder: ", marketOrder.address);
   console.log("OrderBook: ", orderBook.address);
   console.log("OrderRouter: ", orderRouter.address);
+  console.log("PriceRouter: ", priceRouter.address);
   console.log("---------------------------------------------");
 
   return [l3Gateway, priceManager, orderBook];

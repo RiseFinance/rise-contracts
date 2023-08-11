@@ -6,7 +6,6 @@ import "@openzeppelin/contracts/utils/math/SafeCast.sol";
 
 import "../common/constants.sol";
 
-import "../orderbook/OrderBook.sol";
 import "../market/TokenInfo.sol";
 import "../global/GlobalState.sol";
 
@@ -17,79 +16,48 @@ contract PriceManager {
     using SafeCast for uint256;
 
     GlobalState public globalState;
-    OrderBook public orderBook;
     TokenInfo public tokenInfo;
 
-    mapping(address => bool) public isPriceKeeper;
     mapping(uint256 => uint256) public indexPrices;
     mapping(uint256 => uint256) public priceBufferUpdatedTime;
     mapping(uint256 => int256) public lastPriceBuffer;
 
     event Execution(uint256 marketId, int256 price);
 
-    modifier onlyPriceKeeper() {
-        require(
-            isPriceKeeper[msg.sender],
-            "PriceManager: Should be called by keeper"
-        );
-        _;
-    }
-
-    constructor(
-        address _globalState,
-        address _tokenInfo,
-        address _keeperAddress
-    ) {
+    constructor(address _globalState, address _tokenInfo) {
         globalState = GlobalState(_globalState);
         tokenInfo = TokenInfo(_tokenInfo);
-        isPriceKeeper[_keeperAddress] = true;
     }
 
-    function initialize(address _orderBook) external {
-        require(_orderBook == address(0), "PriceManager: already initialized");
-        orderBook = OrderBook(_orderBook);
-    }
+    // function initialize(address _orderBook) external {
+    //     require(_orderBook == address(0), "PriceManager: already initialized");
+    //     orderBook = OrderBook(_orderBook);
+    // }
 
     function setPrice(
-        uint256[] calldata _marketId,
-        uint256[] calldata _price, // new index price from the data source
-        bool _isInitialize
-    ) external onlyPriceKeeper {
-        require(_marketId.length == _price.length, "PriceManager: Wrong input");
-        uint256 l = _marketId.length;
+        uint256 _marketId,
+        uint256 _price // new index price from the data source
+    ) external {
+        require(_price > 0, "PriceManager: price has to be positive");
 
-        for (uint256 i = 0; i < l; i++) {
-            require(_price[i] > 0, "PriceManager: price has to be positive");
+        indexPrices[_marketId] = _price;
+        // int256 currentPriceBuffer = getPriceBuffer(_marketId[i]); // % of price shift
 
-            indexPrices[_marketId[i]] = _price[i];
-            // int256 currentPriceBuffer = getPriceBuffer(_marketId[i]); // % of price shift
+        // int256 currentPriceBufferInUsd = ((_price[i]).toInt256() *
+        //     currentPriceBuffer) / (PRICE_BUFFER_PRECISION).toInt256();
 
-            // int256 currentPriceBufferInUsd = ((_price[i]).toInt256() *
-            //     currentPriceBuffer) / (PRICE_BUFFER_PRECISION).toInt256();
+        // // int prevMarkPrice = indexPrice[_marketId[i]] +
+        // //     currentPriceBufferInUsd;
+        // uint256 currentMarkPrice = ((_price[i]).toInt256() +
+        //     currentPriceBufferInUsd).toUint256();
 
-            // // int prevMarkPrice = indexPrice[_marketId[i]] +
-            // //     currentPriceBufferInUsd;
-            // uint256 currentMarkPrice = ((_price[i]).toInt256() +
-            //     currentPriceBufferInUsd).toUint256();
+        // uint256 markPriceWithLimitOrderPriceImpact;
 
-            // uint256 markPriceWithLimitOrderPriceImpact;
-
-            bool checkBuyOrderBook = _price[i] < indexPrices[_marketId[i]];
-
-            if (_isInitialize) {
-                // markPriceWithLimitOrderPriceImpact = currentMarkPrice;
-            } else {
-                orderBook.executeLimitOrders(
-                    checkBuyOrderBook, // isBuy
-                    _marketId[i]
-                );
-            }
-
-            // console.log(
-            //     "PriceManager: markPriceWithLimitOrderPriceImpact: ",
-            //     markPriceWithLimitOrderPriceImpact
-            // );
-            /*
+        // console.log(
+        //     "PriceManager: markPriceWithLimitOrderPriceImpact: ",
+        //     markPriceWithLimitOrderPriceImpact
+        // );
+        /*
             // TODO: set price with markPriceWithLimitOrderPriceImpact
             int256 newPriceBuffer = (((markPriceWithLimitOrderPriceImpact)
                 .toInt256() - (_price[i]).toInt256()) *
@@ -103,7 +71,6 @@ contract PriceManager {
             console.log("PriceManager: _price[i]: ", _price[i]);
             console.log("\n");
             */
-        }
     }
 
     /* 

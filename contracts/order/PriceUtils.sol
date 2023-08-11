@@ -11,7 +11,7 @@ contract PriceUtils {
         uint256 _marketId,
         uint256 _size,
         bool _isLong
-    ) internal returns (uint256) {
+    ) internal view returns (uint256) {
         /**
          * // TODO: impl
          * @dev Jae Yoon
@@ -19,11 +19,11 @@ contract PriceUtils {
         return priceManager.getAvgExecPrice(_marketId, _size, _isLong);
     }
 
-    function _getMarkPrice(uint256 _marketId) internal returns (uint256) {
+    function _getMarkPrice(uint256 _marketId) internal view returns (uint256) {
         return priceManager.getMarkPrice(_marketId);
     }
 
-    function _getIndexPrice(uint256 _marketId) internal returns (uint256) {
+    function _getIndexPrice(uint256 _marketId) internal view returns (uint256) {
         return priceManager.getIndexPrice(_marketId);
     }
 }
