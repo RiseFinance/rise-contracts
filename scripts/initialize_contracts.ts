@@ -18,8 +18,8 @@ export async function initialize() {
   const l3GatewayAddress = getContractAddress("L3Gateway");
   const testUsdcAddress = getContractAddress("TestUSDC");
 
-  await l2MarginGateway.initialize(l3GatewayAddress);
-  await l2LiquidityGateway.initialize(l3GatewayAddress);
+  // await l2MarginGateway.initialize(l3GatewayAddress);
+  // await l2LiquidityGateway.initialize(l3GatewayAddress);
   await tokenInfo.registerToken(testUsdcAddress, 18);
 
   console.log("Contracts initialized");

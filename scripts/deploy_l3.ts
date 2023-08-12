@@ -177,16 +177,16 @@ async function deployL3Contracts(): Promise<L3Addresses> {
     PriceRouter: priceRouter.address,
   };
 
-  const libraryAddresses = JSON.parse(
-    fs.readFileSync(__dirname + "/output/contractAddresses.json").toString()
-  )["Library"];
+  const _filePath = __dirname + "/output/contractAddresses.json";
 
-  const l2Addresses = JSON.parse(
-    fs.readFileSync(__dirname + "/output/contractAddresses.json").toString()
-  )["L2"];
+  const libraryAddresses = JSON.parse(fs.readFileSync(_filePath).toString())[
+    "Library"
+  ];
+
+  const l2Addresses = JSON.parse(fs.readFileSync(_filePath).toString())["L2"];
 
   fs.writeFileSync(
-    __dirname + "/output/contractAddresses.json",
+    _filePath,
     JSON.stringify(
       { Library: libraryAddresses, L2: l2Addresses, L3: l3Addresses },
       null,
@@ -194,6 +194,10 @@ async function deployL3Contracts(): Promise<L3Addresses> {
     ),
     { flag: "w" }
   );
+
+  fs.chmod(_filePath, 0o777, (err) => {
+    console.log(err);
+  });
 
   return l3Addresses;
 }
