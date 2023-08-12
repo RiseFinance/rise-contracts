@@ -10,7 +10,7 @@ L3Network='l3local'
 
 ##### Preset #####
 
-inbox=$(jq -r '.inbox' $PRESET_PATH)
+inbox=$(jq -r '.Inbox' $PRESET_PATH)
 keeper=$(jq -r '.keeper' $PRESET_PATH)
 
 ##### L2 #####

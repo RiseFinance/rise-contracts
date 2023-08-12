@@ -43,6 +43,15 @@ contract L2MarginGateway is TransferHelper {
         l3GatewayAddress = _l3GatewayAddress;
     }
 
+    function setAllowedBridge(address _allowedBridge) external {
+        // only owner
+        require(
+            allowedBridgesMap[_allowedBridge].index == 0,
+            "L2Gateway: already allowed"
+        );
+        allowedBridgesMap[_allowedBridge].allowed = true;
+    }
+
     // ----------------------- L2 -> L3 Messaging -----------------------
     // Inflow (deposit)
     // TODO: deposit & withdraw ERC-20 (SafeERC20)

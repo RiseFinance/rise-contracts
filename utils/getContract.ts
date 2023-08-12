@@ -2,6 +2,7 @@ import { ethers } from "ethers";
 import * as path from "path";
 import * as fs from "fs";
 import { getContractAddress } from "./getContractAddress";
+import { getPresetAddress } from "./getPresetAddress";
 
 export enum Network {
   L2 = "l2",
@@ -9,9 +10,10 @@ export enum Network {
 }
 
 export function getContract(
-  domainName: string,
+  domainPath: string,
   contractName: string,
-  network: Network
+  network: Network,
+  isPresetAddress?: boolean
 ) {
   const privateKey = process.env.DEPLOY_PRIVATE_KEY as string;
 
@@ -30,13 +32,21 @@ export function getContract(
   const wallet = new ethers.Wallet(privateKey, provider);
 
   const contractAbiPath = path.join(
-    `artifacts/contracts/${domainName}/${contractName}.sol/${contractName}.json`
+    `artifacts/contracts/${domainPath}/${contractName}.sol/${contractName}.json`
   );
   const contractAbiObject = JSON.parse(
     fs.readFileSync(contractAbiPath).toString()
   );
   const contractAbi = contractAbiObject["abi"];
-  const contractAddress = getContractAddress(contractName);
+
+  let contractAddress;
+
+  if (isPresetAddress) {
+    contractAddress = getPresetAddress(contractName);
+  } else {
+    contractAddress = getContractAddress(contractName);
+  }
+
   const contract = new ethers.Contract(contractAddress, contractAbi, wallet);
 
   return contract;
