@@ -64,7 +64,6 @@ npx hardhat verify --network $L3Network --contract contracts/order/OrderValidato
 npx hardhat verify --network $L3Network --contract contracts/order/OrderHistory.sol:OrderHistory $OrderHistory "$TraderVault"
 npx hardhat verify --network $L3Network --contract contracts/position/PositionHistory.sol:PositionHistory $PositionHistory "$PositionVault" "$TraderVault"
 npx hardhat verify --network $L3Network --contract contracts/order/MarketOrder.sol:MarketOrder $MarketOrder "$TraderVault" "$RisePool" "$Market" "$PositionHistory" "$PositionVault" "$OrderValidator" "$OrderHistory" "$GlobalState"
-npx hardhat verify --network $L3Network --contract contracts/order/OrderBook.sol:OrderBook $OrderBook "$TraderVault" "$RisePool" "$Market" "$PositionHIstory" "$PositionVault"
+npx hardhat verify --network $L3Network --contract contracts/orderbook/OrderBook.sol:OrderBook $OrderBook "$TraderVault" "$RisePool" "$Market" "$PositionHIstory" "$PositionVault"
 npx hardhat verify --network $L3Network --contract contracts/order/OrderRouter.sol:OrderRouter $OrderRouter "$MarketOrder" "$OrderBook"
 npx hardhat verify --network $L3Network --contract contracts/oracle/PriceRouter.sol:PriceRouter $PriceRouter "$PriceManager" "$OrderBook" "$keeper"
-

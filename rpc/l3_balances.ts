@@ -14,7 +14,7 @@ async function main() {
 
     // ==================== Call Contract Functions ====================
 
-    const deployer = await getPresetAddress("deployer");
+    const deployer = getPresetAddress("deployer");
     const usdcAddress = getContractAddress("TestUSDC");
     console.log("usdcAddress: ", usdcAddress);
 

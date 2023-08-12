@@ -17,7 +17,7 @@ async function main() {
 }
 
 async function deployL2Contracts(): Promise<L2Addresses> {
-  const _inbox = await getPresetAddress("inbox");
+  const _inbox = getPresetAddress("inbox");
 
   // test USDC
   const usdc = await deployContract("TestUSDC");

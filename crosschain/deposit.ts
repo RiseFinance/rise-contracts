@@ -1,4 +1,4 @@
-import { ethers } from "hardhat";
+import { ethers } from "ethers";
 import { getContract, Network } from "../utils/getContract";
 import { getContractAddress } from "../utils/getContractAddress";
 
@@ -15,20 +15,19 @@ async function main() {
     // ==================== Call Contract Functions ====================
     const usdcAddress = getContractAddress("TestUSDC");
 
-    const depositAmount = ethers.utils.parseUnits("1350", 18); // 1350 USDC
-    const _maxSubmissionCost = ethers.utils.parseEther("0.1");
-    const _gasLimit = ethers.BigNumber.from("3000000");
-    const _gasPriceBid = ethers.BigNumber.from("150000000"); // 0.15gwei
+    const depositAmount = ethers.utils.parseUnits("3350", 18); // 1350 USDC
+
     const gasParams = {
-      maxSubmissionCost: _maxSubmissionCost,
-      gasLimit: _gasLimit,
-      gasPriceBid: _gasPriceBid,
+      _maxSubmissionCost: ethers.utils.parseEther("0.01"),
+      _gasLimit: ethers.BigNumber.from("3000000"),
+      _gasPriceBid: ethers.BigNumber.from("150000000"),
     };
     const tx = await l2MarginGateway.depositERC20ToL3(
       usdcAddress, // _token
       depositAmount, // _depositAmount
       gasParams, // L2ToL3FeeParams
       {
+        value: ethers.utils.parseEther("0.01045"), // for L3 gas fee
         gasLimit: ethers.BigNumber.from("3000000"),
       }
     );

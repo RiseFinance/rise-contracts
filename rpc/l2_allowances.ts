@@ -12,29 +12,13 @@ async function main() {
     // ==================== Call Contract Functions ====================
 
     const deployer = getPresetAddress("deployer");
+    const l2Vault = getContractAddress("L2Vault");
 
     const tokenSymbol = await testUsdc.symbol();
-    console.log(">> tokenSymbol: ", tokenSymbol);
-    console.log(
-      ">>> Total Supply: ",
-      ethers.utils.formatEther(await testUsdc.totalSupply())
-    );
-    console.log(">>> Name: ", await testUsdc.name());
-    console.log(">>> Symbol: ", tokenSymbol);
-
-    console.log("---------------------------------");
 
     console.log(
-      ">>> Deployer's tUSDC balance on L2 : ",
-      ethers.utils.formatEther(await testUsdc.balanceOf(deployer)),
-      tokenSymbol
-    );
-
-    console.log(
-      ">>> L2Vault's tUSDC balance on L2 : ",
-      ethers.utils.formatEther(
-        await testUsdc.balanceOf(getContractAddress("L2Vault"))
-      ),
+      ">>> Deployer's tUSDC allowance for L2Vault on L2 : ",
+      ethers.utils.formatEther(await testUsdc.allowance(deployer, l2Vault)), // _owner, _spender
       tokenSymbol
     );
 

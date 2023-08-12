@@ -3,8 +3,6 @@ import { getContract, Network } from "../utils/getContract";
 import { getPresetAddress } from "../utils/getPresetAddress";
 import { getContractAddress } from "../utils/getContractAddress";
 
-// check test USDC balance on L2
-
 async function main() {
   try {
     // ========================= Set Contract  =========================
@@ -12,29 +10,23 @@ async function main() {
     // ==================== Call Contract Functions ====================
 
     const deployer = getPresetAddress("deployer");
-
+    const l2Vault = getContractAddress("L2Vault");
     const tokenSymbol = await testUsdc.symbol();
-    console.log(">> tokenSymbol: ", tokenSymbol);
-    console.log(
-      ">>> Total Supply: ",
-      ethers.utils.formatEther(await testUsdc.totalSupply())
-    );
-    console.log(">>> Name: ", await testUsdc.name());
-    console.log(">>> Symbol: ", tokenSymbol);
-
-    console.log("---------------------------------");
 
     console.log(
-      ">>> Deployer's tUSDC balance on L2 : ",
-      ethers.utils.formatEther(await testUsdc.balanceOf(deployer)),
+      ">>> Initial allowance:",
+      ethers.utils.formatEther(await testUsdc.allowance(deployer, l2Vault)), // _owner, _spender
       tokenSymbol
     );
 
+    const _amount = ethers.utils.parseEther("300000");
+
+    await testUsdc.approve(l2Vault, _amount); // _spender, _value
+    console.log(">>> Approved.");
+
     console.log(
-      ">>> L2Vault's tUSDC balance on L2 : ",
-      ethers.utils.formatEther(
-        await testUsdc.balanceOf(getContractAddress("L2Vault"))
-      ),
+      ">>> Final allowance:",
+      ethers.utils.formatEther(await testUsdc.allowance(deployer, l2Vault)), // _owner, _spender
       tokenSymbol
     );
 
