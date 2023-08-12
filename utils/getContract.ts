@@ -8,7 +8,7 @@ export enum Network {
   L3 = "l3",
 }
 
-export async function getContract(
+export function getContract(
   domainName: string,
   contractName: string,
   network: Network

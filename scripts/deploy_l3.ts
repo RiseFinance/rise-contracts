@@ -26,10 +26,10 @@ async function main() {
 }
 
 async function deployL3Contracts(): Promise<L3Addresses> {
-  const mathUtils = await getContractAddress("MathUtils"); // library
-  const l2MarginGateway = await getContractAddress("L2MarginGateway");
-  const l2LiquidityGateway = await getContractAddress("L2LiquidityGateway");
-  const keeper = await getPresetAddress("keeper");
+  const mathUtils = getContractAddress("MathUtils"); // library
+  const l2MarginGateway = getContractAddress("L2MarginGateway");
+  const l2LiquidityGateway = getContractAddress("L2LiquidityGateway");
+  const keeper = getPresetAddress("keeper");
 
   // TraderVault
   const traderVault = await deployContract("TraderVault");

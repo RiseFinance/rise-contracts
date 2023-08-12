@@ -6,16 +6,16 @@ async function main() {
   try {
     // ========================= Set Contract  =========================
 
-    const l2MarginGateway = await getContract(
+    const l2MarginGateway = getContract(
       "crosschain",
       "L2MarginGateway",
       Network.L2
     );
 
     // ==================== Call Contract Functions ====================
-    const usdcAddress = getContractAddress("USDC");
+    const usdcAddress = getContractAddress("TestUSDC");
 
-    const depositAmount = ethers.utils.parseUnits("350", 6); // 350 USDC
+    const depositAmount = ethers.utils.parseUnits("1350", 18); // 1350 USDC
     const _maxSubmissionCost = ethers.utils.parseEther("0.1");
     const _gasLimit = ethers.BigNumber.from("3000000");
     const _gasPriceBid = ethers.BigNumber.from("150000000"); // 0.15gwei

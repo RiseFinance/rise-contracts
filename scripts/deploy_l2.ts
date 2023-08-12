@@ -3,7 +3,7 @@ import { deployContract } from "../utils/deployer";
 import { getPresetAddress } from "../utils/getPresetAddress";
 
 export type L2Addresses = {
-  USDC: string;
+  TestUSDC: string;
   Market: string;
   TokenInfo: string;
   L2Vault: string;
@@ -62,7 +62,7 @@ async function deployL2Contracts(): Promise<L2Addresses> {
   console.log("---------------------------------------------");
 
   const l2Addresses = {
-    USDC: usdc.address,
+    TestUSDC: usdc.address,
     Market: market.address,
     TokenInfo: tokenInfo.address,
     L2Vault: l2Vault.address,
