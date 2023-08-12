@@ -15,12 +15,6 @@ import "../token/RM.sol";
 import "./L2Vault.sol";
 
 contract L2LiquidityGateway is TransferHelper {
-    address public l3GatewayAddress;
-    RisePoolUtils public risePoolUtils;
-    L2Vault public l2Vault;
-    Market public market;
-    IInbox public inbox;
-
     error NotBridge(address sender); // TODO: move to errors
 
     struct InOutInfo {
@@ -28,7 +22,13 @@ contract L2LiquidityGateway is TransferHelper {
         bool allowed;
     }
 
-    mapping(address => InOutInfo) private allowedBridgesMap; // TODO: add setter
+    address public l3GatewayAddress;
+    RisePoolUtils public risePoolUtils;
+    L2Vault public l2Vault;
+    Market public market;
+    IInbox public inbox;
+
+    mapping(address => InOutInfo) public allowedBridgesMap; // TODO: add setter
 
     // event RetryableTicketCreated(uint256 indexed ticketId);
 

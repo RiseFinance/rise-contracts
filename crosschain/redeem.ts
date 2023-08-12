@@ -40,11 +40,11 @@ async function main() {
     // appchain should maintain a variable to store the latest merkle tree size.
 
     const txHash =
-      "0xe1c266b816923c3babcc4fa12d5bf60efcfe3dc7329017b194a97489ffae486f";
+      "0xd507efd2c662b89b3288a6baa9c6be900463d7de6b7bbd3e8991b5c99651c48c";
 
     const l3EventLog: L2ToL1Tx = await fetchL3EventLogs(txHash);
 
-    const size = 6; // TODO: set
+    const size = 7; // TODO: set
     const leaf = l3EventLog.position;
     const merkleProof = (await nodeInterface.constructOutboxProof(size, leaf))
       .proof;
@@ -61,6 +61,7 @@ async function main() {
       l3EventLog.data, // data
       { gasLimit: ethers.BigNumber.from("30000000") }
     );
+    redeemTx.wait();
 
     console.log(">>> redeemTx: ", redeemTx);
 

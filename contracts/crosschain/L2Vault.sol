@@ -16,7 +16,16 @@ contract L2Vault is TransferHelper {
         bool allowed;
     }
 
-    mapping(address => InOutInfo) private allowedL2GatewaysMap; // TODO: add setter
+    mapping(address => InOutInfo) public allowedL2GatewaysMap; // TODO: add setter
+
+    function setAllowedGateway(address _allowedL2Gateway) external {
+        // only owner
+        require(
+            allowedL2GatewaysMap[_allowedL2Gateway].index == 0,
+            "L2Gateway: already allowed"
+        );
+        allowedL2GatewaysMap[_allowedL2Gateway].allowed = true;
+    }
 
     // send Deposit & Liquidity tokens here from L2 gateways.
     // Holds all the funds deposited by users and liquidity providers.

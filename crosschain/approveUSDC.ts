@@ -21,7 +21,8 @@ async function main() {
 
     const _amount = ethers.utils.parseEther("300000");
 
-    await testUsdc.approve(l2Vault, _amount); // _spender, _value
+    const tx = await testUsdc.approve(l2Vault, _amount); // _spender, _value
+    tx.wait();
     console.log(">>> Approved.");
 
     console.log(

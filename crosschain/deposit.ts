@@ -31,6 +31,7 @@ async function main() {
         gasLimit: ethers.BigNumber.from("3000000"),
       }
     );
+    tx.wait();
     console.log(">> tx: ", tx.hash);
 
     // =================================================================

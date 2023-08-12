@@ -3,6 +3,8 @@ import { getContractAddress } from "../utils/getContractAddress";
 import { getPresetAddress } from "../utils/getPresetAddress";
 
 export async function initialize() {
+  const l2Vault = getContract("crosschain", "L2Vault", Network.L2);
+
   const l2MarginGateway = getContract(
     "crosschain",
     "L2MarginGateway",
@@ -17,6 +19,7 @@ export async function initialize() {
   const tokenInfoL3 = getContract("market", "TokenInfo", Network.L3);
 
   // initialization parameters
+
   const l3GatewayAddress = getContractAddress("L3Gateway");
   const testUsdcAddress = getContractAddress("TestUSDC");
   const bridgeAddress = getPresetAddress("Bridge");
@@ -25,6 +28,9 @@ export async function initialize() {
   await l2MarginGateway.setAllowedBridge(bridgeAddress);
   await l2LiquidityGateway.initialize(l3GatewayAddress);
   await l2LiquidityGateway.setAllowedBridge(bridgeAddress);
+
+  await l2Vault.setAllowedGateway(l2MarginGateway.address);
+  await l2Vault.setAllowedGateway(l2LiquidityGateway.address);
 
   await tokenInfoL2.registerToken(testUsdcAddress, 18);
   await tokenInfoL3.registerToken(testUsdcAddress, 18);

@@ -28,7 +28,8 @@ async function main() {
         gasLimit: ethers.BigNumber.from("3000000"),
       }
     );
-    console.log(">>> triggerWithdrawalFromL2 tx: ", tx);
+    tx.wait();
+    console.log(">>> triggerWithdrawalFromL2 tx: ", tx.hash);
 
     // =================================================================
   } catch (e) {

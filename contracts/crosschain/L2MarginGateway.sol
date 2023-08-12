@@ -13,11 +13,6 @@ import "./L2Vault.sol";
 import {ETH_ID} from "../common/constants.sol";
 
 contract L2MarginGateway is TransferHelper {
-    address public l3GatewayAddress;
-    TokenInfo public tokenInfo;
-    L2Vault public l2Vault;
-    IInbox public inbox;
-
     error NotBridge(address sender); // TODO: move to errors
 
     struct InOutInfo {
@@ -25,7 +20,12 @@ contract L2MarginGateway is TransferHelper {
         bool allowed;
     }
 
-    mapping(address => InOutInfo) private allowedBridgesMap;
+    address public l3GatewayAddress;
+    TokenInfo public tokenInfo;
+    L2Vault public l2Vault;
+    IInbox public inbox;
+
+    mapping(address => InOutInfo) public allowedBridgesMap;
 
     // event RetryableTicketCreated(uint256 indexed ticketId);
 
