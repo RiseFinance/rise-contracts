@@ -1,7 +1,7 @@
 import * as path from "path";
 import * as fs from "fs";
 
-export function getPresetAddress(contractName: string) {
+export function getPresetAddress(name: string) {
   const addressesPath = path.join(`scripts/input/presetAddresses.json`);
   const addressesObject = JSON.parse(fs.readFileSync(addressesPath).toString());
 
@@ -9,5 +9,5 @@ export function getPresetAddress(contractName: string) {
 
   // check Library first then L2 then L3
 
-  return addressesObject[contractName];
+  return addressesObject[name];
 }

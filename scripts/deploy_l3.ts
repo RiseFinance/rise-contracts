@@ -26,10 +26,10 @@ async function main() {
 }
 
 async function deployL3Contracts(): Promise<L3Addresses> {
-  const mathUtils = await getContractAddress("MathUtils"); // library
-  const l2MarginGateway = await getContractAddress("L2MarginGateway");
-  const l2LiquidityGateway = await getContractAddress("L2LiquidityGateway");
-  const keeper = await getPresetAddress("keeper");
+  const mathUtils = getContractAddress("MathUtils"); // library
+  const l2MarginGateway = getContractAddress("L2MarginGateway");
+  const l2LiquidityGateway = getContractAddress("L2LiquidityGateway");
+  const keeper = getPresetAddress("keeper");
 
   // TraderVault
   const traderVault = await deployContract("TraderVault");
@@ -140,22 +140,22 @@ async function deployL3Contracts(): Promise<L3Addresses> {
 
   console.log("---------------------------------------------");
   console.log(">>> L3 Contracts Deployed:");
-  console.log("TraderVault: ", traderVault.address);
-  console.log("Market: ", market.address);
-  console.log("TokenInfo: ", tokenInfo.address);
-  console.log("RisePool: ", risePool.address);
-  console.log("GlobalState: ", globalState.address);
-  console.log("L3Gateway: ", l3Gateway.address);
-  console.log("PriceManager: ", priceManager.address);
-  console.log("Funding: ", funding.address);
-  console.log("PositionVault: ", positionVault.address);
-  console.log("OrderValidator: ", orderValidator.address);
-  console.log("OrderHistory: ", orderHistory.address);
-  console.log("PositionHistory: ", positionHistory.address);
-  console.log("MarketOrder: ", marketOrder.address);
-  console.log("OrderBook: ", orderBook.address);
-  console.log("OrderRouter: ", orderRouter.address);
-  console.log("PriceRouter: ", priceRouter.address);
+  console.log("TraderVault:", traderVault.address);
+  console.log("Market:", market.address);
+  console.log("TokenInfo:", tokenInfo.address);
+  console.log("RisePool:", risePool.address);
+  console.log("GlobalState:", globalState.address);
+  console.log("L3Gateway:", l3Gateway.address);
+  console.log("PriceManager:", priceManager.address);
+  console.log("Funding:", funding.address);
+  console.log("PositionVault:", positionVault.address);
+  console.log("OrderValidator:", orderValidator.address);
+  console.log("OrderHistory:", orderHistory.address);
+  console.log("PositionHistory:", positionHistory.address);
+  console.log("MarketOrder:", marketOrder.address);
+  console.log("OrderBook:", orderBook.address);
+  console.log("OrderRouter:", orderRouter.address);
+  console.log("PriceRouter:", priceRouter.address);
   console.log("---------------------------------------------");
 
   const l3Addresses = {
@@ -177,16 +177,16 @@ async function deployL3Contracts(): Promise<L3Addresses> {
     PriceRouter: priceRouter.address,
   };
 
-  const libraryAddresses = JSON.parse(
-    fs.readFileSync(__dirname + "/output/contractAddresses.json").toString()
-  )["Library"];
+  const _filePath = __dirname + "/output/contractAddresses.json";
 
-  const l2Addresses = JSON.parse(
-    fs.readFileSync(__dirname + "/output/contractAddresses.json").toString()
-  )["L2"];
+  const libraryAddresses = JSON.parse(fs.readFileSync(_filePath).toString())[
+    "Library"
+  ];
+
+  const l2Addresses = JSON.parse(fs.readFileSync(_filePath).toString())["L2"];
 
   fs.writeFileSync(
-    __dirname + "/output/contractAddresses.json",
+    _filePath,
     JSON.stringify(
       { Library: libraryAddresses, L2: l2Addresses, L3: l3Addresses },
       null,
@@ -194,6 +194,10 @@ async function deployL3Contracts(): Promise<L3Addresses> {
     ),
     { flag: "w" }
   );
+
+  fs.chmod(_filePath, 0o777, (err) => {
+    console.log(err);
+  });
 
   return l3Addresses;
 }

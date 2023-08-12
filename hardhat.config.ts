@@ -28,6 +28,16 @@ const config: HardhatUserConfig = {
   },
   etherscan: {
     apiKey: process.env.ARBISCAN_API_KEY as string,
+    customChains: [
+      {
+        network: "l3local",
+        chainId: 71349615649,
+        urls: {
+          apiURL: "http://localhost:4000/api",
+          browserURL: "http://localhost:4000",
+        },
+      },
+    ],
   },
 };
 

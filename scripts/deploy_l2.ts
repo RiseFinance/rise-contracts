@@ -3,7 +3,7 @@ import { deployContract } from "../utils/deployer";
 import { getPresetAddress } from "../utils/getPresetAddress";
 
 export type L2Addresses = {
-  USDC: string;
+  TestUSDC: string;
   Market: string;
   TokenInfo: string;
   L2Vault: string;
@@ -20,7 +20,7 @@ async function deployL2Contracts(): Promise<L2Addresses> {
   const _inbox = await getPresetAddress("inbox");
 
   // test USDC
-  const usdc = await deployContract("USDC");
+  const usdc = await deployContract("TestUSDC");
 
   // Market
   const market = await deployContract("Market");
@@ -52,17 +52,17 @@ async function deployL2Contracts(): Promise<L2Addresses> {
 
   console.log("---------------------------------------------");
   console.log(">>> L2 Contracts Deployed:");
-  console.log("test USDC: ", usdc.address);
-  console.log("Market: ", market.address);
-  console.log("TokenInfo: ", tokenInfo.address);
-  console.log("L2Vault: ", l2Vault.address);
-  console.log("L2MarginGateway: ", l2MarginGateway.address);
-  console.log("RisePoolUtils: ", risePoolUtils.address);
-  console.log("L2LiquidityGateway: ", l2LiquidityGateway.address);
+  console.log("Test USDC:", usdc.address);
+  console.log("Market:", market.address);
+  console.log("TokenInfo:", tokenInfo.address);
+  console.log("L2Vault:", l2Vault.address);
+  console.log("L2MarginGateway:", l2MarginGateway.address);
+  console.log("RisePoolUtils:", risePoolUtils.address);
+  console.log("L2LiquidityGateway:", l2LiquidityGateway.address);
   console.log("---------------------------------------------");
 
   const l2Addresses = {
-    USDC: usdc.address,
+    TestUSDC: usdc.address,
     Market: market.address,
     TokenInfo: tokenInfo.address,
     L2Vault: l2Vault.address,
@@ -71,15 +71,21 @@ async function deployL2Contracts(): Promise<L2Addresses> {
     L2LiquidityGateway: l2LiquidityGateway.address,
   };
 
-  const libraryAddresses = JSON.parse(
-    fs.readFileSync(__dirname + "/output/contractAddresses.json").toString()
-  )["Library"];
+  const _filePath = __dirname + "/output/contractAddresses.json";
+
+  const libraryAddresses = JSON.parse(fs.readFileSync(_filePath).toString())[
+    "Library"
+  ];
 
   fs.writeFileSync(
-    __dirname + "/output/contractAddresses.json",
+    _filePath,
     JSON.stringify({ Library: libraryAddresses, L2: l2Addresses }, null, 2),
     { flag: "w" }
   );
+
+  fs.chmod(_filePath, 0o777, (err) => {
+    console.log(err);
+  });
 
   return l2Addresses;
 }

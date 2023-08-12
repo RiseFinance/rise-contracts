@@ -1,46 +1,35 @@
-import { ethers } from "hardhat";
-import { getContract } from "../utils/getContract";
+import { getContract, Network } from "../utils/getContract";
+import { getContractAddress } from "../utils/getContractAddress";
 
-export async function initialize(
-  _l2MarginGateway: string,
-  _l2LiquidityGateway: string,
-  _l3Gateway: string,
-  _priceManager: string,
-  _orderBook: string
-) {
-  const privateKey = process.env.DEPLOY_PRIVATE_KEY as string;
-
-  const l2Provider = new ethers.providers.JsonRpcProvider(
-    "https://goerli-rollup.arbitrum.io/rpc"
-  );
-
-  const l3Provider = new ethers.providers.JsonRpcProvider(
-    "http://localhost:8449"
-  );
-
-  const l2Wallet = new ethers.Wallet(privateKey, l2Provider);
-  const l3Wallet = new ethers.Wallet(privateKey, l3Provider);
-
-  const l2MarginGateway = await getContract(
+export async function initialize() {
+  const l2MarginGateway = getContract(
     "crosschain",
     "L2MarginGateway",
-    _l2MarginGateway,
-    l2Wallet
+    Network.L2
   );
-  const l2LiquidityGateway = await getContract(
+  const l2LiquidityGateway = getContract(
     "crosschain",
     "L2LiquidityGateway",
-    _l2LiquidityGateway,
-    l2Wallet
+    Network.L2
   );
-  const priceManager = await getContract(
-    "oracle",
-    "PriceManager",
-    _priceManager,
-    l3Wallet
-  );
+  const tokenInfo = getContract("market", "TokenInfo", Network.L3);
 
-  l2MarginGateway.initialize(_l3Gateway);
-  l2LiquidityGateway.initialize(_l3Gateway);
-  priceManager.initialize(_orderBook);
+  // initialization parameters
+  const l3GatewayAddress = getContractAddress("L3Gateway");
+  const testUsdcAddress = getContractAddress("TestUSDC");
+
+  // await l2MarginGateway.initialize(l3GatewayAddress);
+  // await l2LiquidityGateway.initialize(l3GatewayAddress);
+  await tokenInfo.registerToken(testUsdcAddress, 18);
+
+  console.log("Contracts initialized");
 }
+
+async function main() {
+  await initialize();
+}
+
+main().catch((error) => {
+  console.error(error);
+  process.exitCode = 1;
+});
