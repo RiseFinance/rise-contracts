@@ -20,7 +20,7 @@ async function deployL2Contracts(): Promise<L2Addresses> {
   const _inbox = await getPresetAddress("inbox");
 
   // test USDC
-  const usdc = await deployContract("USDC");
+  const usdc = await deployContract("TestUSDC");
 
   // Market
   const market = await deployContract("Market");
@@ -52,13 +52,13 @@ async function deployL2Contracts(): Promise<L2Addresses> {
 
   console.log("---------------------------------------------");
   console.log(">>> L2 Contracts Deployed:");
-  console.log("test USDC: ", usdc.address);
-  console.log("Market: ", market.address);
-  console.log("TokenInfo: ", tokenInfo.address);
-  console.log("L2Vault: ", l2Vault.address);
-  console.log("L2MarginGateway: ", l2MarginGateway.address);
-  console.log("RisePoolUtils: ", risePoolUtils.address);
-  console.log("L2LiquidityGateway: ", l2LiquidityGateway.address);
+  console.log("Test USDC:", usdc.address);
+  console.log("Market:", market.address);
+  console.log("TokenInfo:", tokenInfo.address);
+  console.log("L2Vault:", l2Vault.address);
+  console.log("L2MarginGateway:", l2MarginGateway.address);
+  console.log("RisePoolUtils:", risePoolUtils.address);
+  console.log("L2LiquidityGateway:", l2LiquidityGateway.address);
   console.log("---------------------------------------------");
 
   const l2Addresses = {

@@ -1,46 +1,30 @@
-import { ethers } from "hardhat";
-import { getContract } from "../utils/getContract";
+import { getContract, Network } from "../utils/getContract";
+import { getContractAddress } from "../utils/getContractAddress";
 
-export async function initialize(
-  _l2MarginGateway: string,
-  _l2LiquidityGateway: string,
-  _l3Gateway: string,
-  _priceManager: string,
-  _orderBook: string
-) {
-  const privateKey = process.env.DEPLOY_PRIVATE_KEY as string;
-
-  const l2Provider = new ethers.providers.JsonRpcProvider(
-    "https://goerli-rollup.arbitrum.io/rpc"
-  );
-
-  const l3Provider = new ethers.providers.JsonRpcProvider(
-    "http://localhost:8449"
-  );
-
-  const l2Wallet = new ethers.Wallet(privateKey, l2Provider);
-  const l3Wallet = new ethers.Wallet(privateKey, l3Provider);
-
+export async function initialize() {
   const l2MarginGateway = await getContract(
     "crosschain",
     "L2MarginGateway",
-    _l2MarginGateway,
-    l2Wallet
+    Network.L2
   );
   const l2LiquidityGateway = await getContract(
     "crosschain",
     "L2LiquidityGateway",
-    _l2LiquidityGateway,
-    l2Wallet
-  );
-  const priceManager = await getContract(
-    "oracle",
-    "PriceManager",
-    _priceManager,
-    l3Wallet
+    Network.L2
   );
 
-  l2MarginGateway.initialize(_l3Gateway);
-  l2LiquidityGateway.initialize(_l3Gateway);
-  priceManager.initialize(_orderBook);
+  // initialization parameters
+  const l3GatewayAddress = getContractAddress("L3Gateway");
+
+  l2MarginGateway.initialize(l3GatewayAddress);
+  l2LiquidityGateway.initialize(l3GatewayAddress);
 }
+
+async function main() {
+  await initialize();
+}
+
+main().catch((error) => {
+  console.error(error);
+  process.exitCode = 1;
+});

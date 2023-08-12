@@ -140,22 +140,22 @@ async function deployL3Contracts(): Promise<L3Addresses> {
 
   console.log("---------------------------------------------");
   console.log(">>> L3 Contracts Deployed:");
-  console.log("TraderVault: ", traderVault.address);
-  console.log("Market: ", market.address);
-  console.log("TokenInfo: ", tokenInfo.address);
-  console.log("RisePool: ", risePool.address);
-  console.log("GlobalState: ", globalState.address);
-  console.log("L3Gateway: ", l3Gateway.address);
-  console.log("PriceManager: ", priceManager.address);
-  console.log("Funding: ", funding.address);
-  console.log("PositionVault: ", positionVault.address);
-  console.log("OrderValidator: ", orderValidator.address);
-  console.log("OrderHistory: ", orderHistory.address);
-  console.log("PositionHistory: ", positionHistory.address);
-  console.log("MarketOrder: ", marketOrder.address);
-  console.log("OrderBook: ", orderBook.address);
-  console.log("OrderRouter: ", orderRouter.address);
-  console.log("PriceRouter: ", priceRouter.address);
+  console.log("TraderVault:", traderVault.address);
+  console.log("Market:", market.address);
+  console.log("TokenInfo:", tokenInfo.address);
+  console.log("RisePool:", risePool.address);
+  console.log("GlobalState:", globalState.address);
+  console.log("L3Gateway:", l3Gateway.address);
+  console.log("PriceManager:", priceManager.address);
+  console.log("Funding:", funding.address);
+  console.log("PositionVault:", positionVault.address);
+  console.log("OrderValidator:", orderValidator.address);
+  console.log("OrderHistory:", orderHistory.address);
+  console.log("PositionHistory:", positionHistory.address);
+  console.log("MarketOrder:", marketOrder.address);
+  console.log("OrderBook:", orderBook.address);
+  console.log("OrderRouter:", orderRouter.address);
+  console.log("PriceRouter:", priceRouter.address);
   console.log("---------------------------------------------");
 
   const l3Addresses = {
