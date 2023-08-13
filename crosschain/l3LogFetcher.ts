@@ -5,6 +5,7 @@ export enum L3EventType {
   RedeemScheduled = "RedeemScheduled", // from function call `submitRetryable`
 }
 
+// Topic0 = signature of the event
 enum Topic0 {
   L2ToL1Tx = "0x3e7aafa77dbf186b7fd488006beff893744caa3c4f6f299e8a709fa2087374fc", // event: `L2ToL1Tx`
   RedeemScheduled = "0x5ccd009502509cf28762c67858994d85b163bb6e451f5e9df7c5e18c9c2e123e", // event: `RedeemScheduled`
