@@ -237,6 +237,6 @@ contract L2MarginGateway is TransferHelper {
         if (!allowedBridgesMap[msg.sender].allowed)
             revert NotBridge(msg.sender);
 
-        l2Vault._trasferOutERC20FromL2Vault(_token, _amount, _recipient);
+        l2Vault._transferOutERC20FromL2Vault(_token, _amount, _recipient);
     }
 }

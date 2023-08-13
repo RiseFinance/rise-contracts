@@ -1,5 +1,6 @@
 import { ethers } from "ethers";
-import { getContract, Network } from "../utils/getContract";
+import { Network } from "../utils/enum";
+import { getContract } from "../utils/getContract";
 
 async function main() {
   try {

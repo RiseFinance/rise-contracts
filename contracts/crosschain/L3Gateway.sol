@@ -77,7 +77,9 @@ contract L3Gateway is IL3Gateway {
 
         traderVault.decreaseTraderBalance(_trader, _assetId, _amount);
 
+        // FIXME: token address not registered in L3 TokenInfo contract (currently)
         address tokenAddress = tokenInfo.getTokenAddressFromAssetId(_assetId);
+        // FIXME: currently not working
 
         bytes4 selector;
         bytes memory data;

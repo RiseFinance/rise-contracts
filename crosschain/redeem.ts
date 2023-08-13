@@ -1,9 +1,6 @@
 import { ethers } from "ethers";
-import {
-  getContract,
-  getReadonlyContract,
-  Network,
-} from "../utils/getContract";
+import { Network, ContractType } from "../utils/enum";
+import { getContract, getReadonlyContract } from "../utils/getContract";
 import { getContractAddress } from "../utils/getContractAddress";
 import {
   fetchL3EventLogs,
@@ -40,8 +37,11 @@ async function main() {
     // ==================== Call Contract Functions ====================
     // note: position, index, leaf have the same value
 
-    const l3GatewayAddress = getContractAddress("L3Gateway");
-    const l2MarginGatewayAddress = getContractAddress("L2MarginGateway");
+    const l3GatewayAddress = getContractAddress("L3Gateway", ContractType.L3);
+    const l2MarginGatewayAddress = getContractAddress(
+      "L2MarginGateway",
+      ContractType.L2
+    );
 
     // TODO: how to get txHash?
     // function calls: submitRetryable => withdrawAssetToL2
@@ -51,7 +51,7 @@ async function main() {
     // We can get the L3 sender address from
     // L2MarginGateway.triggerWithdrawalFromL2's `MessageDelivered.sender` event field (from L2)
     const submitRetryableTxHash =
-      "0x389a4a851508b7b87e8d934415c9cf2b7e99e926dce0d5bc8aafec84ee168b63";
+      "0xfc7472d4e709428c35d509f4c26a5472614cb3fc8fd8ee3d837989117bc980dc";
 
     const redeemScheduledEventLog: RedeemScheduled = (await fetchL3EventLogs(
       submitRetryableTxHash,

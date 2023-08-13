@@ -1,4 +1,5 @@
 import * as fs from "fs";
+import { Network, ContractType } from "../utils/enum";
 import { deployContract } from "../utils/deployer";
 import { getContractAddress } from "../utils/getContractAddress";
 import { getPresetAddress } from "../utils/getPresetAddress";
@@ -26,9 +27,15 @@ async function main() {
 }
 
 async function deployL3Contracts(): Promise<L3Addresses> {
-  const mathUtils = getContractAddress("MathUtils"); // library
-  const l2MarginGateway = getContractAddress("L2MarginGateway");
-  const l2LiquidityGateway = getContractAddress("L2LiquidityGateway");
+  const mathUtils = getContractAddress("MathUtils", ContractType.Library); // library
+  const l2MarginGateway = getContractAddress(
+    "L2MarginGateway",
+    ContractType.L2
+  );
+  const l2LiquidityGateway = getContractAddress(
+    "L2LiquidityGateway",
+    ContractType.L2
+  );
   const keeper = getPresetAddress("keeper");
 
   // TraderVault

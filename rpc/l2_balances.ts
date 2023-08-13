@@ -1,5 +1,6 @@
 import { ethers } from "ethers";
-import { getContract, Network } from "../utils/getContract";
+import { Network, ContractType } from "../utils/enum";
+import { getContract } from "../utils/getContract";
 import { getPresetAddress } from "../utils/getPresetAddress";
 import { getContractAddress } from "../utils/getContractAddress";
 
@@ -24,7 +25,7 @@ async function main() {
     console.log(
       ">>> L2Vault's tUSDC balance on L2 : ",
       ethers.utils.formatEther(
-        await testUsdc.balanceOf(getContractAddress("L2Vault"))
+        await testUsdc.balanceOf(getContractAddress("L2Vault", ContractType.L2))
       ),
       "tUSDC"
     );

@@ -50,7 +50,7 @@ contract L2Vault is TransferHelper {
     }
 
     // onlyL2Gateway
-    function _trasferOutERC20FromL2Vault(
+    function _transferOutERC20FromL2Vault(
         address _token,
         uint256 _amount,
         address _receiver

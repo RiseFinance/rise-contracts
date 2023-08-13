@@ -1,7 +1,8 @@
 import { ethers } from "ethers";
-import { getContract, Network } from "../utils/getContract";
+import { getContract } from "../utils/getContract";
 import { getPresetAddress } from "../utils/getPresetAddress";
 import { getContractAddress } from "../utils/getContractAddress";
+import { Network, ContractType } from "../utils/enum";
 
 // check test USDC balance on L2
 
@@ -15,7 +16,7 @@ async function main() {
     // ==================== Call Contract Functions ====================
 
     const deployer = getPresetAddress("deployer");
-    const usdcAddress = getContractAddress("TestUSDC");
+    const usdcAddress = getContractAddress("TestUSDC", ContractType.L2);
 
     const usdcAssetId = await tokenInfo.getAssetIdFromTokenAddress(usdcAddress);
 

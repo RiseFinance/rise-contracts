@@ -1,4 +1,5 @@
-import { getContract, Network } from "../utils/getContract";
+import { Network, ContractType } from "../utils/enum";
+import { getContract } from "../utils/getContract";
 import { getContractAddress } from "../utils/getContractAddress";
 import { getPresetAddress } from "../utils/getPresetAddress";
 
@@ -20,24 +21,24 @@ export async function initialize() {
 
   // initialization parameters
 
-  const l3GatewayAddress = getContractAddress("L3Gateway");
-  const testUsdcAddress = getContractAddress("TestUSDC");
+  const l3GatewayAddress = getContractAddress("L3Gateway", ContractType.L3);
+  const testUsdcAddress = getContractAddress("TestUSDC", ContractType.L2);
   const bridgeAddress = getPresetAddress("Bridge");
 
-  await l2MarginGateway.initialize(l3GatewayAddress);
-  await l2MarginGateway.setAllowedBridge(bridgeAddress);
+  // await l2MarginGateway.initialize(l3GatewayAddress);
+  // await l2MarginGateway.setAllowedBridge(bridgeAddress);
   console.log(">>> L2MarginGateway initialized");
 
-  await l2LiquidityGateway.initialize(l3GatewayAddress);
-  await l2LiquidityGateway.setAllowedBridge(bridgeAddress);
+  // await l2LiquidityGateway.initialize(l3GatewayAddress);
+  // await l2LiquidityGateway.setAllowedBridge(bridgeAddress);
   console.log(">>> L2LiquidityGateway initialized");
 
-  await l2Vault.setAllowedGateway(l2MarginGateway.address);
-  await l2Vault.setAllowedGateway(l2LiquidityGateway.address);
+  // await l2Vault.setAllowedGateway(l2MarginGateway.address);
+  // await l2Vault.setAllowedGateway(l2LiquidityGateway.address);
   console.log(">>> L2Vault initialized");
 
-  await tokenInfoL2.registerToken(testUsdcAddress, 18);
-  await tokenInfoL3.registerToken(testUsdcAddress, 18);
+  // await tokenInfoL2.registerToken(testUsdcAddress, 18);
+  await tokenInfoL3.registerToken(testUsdcAddress, 18); // FIXME: not working (tx successful but token not registered on L3)
   console.log(">>> TokenInfo initialized");
 
   console.log("Contracts initialized");

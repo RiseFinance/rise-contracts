@@ -1,5 +1,6 @@
 import { ethers } from "ethers";
-import { getContract, Network } from "../utils/getContract";
+import { Network, ContractType } from "../utils/enum";
+import { getContract } from "../utils/getContract";
 import { getPresetAddress } from "../utils/getPresetAddress";
 import { getContractAddress } from "../utils/getContractAddress";
 
@@ -10,7 +11,7 @@ async function main() {
     // ==================== Call Contract Functions ====================
 
     const deployer = getPresetAddress("deployer");
-    const l2Vault = getContractAddress("L2Vault");
+    const l2Vault = getContractAddress("L2Vault", ContractType.L2);
     const tokenSymbol = await testUsdc.symbol();
 
     console.log(

@@ -1,5 +1,6 @@
 import { ethers } from "ethers";
-import { getContract, Network } from "../utils/getContract";
+import { Network, ContractType } from "../utils/enum";
+import { getContract } from "../utils/getContract";
 import { getContractAddress } from "../utils/getContractAddress";
 
 async function main() {
@@ -13,7 +14,7 @@ async function main() {
     );
 
     // ==================== Call Contract Functions ====================
-    const usdcAddress = getContractAddress("TestUSDC");
+    const usdcAddress = getContractAddress("TestUSDC", ContractType.L2);
 
     const depositAmount = ethers.utils.parseUnits("3350", 18); // 1350 USDC
 
