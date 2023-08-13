@@ -44,28 +44,30 @@ async function main() {
     const l2MarginGatewayAddress = getContractAddress("L2MarginGateway");
 
     // TODO: how to get txHash?
-    // Retryable Ticket => withdrawAssetToL2
+    // function calls: submitRetryable => withdrawAssetToL2
     // get from L3 event logs: while calling submitRetryable, get event log `RedeemScheduled` -> `retryTxHash`
 
     // TODO: set
+    // We can get the L3 sender address from
+    // L2MarginGateway.triggerWithdrawalFromL2's `MessageDelivered.sender` event field (from L2)
     const submitRetryableTxHash =
-      "0x389a4a851508b7b87e8d934415c9cf2b7e99e926dce0d5bc8aafec84ee168b63"; // 이건 L2MarginGateway.triggerWithdrawalFromL2의 `MessageDelivered.sender` 이벤트 필드로 참조 가능 (from L2)
+      "0x389a4a851508b7b87e8d934415c9cf2b7e99e926dce0d5bc8aafec84ee168b63";
 
-    const redeemScheduledEvent: RedeemScheduled = (await fetchL3EventLogs(
+    const redeemScheduledEventLog: RedeemScheduled = (await fetchL3EventLogs(
       submitRetryableTxHash,
       L3EventType.RedeemScheduled
     )) as RedeemScheduled;
 
     // txHash for `withdrawAssetToL2` from L3
-    const withdrawAssetToL2TxHash = redeemScheduledEvent.retryTxHash;
+    const withdrawAssetToL2TxHash = redeemScheduledEventLog.retryTxHash;
 
-    const l2ToL1TxEvent: L2ToL1Tx = (await fetchL3EventLogs(
+    const l2ToL1TxEventLog: L2ToL1Tx = (await fetchL3EventLogs(
       withdrawAssetToL2TxHash,
       L3EventType.L2ToL1Tx
     )) as L2ToL1Tx;
 
     const sendMerkleTreeSize = (await arbSys.sendMerkleTreeState()).size;
-    const leaf = l2ToL1TxEvent.position;
+    const leaf = l2ToL1TxEventLog.position;
 
     // construct a mekle proof for the leaf via the nodeInterface virtual contract interface
     const merkleProof = (
@@ -74,14 +76,14 @@ async function main() {
 
     const redeemTx = await iOutbox.executeTransaction(
       merkleProof,
-      l2ToL1TxEvent.position, // index
+      l2ToL1TxEventLog.position, // index
       l3GatewayAddress, // l2Sender
       l2MarginGatewayAddress, // to
-      l2ToL1TxEvent.arbBlockNum, // l2Block
-      l2ToL1TxEvent.ethBlockNum, // l1Block
-      l2ToL1TxEvent.timestamp, // l2Timestamp
-      l2ToL1TxEvent.callvalue, // value
-      l2ToL1TxEvent.data, // data
+      l2ToL1TxEventLog.arbBlockNum, // l2Block
+      l2ToL1TxEventLog.ethBlockNum, // l1Block
+      l2ToL1TxEventLog.timestamp, // l2Timestamp
+      l2ToL1TxEventLog.callvalue, // value
+      l2ToL1TxEventLog.data, // data
       { gasLimit: ethers.BigNumber.from("30000000") }
     );
 
