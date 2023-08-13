@@ -1,15 +1,12 @@
 import * as path from "path";
 import * as fs from "fs";
-import { ContractType } from "../utils/enum";
+import { Network } from "./network";
 
-export function getContractAddress(
-  contractName: string,
-  contractType: ContractType
-) {
+export function getContractAddress(contractName: string, network: Network) {
   const addressesPath = path.join(`scripts/output/contractAddresses.json`);
   const addressesObject = JSON.parse(fs.readFileSync(addressesPath).toString());
 
-  const contractAddress = addressesObject[contractType][contractName];
+  const contractAddress = addressesObject[network][contractName];
 
   return contractAddress;
 }

@@ -73,15 +73,9 @@ async function deployL2Contracts(): Promise<L2Addresses> {
 
   const _filePath = __dirname + "/output/contractAddresses.json";
 
-  const libraryAddresses = JSON.parse(fs.readFileSync(_filePath).toString())[
-    "Library"
-  ];
-
-  fs.writeFileSync(
-    _filePath,
-    JSON.stringify({ Library: libraryAddresses, L2: l2Addresses }, null, 2),
-    { flag: "w" }
-  );
+  fs.writeFileSync(_filePath, JSON.stringify({ L2: l2Addresses }, null, 2), {
+    flag: "w",
+  });
 
   fs.chmod(_filePath, 0o777, (err) => {
     console.log(err);

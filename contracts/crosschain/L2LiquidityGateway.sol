@@ -245,6 +245,6 @@ contract L2LiquidityGateway is TransferHelper {
         if (!allowedBridgesMap[msg.sender].allowed)
             revert NotBridge(msg.sender);
 
-        l2Vault._trasferOutERC20FromL2Vault(_token, _amount, _recipient); // FIXME: funds should be transferred from the L2Vault
+        l2Vault._transferOutERC20FromL2Vault(_token, _amount, _recipient); // FIXME: funds should be transferred from the L2Vault
     }
 }

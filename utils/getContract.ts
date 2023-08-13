@@ -3,7 +3,7 @@ import * as path from "path";
 import * as fs from "fs";
 import { getContractAddress } from "./getContractAddress";
 import { getPresetAddress } from "./getPresetAddress";
-import { Network, ContractType } from "./enum";
+import { Network } from "./network";
 
 export function getContract(
   domainPath: string,
@@ -71,16 +71,11 @@ function getContractBase(
   const contractAbi = contractAbiObject["abi"];
 
   let contractAddress;
-  let contractType;
-
-  network === Network.L2
-    ? (contractType = ContractType.L2)
-    : (contractType = ContractType.L3);
 
   if (isPresetAddress) {
     contractAddress = getPresetAddress(contractName);
   } else {
-    contractAddress = getContractAddress(contractName, contractType);
+    contractAddress = getContractAddress(contractName, network);
   }
 
   return {

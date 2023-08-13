@@ -1,6 +1,7 @@
 import * as fs from "fs";
-import { Network, ContractType } from "../utils/enum";
+import { Network } from "../utils/network";
 import { deployContract } from "../utils/deployer";
+import { getLibraryAddress } from "../utils/getLibraryAddress";
 import { getContractAddress } from "../utils/getContractAddress";
 import { getPresetAddress } from "../utils/getPresetAddress";
 
@@ -27,14 +28,11 @@ async function main() {
 }
 
 async function deployL3Contracts(): Promise<L3Addresses> {
-  const mathUtils = getContractAddress("MathUtils", ContractType.Library); // library
-  const l2MarginGateway = getContractAddress(
-    "L2MarginGateway",
-    ContractType.L2
-  );
+  const mathUtils = getLibraryAddress("MathUtils"); // library
+  const l2MarginGateway = getContractAddress("L2MarginGateway", Network.L2);
   const l2LiquidityGateway = getContractAddress(
     "L2LiquidityGateway",
-    ContractType.L2
+    Network.L2
   );
   const keeper = getPresetAddress("keeper");
 
@@ -186,19 +184,11 @@ async function deployL3Contracts(): Promise<L3Addresses> {
 
   const _filePath = __dirname + "/output/contractAddresses.json";
 
-  const libraryAddresses = JSON.parse(fs.readFileSync(_filePath).toString())[
-    "Library"
-  ];
-
   const l2Addresses = JSON.parse(fs.readFileSync(_filePath).toString())["L2"];
 
   fs.writeFileSync(
     _filePath,
-    JSON.stringify(
-      { Library: libraryAddresses, L2: l2Addresses, L3: l3Addresses },
-      null,
-      2
-    ),
+    JSON.stringify({ L2: l2Addresses, L3: l3Addresses }, null, 2),
     { flag: "w" }
   );
 

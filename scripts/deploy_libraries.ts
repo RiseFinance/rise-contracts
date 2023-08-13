@@ -13,7 +13,7 @@ async function deployLibraries() {
   };
 
   fs.writeFileSync(
-    __dirname + "/output/contractAddresses.json",
+    __dirname + "/output/libraryAddresses.json",
     JSON.stringify({ Library: libraryAddresses }, null, 2),
     { flag: "w" }
   );

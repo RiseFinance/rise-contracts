@@ -1,5 +1,5 @@
 import { ethers } from "ethers";
-import { Network, ContractType } from "../utils/enum";
+import { Network } from "../utils/network";
 import { getContract, getReadonlyContract } from "../utils/getContract";
 import { getContractAddress } from "../utils/getContractAddress";
 import {
@@ -37,10 +37,10 @@ async function main() {
     // ==================== Call Contract Functions ====================
     // note: position, index, leaf have the same value
 
-    const l3GatewayAddress = getContractAddress("L3Gateway", ContractType.L3);
+    const l3GatewayAddress = getContractAddress("L3Gateway", Network.L3);
     const l2MarginGatewayAddress = getContractAddress(
       "L2MarginGateway",
-      ContractType.L2
+      Network.L2
     );
 
     // TODO: how to get txHash?
