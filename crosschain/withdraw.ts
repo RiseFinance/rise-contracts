@@ -19,12 +19,17 @@ async function main() {
       _gasLimit: ethers.BigNumber.from("3000000"),
       _gasPriceBid: ethers.BigNumber.from("150000000"),
     };
+
+    const _callValue = gasParams._maxSubmissionCost.add(
+      gasParams._gasLimit.mul(gasParams._gasPriceBid)
+    );
+
     const tx = await l2MarginGateway.triggerWithdrawalFromL2(
       0, // _assetId (0: tUSDC)
       ethers.utils.parseEther("1500"), // _withdrawAmount (1500 tUSDC)
       gasParams,
       {
-        value: ethers.utils.parseEther("0.01045"), // msg.value = maxSubmissionCost + (gasLimit * gasPriceBid) = 0.01 + 0.00045 = 0.01045 ETH
+        value: _callValue, // msg.value = maxSubmissionCost + (gasLimit * gasPriceBid) = 0.01 + 0.00045 = 0.01045 ETH
         gasLimit: ethers.BigNumber.from("3000000"),
       }
     );
