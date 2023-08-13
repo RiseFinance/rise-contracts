@@ -58,6 +58,8 @@ export async function fetchL3EventLogs(txHash: string) {
     data: log[8],
   };
 
+  console.log(">>> L3LogFetcher: ", l2ToL1Tx);
+
   return l2ToL1Tx;
 }
 

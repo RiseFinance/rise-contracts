@@ -44,8 +44,9 @@ async function main() {
 
     const l3EventLog: L2ToL1Tx = await fetchL3EventLogs(txHash);
 
-    const size = 7; // TODO: set
+    const size = 8; // TODO: set
     const leaf = l3EventLog.position;
+    console.log(">>> leaf: ", leaf);
     const merkleProof = (await nodeInterface.constructOutboxProof(size, leaf))
       .proof;
 

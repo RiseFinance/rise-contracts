@@ -51,19 +51,19 @@ OrderBook=$(jq -r '.L3.OrderBook' $CONTRACT_PATH)
 OrderRouter=$(jq -r '.L3.OrderRouter' $CONTRACT_PATH)
 PriceRouter=$(jq -r '.L3.PriceRouter' $CONTRACT_PATH)
 
-# npx hardhat verify --network $L3Network --contract contracts/account/TraderVault.sol:TraderVault $TraderVault
-# npx hardhat verify --network $L3Network --contract contracts/market/Market.sol:Market $Market
-# npx hardhat verify --network $L3Network --contract contracts/market/TokenInfo.sol:TokenInfo $TokenInfo "$Market"
-# npx hardhat verify --network $L3Network --contract contracts/risepool/RisePool.sol:RisePool $RisePool
-# npx hardhat verify --network $L3Network --contract contracts/global/GlobalState.sol:GlobalState $GlobalState
-# npx hardhat verify --network $L3Network --contract contracts/crosschain/L3Gateway.sol:L3Gateway $L3Gateway "$TraderVault" "$TokenInfo" "$RisePool" "$Market" "$L2MarginGateway" "$L2LiquidityGateway"
-# npx hardhat verify --network $L3Network --contract contracts/oracle/PriceManager.sol:PriceManager $PriceManager "$GlobalState" "$TokenInfo"
-# npx hardhat verify --network $L3Network --contract contracts/fee/Funding.sol:Funding $Funding "$PriceManager" "$GlobalState" "$TokenInfo" "$Market"
-# npx hardhat verify --network $L3Network --contract contracts/position/PositionVault.sol:PositionVault $PositionVault "$Funding"
-# npx hardhat verify --network $L3Network --contract contracts/order/OrderValidator.sol:OrderValidator $OrderValidator "$PositionVault" "$GlobalState" "$RisePool"
-# npx hardhat verify --network $L3Network --contract contracts/order/OrderHistory.sol:OrderHistory $OrderHistory "$TraderVault"
-# npx hardhat verify --network $L3Network --contract contracts/position/PositionHistory.sol:PositionHistory $PositionHistory "$PositionVault" "$TraderVault"
-# npx hardhat verify --network $L3Network --contract contracts/order/MarketOrder.sol:MarketOrder $MarketOrder "$TraderVault" "$RisePool" "$Market" "$PositionHistory" "$PositionVault" "$OrderValidator" "$OrderHistory" "$GlobalState"
+npx hardhat verify --network $L3Network --contract contracts/account/TraderVault.sol:TraderVault $TraderVault
+npx hardhat verify --network $L3Network --contract contracts/market/Market.sol:Market $Market
+npx hardhat verify --network $L3Network --contract contracts/market/TokenInfo.sol:TokenInfo $TokenInfo "$Market"
+npx hardhat verify --network $L3Network --contract contracts/risepool/RisePool.sol:RisePool $RisePool
+npx hardhat verify --network $L3Network --contract contracts/global/GlobalState.sol:GlobalState $GlobalState
+npx hardhat verify --network $L3Network --contract contracts/crosschain/L3Gateway.sol:L3Gateway $L3Gateway "$TraderVault" "$TokenInfo" "$RisePool" "$Market" "$L2MarginGateway" "$L2LiquidityGateway"
+npx hardhat verify --network $L3Network --contract contracts/oracle/PriceManager.sol:PriceManager $PriceManager "$GlobalState" "$TokenInfo"
+npx hardhat verify --network $L3Network --contract contracts/fee/Funding.sol:Funding $Funding "$PriceManager" "$GlobalState" "$TokenInfo" "$Market"
+npx hardhat verify --network $L3Network --contract contracts/position/PositionVault.sol:PositionVault $PositionVault "$Funding"
+npx hardhat verify --network $L3Network --contract contracts/order/OrderValidator.sol:OrderValidator $OrderValidator "$PositionVault" "$GlobalState" "$RisePool"
+npx hardhat verify --network $L3Network --contract contracts/order/OrderHistory.sol:OrderHistory $OrderHistory "$TraderVault"
+npx hardhat verify --network $L3Network --contract contracts/position/PositionHistory.sol:PositionHistory $PositionHistory "$PositionVault" "$TraderVault"
+npx hardhat verify --network $L3Network --contract contracts/order/MarketOrder.sol:MarketOrder $MarketOrder "$TraderVault" "$RisePool" "$Market" "$PositionHistory" "$PositionVault" "$OrderValidator" "$OrderHistory" "$GlobalState"
 npx hardhat verify --network $L3Network --contract contracts/orderbook/OrderBook.sol:OrderBook $OrderBook "$TraderVault" "$RisePool" "$Market" "$PositionHistory" "$PositionVault"
-# npx hardhat verify --network $L3Network --contract contracts/order/OrderRouter.sol:OrderRouter $OrderRouter "$MarketOrder" "$OrderBook"
-# npx hardhat verify --network $L3Network --contract contracts/oracle/PriceRouter.sol:PriceRouter $PriceRouter "$PriceManager" "$OrderBook" "$keeper"
+npx hardhat verify --network $L3Network --contract contracts/order/OrderRouter.sol:OrderRouter $OrderRouter "$MarketOrder" "$OrderBook"
+npx hardhat verify --network $L3Network --contract contracts/oracle/PriceRouter.sol:PriceRouter $PriceRouter "$PriceManager" "$OrderBook" "$keeper"

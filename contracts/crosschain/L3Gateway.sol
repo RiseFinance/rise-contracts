@@ -77,18 +77,27 @@ contract L3Gateway is IL3Gateway {
 
         traderVault.decreaseTraderBalance(_trader, _assetId, _amount);
 
+        address tokenAddress = tokenInfo.getTokenAddressFromAssetId(_assetId);
+
         bytes4 selector;
+        bytes memory data;
         if (_assetId == ETH_ID) {
             selector = IL2MarginGateway._withdrawEthFromOutbox.selector;
+            data = abi.encodeWithSelector(
+                selector,
+                _trader, // _dest => not allowing to designate a different recipient address
+                _amount // _amount
+            );
         } else {
             selector = IL2MarginGateway._withdrawERC20FromOutbox.selector;
+            data = abi.encodeWithSelector(
+                selector,
+                _trader, // _dest => not allowing to designate a different recipient address
+                _amount, // _amount
+                tokenAddress // _token
+            );
         }
 
-        bytes memory data = abi.encodeWithSelector(
-            selector,
-            _trader, // _dest => not allowing to designate a different recipient address
-            _amount // _amount
-        );
         ArbSys(address(100)).sendTxToL1(l2MarginGatewayAddress, data);
     }
 

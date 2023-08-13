@@ -35,6 +35,9 @@ export async function initialize() {
   await tokenInfoL2.registerToken(testUsdcAddress, 18);
   await tokenInfoL3.registerToken(testUsdcAddress, 18);
 
+  // const bridgeLogic = "0x9f5E8aC052D7cb968D7a82618f4AD7261a4684c1";
+  // await l2MarginGateway.setAllowedBridge(bridgeLogic);
+
   console.log("Contracts initialized");
 }
 
