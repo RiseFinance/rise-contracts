@@ -29,7 +29,7 @@ async function main() {
       }
     );
     tx.wait();
-    console.log(">>> triggerWithdrawalFromL2 tx: ", tx.hash);
+    console.log(">>> triggerWithdrawalFromL2 tx: ", tx);
 
     // =================================================================
   } catch (e) {

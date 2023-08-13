@@ -57,6 +57,7 @@ contract L2Vault is TransferHelper {
     ) external {
         if (!allowedL2GatewaysMap[msg.sender].allowed)
             revert NotL2Gateway(msg.sender);
-        IERC20(_token).safeTransfer(_receiver, _amount);
+        // IERC20(_token).safeTransfer(_receiver, _amount); // error: Address:call to non-contract
+        IERC20(_token).transfer(_receiver, _amount);
     }
 }

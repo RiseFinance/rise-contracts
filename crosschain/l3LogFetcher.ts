@@ -1,5 +1,20 @@
 import { ethers } from "ethers";
 
+export enum L3EventType {
+  L2ToL1Tx = "L2ToL1Tx", // from function call `withdrawAssetToL2`
+  RedeemScheduled = "RedeemScheduled", // from function call `submitRetryable`
+}
+
+enum Topic0 {
+  L2ToL1Tx = "0x3e7aafa77dbf186b7fd488006beff893744caa3c4f6f299e8a709fa2087374fc", // event: `L2ToL1Tx`
+  RedeemScheduled = "0x5ccd009502509cf28762c67858994d85b163bb6e451f5e9df7c5e18c9c2e123e", // event: `RedeemScheduled`
+}
+
+enum EventABI {
+  L2ToL1Tx = "event L2ToL1Tx(address caller, address indexed destination, uint256 indexed hash, uint256 indexed position, uint256 arbBlockNum, uint256 ethBlockNum, uint256 timestamp, uint256 callvalue, bytes data)",
+  RedeemScheduled = "event RedeemScheduled(bytes32 indexed ticketId, bytes32 indexed retryTxHash, uint64 indexed sequenceNum, uint64 donatedGas, address gasDonor, uint256 maxRefund, uint256 submissionFeeRefund)",
+}
+
 export interface L2ToL1Tx {
   caller: string;
   destination: string;
@@ -12,23 +27,45 @@ export interface L2ToL1Tx {
   data: string;
 }
 
-export async function fetchL3EventLogs(txHash: string) {
+export interface RedeemScheduled {
+  ticketId: string;
+  retryTxHash: string;
+  sequenceNum: string;
+  donatedGas: string;
+  gasDonor: string;
+  maxRefund: string;
+  submissionFeeRefund: string;
+}
+
+export async function fetchL3EventLogs(
+  txHash: string,
+  l3EventType: L3EventType
+) {
   const l3Provider = new ethers.providers.JsonRpcProvider(
     "http://localhost:8449"
   );
-
   const txReceipt = await l3Provider.getTransactionReceipt(txHash);
 
   // iterate txRecipt.logs
-
   let data: string = "0x";
   let topics: readonly string[] = ["0x"];
+  let topic0: string;
+  let iface: ethers.utils.Interface;
+  let logObject: L2ToL1Tx | RedeemScheduled = {} as L2ToL1Tx | RedeemScheduled;
+
+  // select topic0 and iface for different l3 event types
+  if (l3EventType === L3EventType.L2ToL1Tx) {
+    topic0 = Topic0.L2ToL1Tx;
+    iface = new ethers.utils.Interface([EventABI.L2ToL1Tx]);
+  } else if (l3EventType === L3EventType.RedeemScheduled) {
+    topic0 = Topic0.RedeemScheduled;
+    iface = new ethers.utils.Interface([EventABI.RedeemScheduled]);
+  } else {
+    throw new Error("Invalid L3EventType");
+  }
 
   for (let i = 0; i < txReceipt.logs.length; i++) {
-    if (
-      txReceipt.logs[i].topics[0] ===
-      "0x3e7aafa77dbf186b7fd488006beff893744caa3c4f6f299e8a709fa2087374fc" // method: `L2ToL1Tx`
-    ) {
+    if (txReceipt.logs[i].topics[0] === topic0) {
       data = txReceipt.logs[i].data;
       topics = txReceipt.logs[i].topics;
       break;
@@ -40,102 +77,34 @@ export async function fetchL3EventLogs(txHash: string) {
   }
 
   /// common
-  const iface = new ethers.utils.Interface([
-    "event L2ToL1Tx(address caller, address indexed destination, uint256 indexed hash, uint256 indexed position, uint256 arbBlockNum, uint256 ethBlockNum, uint256 timestamp, uint256 callvalue, bytes data)",
-  ]);
-  const log = iface.decodeEventLog("L2ToL1Tx", data, topics);
+  const log = iface.decodeEventLog(l3EventType, data, topics);
 
-  // convert the `log` array into L2ToL1Tx object
-  const l2ToL1Tx: L2ToL1Tx = {
-    caller: log[0],
-    destination: log[1],
-    hash: log[2],
-    position: log[3],
-    arbBlockNum: log[4],
-    ethBlockNum: log[5],
-    timestamp: log[6],
-    callvalue: log[7],
-    data: log[8],
-  };
+  // convert the `log` array into log object
+  if (l3EventType === L3EventType.L2ToL1Tx) {
+    logObject = {
+      caller: log[0],
+      destination: log[1],
+      hash: log[2],
+      position: log[3],
+      arbBlockNum: log[4],
+      ethBlockNum: log[5],
+      timestamp: log[6],
+      callvalue: log[7],
+      data: log[8],
+    };
+  } else if (l3EventType === L3EventType.RedeemScheduled) {
+    logObject = {
+      ticketId: log[0],
+      retryTxHash: log[1],
+      sequenceNum: log[2],
+      donatedGas: log[3],
+      gasDonor: log[4],
+      maxRefund: log[5],
+      submissionFeeRefund: log[6],
+    };
+  }
 
-  console.log(">>> L3LogFetcher: ", l2ToL1Tx);
+  console.log(">>> L3LogFetcher: ", logObject);
 
-  return l2ToL1Tx;
+  return logObject;
 }
-
-// async function main() {
-//   try {
-//     // ---------------------------------------------------------------------------------------
-
-//     /// option 1. Log로 조회하기
-
-//     // Warning
-//     // Get event logs for an address and/or topics. Up to a maximum of 1,000 event logs.
-//     // const apiUrl = "http://localhost:4000/api";
-
-//     // const client: Axios = axios.create({
-//     //   baseURL: apiUrl,
-//     //   headers: {
-//     //     "Content-Type": "application/json",
-//     //   },
-//     // });
-
-//     // const params = {
-//     //   module: "logs",
-//     //   action: "getLogs",
-//     //   fromBlock: 17, // TODO: set
-//     //   toBlock: 17,
-//     //   address: "0x0000000000000000000000000000000000000064",
-//     //   topic0:
-//     //     "0x3e7aafa77dbf186b7fd488006beff893744caa3c4f6f299e8a709fa2087374fc", // method: `L2ToL1Tx`
-//     // };
-
-//     // // const response = await client.get("/", { params });
-//     // const response = await axios.get(apiUrl, { params });
-//     // const data = response.data.result[0].data;
-//     // const topics = response.data.result[0].topics;
-
-//     // ---------------------------------------------------------------------------------------
-
-//     /// option 2. 트랜잭션 Receipt로 조회하기
-
-//     const txHash =
-//       "0x491dd5f3850efff43ede54e2d4579ef082f512f2fe5dbb110cffa158e7c8b55f";
-
-//     const l3Provider = new ethers.providers.JsonRpcProvider(
-//       "http://localhost:8449"
-//     );
-
-//     const txReceipt = await l3Provider.getTransactionReceipt(txHash);
-//     const data = txReceipt.logs[0].data;
-//     const topics = txReceipt.logs[0].topics;
-
-//     /// common
-//     const iface = new ethers.utils.Interface([
-//       "event L2ToL1Tx(address caller, address indexed destination, uint256 indexed hash, uint256 indexed position, uint256 arbBlockNum, uint256 ethBlockNum, uint256 timestamp, uint256 callvalue, bytes data)",
-//     ]);
-//     const log = iface.decodeEventLog("L2ToL1Tx", data, topics);
-
-//     // convert the `log` array into L2ToL1Tx object
-//     const l2ToL1Tx: L2ToL1Tx = {
-//       caller: log[0],
-//       destination: log[1],
-//       hash: log[2],
-//       position: log[3],
-//       arbBlockNum: log[4],
-//       ethBlockNum: log[5],
-//       timestamp: log[6],
-//       callvalue: log[7],
-//       data: log[8],
-//     };
-
-//     return l2ToL1Tx;
-//   } catch (error) {
-//     console.log(error);
-//   }
-// }
-
-// main().catch((error) => {
-//   console.error(error);
-//   process.exitCode = 1;
-// });

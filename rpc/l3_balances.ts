@@ -16,7 +16,6 @@ async function main() {
 
     const deployer = getPresetAddress("deployer");
     const usdcAddress = getContractAddress("TestUSDC");
-    console.log("usdcAddress: ", usdcAddress);
 
     const usdcAssetId = await tokenInfo.getAssetIdFromTokenAddress(usdcAddress);
 
@@ -24,12 +23,13 @@ async function main() {
       deployer,
       usdcAssetId
     );
-
+    console.log("---------------------------------");
     console.log(
-      "traderBalance on L3: ",
+      ">>> TraderVault.traderBalance on L3: ",
       ethers.utils.formatEther(traderBalance),
       "tUSDC"
     );
+    console.log("---------------------------------");
 
     // =================================================================
   } catch (e) {

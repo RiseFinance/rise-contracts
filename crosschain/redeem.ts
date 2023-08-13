@@ -1,7 +1,12 @@
 import { ethers } from "ethers";
 import { getContract, Network } from "../utils/getContract";
 import { getContractAddress } from "../utils/getContractAddress";
-import { fetchL3EventLogs, L2ToL1Tx } from "./l3LogFetcher";
+import {
+  fetchL3EventLogs,
+  L3EventType,
+  L2ToL1Tx,
+  RedeemScheduled,
+} from "./l3LogFetcher";
 
 async function main() {
   try {
@@ -39,27 +44,43 @@ async function main() {
     // FIXME: cannot call ArbSys funcions (only callable by zero address)
     // appchain should maintain a variable to store the latest merkle tree size.
 
-    const txHash =
-      "0xd507efd2c662b89b3288a6baa9c6be900463d7de6b7bbd3e8991b5c99651c48c";
+    // TODO: how to get txHash?
+    // Retryable Ticket => withdrawAssetToL2
+    // get from L3 event logs: while calling submitRetryable, get event log `RedeemScheduled` -> `retryTxHash`
 
-    const l3EventLog: L2ToL1Tx = await fetchL3EventLogs(txHash);
+    const txHashSubmitRetryable =
+      "0x389a4a851508b7b87e8d934415c9cf2b7e99e926dce0d5bc8aafec84ee168b63"; // 이건 L2MarginGateway.triggerWithdrawalFromL2의 `MessageDelivered.sender` 이벤트 필드로 참조 가능 (from L2)
 
-    const size = 8; // TODO: set
-    const leaf = l3EventLog.position;
+    const redeemScheduledEvent: RedeemScheduled = (await fetchL3EventLogs(
+      txHashSubmitRetryable,
+      L3EventType.RedeemScheduled
+    )) as RedeemScheduled;
+
+    // txHash for `withdrawAssetToL2` from L3
+    const txHashWithdrawAssetToL2 = redeemScheduledEvent.retryTxHash;
+    // console.log(">>> retryable txHash: ", txHashWithdrawAssetToL2);
+
+    const l2ToL1TxEvent: L2ToL1Tx = (await fetchL3EventLogs(
+      txHashWithdrawAssetToL2,
+      L3EventType.L2ToL1Tx
+    )) as L2ToL1Tx;
+
+    const size = 10; // TODO: set
+    const leaf = l2ToL1TxEvent.position;
     console.log(">>> leaf: ", leaf);
     const merkleProof = (await nodeInterface.constructOutboxProof(size, leaf))
       .proof;
 
     const redeemTx = await iOutbox.executeTransaction(
       merkleProof,
-      l3EventLog.position, // index
+      l2ToL1TxEvent.position, // index
       l3GatewayAddress, // l2Sender
       l2MarginGatewayAddress, // to
-      l3EventLog.arbBlockNum, // l2Block
-      l3EventLog.ethBlockNum, // l1Block
-      l3EventLog.timestamp, // l2Timestamp
-      l3EventLog.callvalue, // value
-      l3EventLog.data, // data
+      l2ToL1TxEvent.arbBlockNum, // l2Block
+      l2ToL1TxEvent.ethBlockNum, // l1Block
+      l2ToL1TxEvent.timestamp, // l2Timestamp
+      l2ToL1TxEvent.callvalue, // value
+      l2ToL1TxEvent.data, // data
       { gasLimit: ethers.BigNumber.from("30000000") }
     );
     redeemTx.wait();

@@ -26,17 +26,19 @@ export async function initialize() {
 
   await l2MarginGateway.initialize(l3GatewayAddress);
   await l2MarginGateway.setAllowedBridge(bridgeAddress);
+  console.log(">>> L2MarginGateway initialized");
+
   await l2LiquidityGateway.initialize(l3GatewayAddress);
   await l2LiquidityGateway.setAllowedBridge(bridgeAddress);
+  console.log(">>> L2LiquidityGateway initialized");
 
   await l2Vault.setAllowedGateway(l2MarginGateway.address);
   await l2Vault.setAllowedGateway(l2LiquidityGateway.address);
+  console.log(">>> L2Vault initialized");
 
   await tokenInfoL2.registerToken(testUsdcAddress, 18);
   await tokenInfoL3.registerToken(testUsdcAddress, 18);
-
-  // const bridgeLogic = "0x9f5E8aC052D7cb968D7a82618f4AD7261a4684c1";
-  // await l2MarginGateway.setAllowedBridge(bridgeLogic);
+  console.log(">>> TokenInfo initialized");
 
   console.log("Contracts initialized");
 }
