@@ -3,7 +3,7 @@ import * as path from "path";
 import * as fs from "fs";
 import { getContractAddress } from "./getContractAddress";
 import { getPresetAddress } from "./getPresetAddress";
-import { Network } from "./network";
+import { Network, RpcUrl } from "./network";
 
 export function getContract(
   domainPath: string,
@@ -53,11 +53,9 @@ function getContractBase(
   let provider;
 
   if (network === Network.L2) {
-    provider = new ethers.providers.JsonRpcProvider(
-      "https://goerli-rollup.arbitrum.io/rpc"
-    );
+    provider = new ethers.providers.JsonRpcProvider(RpcUrl.L2);
   } else if (network === Network.L3) {
-    provider = new ethers.providers.JsonRpcProvider("http://localhost:8449");
+    provider = new ethers.providers.JsonRpcProvider(RpcUrl.L3);
   } else {
     throw new Error("Invalid network");
   }

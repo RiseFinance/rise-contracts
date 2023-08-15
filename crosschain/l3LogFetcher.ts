@@ -1,4 +1,5 @@
 import { ethers } from "ethers";
+import { RpcUrl } from "../utils/network";
 
 export enum L3EventType {
   L2ToL1Tx = "L2ToL1Tx", // from function call `withdrawAssetToL2`
@@ -7,13 +8,13 @@ export enum L3EventType {
 
 // Topic0 = signature of the event
 enum Topic0 {
-  L2ToL1Tx = "0x3e7aafa77dbf186b7fd488006beff893744caa3c4f6f299e8a709fa2087374fc", // event: `L2ToL1Tx`
-  RedeemScheduled = "0x5ccd009502509cf28762c67858994d85b163bb6e451f5e9df7c5e18c9c2e123e", // event: `RedeemScheduled`
+  L2ToL1Tx = `0x3e7aafa77dbf186b7fd488006beff893744caa3c4f6f299e8a709fa2087374fc`, // event: `L2ToL1Tx`
+  RedeemScheduled = `0x5ccd009502509cf28762c67858994d85b163bb6e451f5e9df7c5e18c9c2e123e`, // event: `RedeemScheduled`
 }
 
 enum EventABI {
-  L2ToL1Tx = "event L2ToL1Tx(address caller, address indexed destination, uint256 indexed hash, uint256 indexed position, uint256 arbBlockNum, uint256 ethBlockNum, uint256 timestamp, uint256 callvalue, bytes data)",
-  RedeemScheduled = "event RedeemScheduled(bytes32 indexed ticketId, bytes32 indexed retryTxHash, uint64 indexed sequenceNum, uint64 donatedGas, address gasDonor, uint256 maxRefund, uint256 submissionFeeRefund)",
+  L2ToL1Tx = `event L2ToL1Tx(address caller, address indexed destination, uint256 indexed hash, uint256 indexed position, uint256 arbBlockNum, uint256 ethBlockNum, uint256 timestamp, uint256 callvalue, bytes data)`,
+  RedeemScheduled = `event RedeemScheduled(bytes32 indexed ticketId, bytes32 indexed retryTxHash, uint64 indexed sequenceNum, uint64 donatedGas, address gasDonor, uint256 maxRefund, uint256 submissionFeeRefund)`,
 }
 
 export interface L2ToL1Tx {
@@ -42,9 +43,7 @@ export async function fetchL3EventLogs(
   txHash: string,
   l3EventType: L3EventType
 ) {
-  const l3Provider = new ethers.providers.JsonRpcProvider(
-    "http://localhost:8449"
-  );
+  const l3Provider = new ethers.providers.JsonRpcProvider(RpcUrl.L3);
   const txReceipt = await l3Provider.getTransactionReceipt(txHash);
 
   // iterate txRecipt.logs
