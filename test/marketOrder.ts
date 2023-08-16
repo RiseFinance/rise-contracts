@@ -3,6 +3,7 @@ import { expect } from "chai";
 import { ethers } from "hardhat";
 
 import { deployForTest } from "./test_deploy";
+import { formatStruct } from "../utils/formatter";
 
 const USDC_ID = 0;
 const ETH_ID = 1;
@@ -94,17 +95,17 @@ describe("Place and Execute Market Order", function () {
     );
 
     const position = await ctx.positionVault.getPosition(key);
-    console.log(">>> position: ", position);
+    console.log(">>> position: ", formatStruct(position));
 
     const orderRecord = await ctx.orderHistory.orderRecords(
       ctx.trader.address,
       0
     ); // traderAddress, traderOrderRecordId
-    console.log(">>> orderRecord: ", orderRecord);
+    console.log(">>> orderRecord: ", formatStruct(orderRecord));
 
     const globalPositionState =
       await ctx.globalState.getGlobalLongPositionState(ETH_USDC_MARKET_ID);
-    console.log(">>> globalPositionState: ", globalPositionState);
+    console.log(">>> globalPositionState: ", formatStruct(globalPositionState));
 
     const traderBalance = await ctx.traderVault.getTraderBalance(
       ctx.trader.address,
@@ -121,7 +122,7 @@ describe("Place and Execute Market Order", function () {
       ctx.trader.address,
       0
     ); // traderAddress, traderPositionRecordId
-    console.log(">>> positionRecord: ", positionRecord);
+    console.log(">>> positionRecord: ", formatStruct(positionRecord));
 
     // position 생성
     // order record 생성
