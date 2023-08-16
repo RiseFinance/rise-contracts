@@ -52,7 +52,7 @@ PositionManager=$(jq -r '.L3.PositionManager' $CONTRACT_PATH)
 MarketOrder=$(jq -r '.L3.MarketOrder' $CONTRACT_PATH)
 OrderBook=$(jq -r '.L3.OrderBook' $CONTRACT_PATH)
 OrderRouter=$(jq -r '.L3.OrderRouter' $CONTRACT_PATH)
-PriceRouter=$(jq -r '.L3.PriceRouter' $CONTRACT_PATH)
+PriceMaster=$(jq -r '.L3.PriceMaster' $CONTRACT_PATH)
 
 npx hardhat verify --network $L3Network --contract contracts/account/TraderVault.sol:TraderVault $TraderVault
 npx hardhat verify --network $L3Network --contract contracts/market/Market.sol:Market $Market
@@ -72,4 +72,4 @@ npx hardhat verify --network $L3Network --contract contracts/position/PositionMa
 npx hardhat verify --network $L3Network --contract contracts/order/MarketOrder.sol:MarketOrder $MarketOrder "$TraderVault" "$RisePool" "$Market" "$PositionHistory" "$PositionVault" "$OrderValidator" "$OrderHistory" "$GlobalState"
 npx hardhat verify --network $L3Network --contract contracts/orderbook/OrderBook.sol:OrderBook $OrderBook "$TraderVault" "$RisePool" "$Market" "$PositionHistory" "$PositionVault"
 npx hardhat verify --network $L3Network --contract contracts/order/OrderRouter.sol:OrderRouter $OrderRouter "$MarketOrder" "$OrderBook"
-npx hardhat verify --network $L3Network --contract contracts/oracle/PriceRouter.sol:PriceRouter $PriceRouter "$PriceManager" "$OrderBook" "$keeper"
+npx hardhat verify --network $L3Network --contract contracts/oracle/PriceMaster.sol:PriceMaster $PriceMaster "$PriceManager" "$OrderBook" "$keeper"

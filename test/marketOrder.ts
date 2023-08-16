@@ -35,7 +35,7 @@ const PRICE_BUFFER_DECIMALS = 8;
       marketOrder,
       orderBook,
       orderRouter,
-      priceRouter,
+      priceMaster,
     } = await loadFixture(deployForTest);
  */
 
@@ -57,17 +57,17 @@ describe("Place and Execute Market Order", function () {
     await depositToTraderAccount(ctx.traderVault, ctx.trader);
 
     let m = {
-        marketId: ETH_USD,
-        priceTickSize: 10 ** 8,
-        baseAssetId: ETH_ID,
-        quoteAssetId: USD_ID,
-        longReserveAssetId: ETH_ID,
-        shortReserveAssetId: USD_ID,
-        marginAssetId: USD_ID,
-        fundingRateMultiplier: 0,
-        marketMakerToken: ctx.trader.address,
-      };
-      await ctx.listingManager.createRisePerpsMarket(m);
+      marketId: ETH_USD,
+      priceTickSize: 10 ** 8,
+      baseAssetId: ETH_ID,
+      quoteAssetId: USD_ID,
+      longReserveAssetId: ETH_ID,
+      shortReserveAssetId: USD_ID,
+      marginAssetId: USD_ID,
+      fundingRateMultiplier: 0,
+      marketMakerToken: ctx.trader.address,
+    };
+    await ctx.listingManager.createRisePerpsMarket(m);
 
     // TODO: setup - register token & do market listing
 
@@ -81,7 +81,5 @@ describe("Place and Execute Market Order", function () {
       marginAbs: ethers.utils.parseUnits("1000", USD_DECIMALS),
       limitPrice: 0,
     };
-
-    await 
   });
 });

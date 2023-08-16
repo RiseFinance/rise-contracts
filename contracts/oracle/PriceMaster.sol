@@ -7,7 +7,7 @@ import "hardhat/console.sol";
 import "./PriceManager.sol";
 import "../orderbook/OrderBook.sol";
 
-contract PriceRouter {
+contract PriceMaster {
     PriceManager public priceManager;
     OrderBook public orderBook;
 
@@ -36,7 +36,7 @@ contract PriceRouter {
         uint256[] calldata _price, // new index price from the data source
         bool _isInitialize
     ) public onlyPriceKeeper {
-        require(_marketId.length == _price.length, "PriceRouter: Wrong input");
+        require(_marketId.length == _price.length, "PriceMaster: Wrong input");
         uint256 l = _marketId.length;
         for (uint256 i = 0; i < l; i++) {
             priceManager.setPrice(_marketId[i], _price[i]);

@@ -1,6 +1,6 @@
 import * as fs from "fs";
 import { Network } from "../utils/network";
-import { deployContract, libraryAddresses } from "../utils/deployer";
+import { deployContract } from "../utils/deployer";
 import { getLibraryAddress } from "../utils/getLibraryAddress";
 import { getContractAddress } from "../utils/getContractAddress";
 import { getPresetAddress } from "../utils/getPresetAddress";
@@ -20,10 +20,12 @@ export type L3Addresses = {
   OrderValidator: string;
   OrderHistory: string;
   PositionHistory: string;
+  PositionFee: string;
   PositionManager: string;
   MarketOrder: string;
   OrderBook: string;
   OrderRouter: string;
+  PriceMaster: string;
 };
 
 async function main() {
@@ -197,8 +199,8 @@ async function deployL3Contracts(): Promise<L3Addresses> {
     orderBook.address,
   ]);
 
-  // PriceRouter
-  const priceRouter = await deployContract("PriceRouter", [
+  // PriceMaster
+  const priceMaster = await deployContract("PriceMaster", [
     priceManager.address,
     orderBook.address,
     keeper, // price keeper
@@ -224,7 +226,7 @@ async function deployL3Contracts(): Promise<L3Addresses> {
   console.log("MarketOrder:", marketOrder.address);
   console.log("OrderBook:", orderBook.address);
   console.log("OrderRouter:", orderRouter.address);
-  console.log("PriceRouter:", priceRouter.address);
+  console.log("PriceMaster:", priceMaster.address);
   console.log("---------------------------------------------");
 
   const l3Addresses = {
@@ -242,11 +244,12 @@ async function deployL3Contracts(): Promise<L3Addresses> {
     OrderValidator: orderValidator.address,
     OrderHistory: orderHistory.address,
     PositionHistory: positionHistory.address,
+    PositionFee: positionFee.address,
     PositionManager: positionManager.address,
     MarketOrder: marketOrder.address,
     OrderBook: orderBook.address,
     OrderRouter: orderRouter.address,
-    PriceRouter: priceRouter.address,
+    PriceMaster: priceMaster.address,
   };
 
   const _filePath = __dirname + "/output/contractAddresses.json";
