@@ -18,73 +18,79 @@ function ETH(amount: number) {
 }
 
 describe.only("Place Limit Order and Execute", function () {
-
   // Fixtures
   async function deployContracts() {
-    const [deployer, trader, priceKeeper,limitOrderTrader] = await ethers.getSigners();
+    const [deployer, trader, priceKeeper, limitOrderTrader] =
+      await ethers.getSigners();
 
-  const mathUtils = await deployContract("MathUtils");
+    const mathUtils = await deployContract("MathUtils");
 
     // TraderVault
     const traderVault = await deployContract("TraderVault");
-    
-    const positionFee = await deployContract("PositionFee", [traderVault.address]);
+
+    const positionFee = await deployContract("PositionFee", [
+      traderVault.address,
+    ]);
     // Market
     const market = await deployContract("Market");
-  
+
     // TokenInfo
     const tokenInfo = await deployContract("TokenInfo", [market.address]);
-  
+
     // RisePool
     const risePool = await deployContract("RisePool");
-  
+
     // GlobalState
-    const globalState = await deployContract("GlobalState", [], mathUtils.address);
-  
+    const globalState = await deployContract(
+      "GlobalState",
+      [],
+      mathUtils.address
+    );
+
     // PriceManager
     const priceManager = await deployContract("PriceManager", [
       globalState.address,
       tokenInfo.address,
     ]);
-  
-        // Funding
-        const funding = await deployContract(
-          "Funding",
-          [
-            priceManager.address,
-            globalState.address,
-            tokenInfo.address,
-            market.address,
-          ],
-          mathUtils.address
-        );
-  
+
+    // Funding
+    const funding = await deployContract(
+      "Funding",
+      [
+        priceManager.address,
+        globalState.address,
+        tokenInfo.address,
+        market.address,
+      ],
+      mathUtils.address
+    );
+
     // PositionVault
     const positionVault = await deployContract(
       "PositionVault",
       [funding.address],
       mathUtils.address
     );
-  
+
     // OrderValidator
     const orderValidator = await deployContract("OrderValidator", [
       positionVault.address,
       globalState.address,
       risePool.address,
     ]);
-  
+
     // OrderHistory
     const orderHistory = await deployContract("OrderHistory", [
       traderVault.address,
     ]);
-  
+
     // PositionHistory
     const positionHistory = await deployContract(
       "PositionHistory",
       [positionVault.address, traderVault.address],
       mathUtils.address
     );
-  
+
     // MarketOrder
     const marketOrder = await deployContract("MarketOrder", [
       traderVault.address,
@@ -96,7 +102,7 @@ describe.only("Place Limit Order and Execute", function () {
       orderHistory.address,
       globalState.address,
     ]);
-  
+
     // OrderBook
     const orderBook = await deployContract(
       "OrderBook",
@@ -109,8 +115,6 @@ describe.only("Place Limit Order and Execute", function () {
       ],
       mathUtils.address
     );
-
-
 
     // OrderRouter
     const orderRouter = await deployContract("OrderRouter", [
@@ -138,7 +142,7 @@ describe.only("Place Limit Order and Execute", function () {
       orderRouter,
       listingManager,
       limitOrderTrader,
-      market
+      market,
     };
   }
 
@@ -153,7 +157,10 @@ describe.only("Place Limit Order and Execute", function () {
       .increaseTraderBalance(trader.address, USD_ID, depositAmount);
   }
 
-  async function fillBuyOrderBookForTest(orderBook: any, limitOrderTrader: any) {
+  async function fillBuyOrderBookForTest(
+    orderBook: any,
+    limitOrderTrader: any
+  ) {
     const bidPrices = [1945, 1946, 1947, 1948, 1949];
 
     for (let price of bidPrices) {
@@ -161,14 +168,14 @@ describe.only("Place Limit Order and Execute", function () {
       // place 10 orders per price tick
       for (let i = 0; i < 10; i++) {
         const orderParams = {
-        trader : limitOrderTrader.address,
-        isLong: true,
-        isIncrease: true,
-        orderType: 1,
-        marketId: ETH_USD,
-        sizeAbs: ETH(1),
-        marginAbs: USD(150),
-        limitPrice: USD(price),
+          trader: limitOrderTrader.address,
+          isLong: true,
+          isIncrease: true,
+          orderType: 1,
+          marketId: ETH_USD,
+          sizeAbs: ETH(1),
+          marginAbs: USD(150),
+          limitPrice: USD(price),
         };
         await orderBook.placeLimitOrder(orderParams);
       }
@@ -178,10 +185,7 @@ describe.only("Place Limit Order and Execute", function () {
   async function checkOrderSizeForPriceTick(orderBook: any) {
     const prices = [1945, 1946, 1947, 1948, 1949];
     for (let price of prices) {
-      const size = await orderBook.orderSizeForPriceTick(
-        ETH_USD,
-        USD(price)
-      );
+      const size = await orderBook.orderSizeForPriceTick(ETH_USD, USD(price));
       console.log(
         `>>> orderbook filled | price: ${price} | size: ${ethers.utils.formatUnits(
           size,
@@ -217,25 +221,32 @@ describe.only("Place Limit Order and Execute", function () {
   // TODO: configure different orderbook states
 
   it("Should place a limit order (ETH/USD x8 Long Increase)", async function () {
-    const { deployer, trader, traderVault, orderBook, priceManager, orderRouter, listingManager } =
-      await loadFixture(deployContracts);
+    const {
+      deployer,
+      trader,
+      traderVault,
+      orderBook,
+      priceManager,
+      orderRouter,
+      listingManager,
+    } = await loadFixture(deployContracts);
     // await configureL3Vault(l3Vault);
     await depositToTraderAccount(traderVault, trader);
 
     let m = {
-      marketId : ETH_USD,
-      priceTickSize : 10**8,
-      baseAssetId : ETH_ID,
-      quoteAssetId : USD_ID,
+      marketId: ETH_USD,
+      priceTickSize: 10 ** 8,
+      baseAssetId: ETH_ID,
+      quoteAssetId: USD_ID,
       longReserveAssetId: ETH_ID,
       shortReserveAssetId: USD_ID,
-      marginAssetId : USD_ID,
-      fundingRateMultiplier : 0,
-      marketMakerToken : trader.address,
-    }
-    await listingManager.createRisePerpsMarket(m)
+      marginAssetId: USD_ID,
+      fundingRateMultiplier: 0,
+      marketMakerToken: trader.address,
+    };
+    await listingManager.createRisePerpsMarket(m);
     const orderRequest = {
-      trader : trader.address,
+      trader: trader.address,
       isLong: true,
       isIncrease: true,
       orderType: 1,
@@ -302,7 +313,7 @@ describe.only("Place Limit Order and Execute", function () {
     // fill orderbook
     // await configureL3Vault(l3Vault);
     await depositToTraderAccount(traderVault, trader);
-    await fillBuyOrderBookForTest(orderBook,limitOrderTrader);
+    await fillBuyOrderBookForTest(orderBook, limitOrderTrader);
 
     await checkOrderSizeForPriceTick(orderBook);
 

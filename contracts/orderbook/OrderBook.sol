@@ -11,7 +11,6 @@ import "../utils/MathUtils.sol";
 
 import "../position/PositionHistory.sol";
 import "../position/PositionVault.sol";
-import "../position/PnlManager.sol";
 import "../order/OrderExecutor.sol";
 import "../order/OrderHistory.sol";
 import "../order/PriceUtils.sol";
@@ -65,14 +64,16 @@ contract OrderBook is
         address _risePool,
         address _market,
         address _positionHistory,
-        address _positionVault
+        address _positionVault,
+        address _positionFee
     )
         OrderExecutor(
             _traderVault,
             _risePool,
             _market,
             _positionHistory,
-            _positionVault
+            _positionVault,
+            _positionFee
         )
     {}
 

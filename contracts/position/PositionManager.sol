@@ -7,25 +7,18 @@ import "../market/Market.sol";
 import "./PositionVault.sol";
 import "./PnlManager.sol";
 
-contract PositionManager {
+contract PositionManager is OrderUtils {
     PositionVault public positionVault;
     PnlManager public pnlManager;
-    OrderUtils public orderUtils;
     Market public market;
 
     // function iterateOpenPositions() public {}
 
     // iteration over the trader's open positions => (2 * listed market num) for each trader
 
-    constructor(
-        address _positionVault,
-        address _pnlManager,
-        address _orderUtils,
-        address _market
-    ) {
+    constructor(address _positionVault, address _pnlManager, address _market) {
         positionVault = PositionVault(_positionVault);
         pnlManager = PnlManager(_pnlManager);
-        orderUtils = OrderUtils(_orderUtils);
         market = Market(_market);
     }
 
@@ -42,7 +35,7 @@ contract PositionManager {
         for (uint256 i = 0; i < marketNum; i++) {
             // iterate over long/short
             for (uint256 j = 0; j < 2; j++) {
-                bytes32 key = orderUtils._getPositionKey(_trader, _isLong, i);
+                bytes32 key = _getPositionKey(_trader, _isLong, i);
                 OpenPosition memory position = positionVault.getPosition(key);
 
                 int256 _pnl = pnlManager._calculatePnL(

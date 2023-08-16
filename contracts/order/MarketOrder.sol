@@ -26,14 +26,16 @@ contract MarketOrder is OrderExecutor, OrderUtils, PriceUtils {
         address _positionVault,
         address _orderValidator,
         address _orderHistory,
-        address _globalState
+        address _globalState,
+        address _positionFee
     )
         OrderExecutor(
             _traderVault,
             _risePool,
             _market,
             _positionHistory,
-            _positionVault
+            _positionVault,
+            _positionFee
         )
     {
         orderValidator = OrderValidator(_orderValidator);
