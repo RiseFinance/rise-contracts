@@ -9,17 +9,20 @@ import { getPresetAddress } from "../utils/getPresetAddress";
 export async function deployForTest() {
   const [deployer, keeper, trader] = await ethers.getSigners();
 
-  // libraries
-  const mathUtils = getLibraryAddress("MathUtils");
-  const positionUtils = getLibraryAddress("PositionUtils");
-  const orderUtils = getLibraryAddress("OrderUtils");
-  const pnlUtils = getLibraryAddress("PnlUtils");
-
   const l2MarginGateway = getContractAddress("L2MarginGateway", Network.L2);
   const l2LiquidityGateway = getContractAddress(
     "L2LiquidityGateway",
     Network.L2
   );
+
+  // L3 libraries
+
+  const mathUtils = await deployContract("MathUtils");
+  const orderUtils = await deployContract("OrderUtils");
+  const positionUtils = await deployContract("PositionUtils", [], {
+    MathUtils: mathUtils.address,
+  });
+  const pnlUtils = await deployContract("PnlUtils");
 
   // TraderVault
   const traderVault = await deployContract("TraderVault");
@@ -38,7 +41,7 @@ export async function deployForTest() {
 
   // GlobalState
   const globalState = await deployContract("GlobalState", [], {
-    PositionUtils: positionUtils,
+    PositionUtils: positionUtils.address,
   });
 
   // L3Gateway
@@ -57,6 +60,11 @@ export async function deployForTest() {
     tokenInfo.address,
   ]);
 
+  // PriceFetcher
+  const priceFetcher = await deployContract("PriceFetcher", [
+    priceManager.address,
+  ]);
+
   // Liquidation
   const liquidation = await deployContract(
     "Liquidation",
@@ -67,7 +75,7 @@ export async function deployForTest() {
       market.address,
     ],
     {
-      MathUtils: mathUtils,
+      MathUtils: mathUtils.address,
     }
   );
 
@@ -81,8 +89,8 @@ export async function deployForTest() {
       market.address,
     ],
     {
-      MathUtils: mathUtils,
-      OrderUtils: orderUtils,
+      MathUtils: mathUtils.address,
+      OrderUtils: orderUtils.address,
     }
   );
 
@@ -90,7 +98,7 @@ export async function deployForTest() {
   const positionVault = await deployContract(
     "PositionVault",
     [funding.address],
-    { PositionUtils: positionUtils }
+    { PositionUtils: positionUtils.address }
   );
 
   // OrderValidator
@@ -109,7 +117,7 @@ export async function deployForTest() {
   const positionHistory = await deployContract(
     "PositionHistory",
     [positionVault.address, traderVault.address],
-    { PositionUtils: positionUtils }
+    { PositionUtils: positionUtils.address }
   );
 
   // PositionFee
@@ -121,7 +129,7 @@ export async function deployForTest() {
   const positionManager = await deployContract(
     "PositionManager",
     [positionVault.address, market.address],
-    { OrderUtils: orderUtils, PnlUtils: pnlUtils }
+    { OrderUtils: orderUtils.address, PnlUtils: pnlUtils.address }
   );
 
   // MarketOrder
@@ -136,12 +144,13 @@ export async function deployForTest() {
       positionVault.address,
       orderValidator.address,
       orderHistory.address,
+      priceFetcher.address,
       globalState.address,
       positionFee.address,
     ],
     {
-      OrderUtils: orderUtils,
-      PnlUtils: pnlUtils,
+      OrderUtils: orderUtils.address,
+      PnlUtils: pnlUtils.address,
     }
   );
 
@@ -155,9 +164,14 @@ export async function deployForTest() {
       market.address,
       positionHistory.address,
       positionVault.address,
+      priceFetcher.address,
       positionFee.address,
     ],
-    { MathUtils: mathUtils, OrderUtils: orderUtils, PnlUtils: pnlUtils }
+    {
+      MathUtils: mathUtils.address,
+      OrderUtils: orderUtils.address,
+      PnlUtils: pnlUtils.address,
+    }
   );
 
   // OrderRouter
@@ -170,7 +184,7 @@ export async function deployForTest() {
   const priceMaster = await deployContract("PriceMaster", [
     priceManager.address,
     orderBook.address,
-    keeper, // price keeper
+    keeper.address, // price keeper
   ]);
 
   // L3 initialization
@@ -181,6 +195,9 @@ export async function deployForTest() {
     keeper,
     trader,
     mathUtils,
+    positionUtils,
+    orderUtils,
+    pnlUtils,
     l2MarginGateway,
     l2LiquidityGateway,
     traderVault,
@@ -191,6 +208,7 @@ export async function deployForTest() {
     globalState,
     l3Gateway,
     priceManager,
+    priceFetcher,
     liquidation,
     funding,
     positionVault,

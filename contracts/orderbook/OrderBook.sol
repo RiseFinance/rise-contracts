@@ -21,11 +21,12 @@ import "./OrderBookBase.sol";
 
 import "hardhat/console.sol";
 
-contract OrderBook is OrderBookBase, OrderExecutor, PriceFetcher, Modifiers {
+contract OrderBook is OrderBookBase, OrderExecutor, Modifiers {
     using MathUtils for int256;
     using SafeCast for uint256;
     using SafeCast for int256;
 
+    PriceFetcher public priceFetcher;
     OrderHistory public orderHistory;
     GlobalState public globalState;
     TokenInfo public tokenInfo;
@@ -59,6 +60,7 @@ contract OrderBook is OrderBookBase, OrderExecutor, PriceFetcher, Modifiers {
         address _market,
         address _positionHistory,
         address _positionVault,
+        address _priceFetcher,
         address _positionFee
     )
         OrderExecutor(
@@ -70,7 +72,9 @@ contract OrderBook is OrderBookBase, OrderExecutor, PriceFetcher, Modifiers {
             _positionVault,
             _positionFee
         )
-    {}
+    {
+        priceFetcher = PriceFetcher(_priceFetcher);
+    }
 
     function getOrderRequest(
         bool _isBuy,
@@ -146,7 +150,7 @@ contract OrderBook is OrderBookBase, OrderExecutor, PriceFetcher, Modifiers {
 
         IterationContext memory ic;
 
-        ic.interimMarkPrice = priceManager.getMarkPrice(_marketId); // initialize
+        ic.interimMarkPrice = priceFetcher._getMarkPrice(_marketId); // initialize
         // uint256 _limitPriceIterator = maxBidPrice[_marketId]; // intialize
         console.log("hi");
         ic.limitPriceIterator = _isBuy
@@ -217,7 +221,7 @@ contract OrderBook is OrderBookBase, OrderExecutor, PriceFetcher, Modifiers {
                 tokenInfo.getBaseTokenSizeToPriceBufferDeltaMultiplier(
                     _marketId
                 ) /
-                _getIndexPrice(_marketId));
+                priceFetcher._getIndexPrice(_marketId));
 
             console.log("Price: ", ic.limitPriceIterator / 1e20, "USD\n");
 
@@ -239,7 +243,7 @@ contract OrderBook is OrderBookBase, OrderExecutor, PriceFetcher, Modifiers {
 
             // console.log(">>> ptc.priceImpactInUsd: ", ptc.priceImpactInUsd);
 
-            ptc.avgExecutionPrice = _getAvgExecPrice(
+            ptc.avgExecutionPrice = priceFetcher._getAvgExecPrice(
                 _marketId,
                 ptc.fillAmount,
                 _isBuy
@@ -306,7 +310,7 @@ contract OrderBook is OrderBookBase, OrderExecutor, PriceFetcher, Modifiers {
             }
             // Note: if `isPartial = true` in this while loop,  sizeCap will be 0 after the for loop
 
-            ic.interimMarkPrice = priceManager.getMarkPrice(_marketId); // 이번 price tick 주문 iteration 이후 Price Impact를 interimPrice에 적용
+            ic.interimMarkPrice = priceFetcher._getMarkPrice(_marketId); // 이번 price tick 주문 iteration 이후 Price Impact를 interimPrice에 적용
 
             ic.limitPriceIterator = _isBuy
                 ? ic.limitPriceIterator - market.getPriceTickSize(_marketId)

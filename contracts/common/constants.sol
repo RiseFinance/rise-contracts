@@ -2,7 +2,7 @@
 
 pragma solidity ^0.8.0;
 
-uint256 constant USD_ID = 0; // FIXME:
+uint256 constant USDC_ID = 0; // FIXME:
 uint256 constant ETH_ID = 1;
 
 uint256 constant PRICE_BUFFER_PRECISION = 1e20;

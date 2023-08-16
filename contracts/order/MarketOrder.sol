@@ -10,12 +10,15 @@ import "../order/OrderExecutor.sol";
 import "../order/PriceFetcher.sol";
 import "../order/OrderUtils.sol";
 import "../global/GlobalState.sol";
-import "./OrderHistory.sol";
 import "./OrderValidator.sol";
+import "./OrderHistory.sol";
 
-contract MarketOrder is OrderExecutor, PriceFetcher {
+import "hardhat/console.sol";
+
+contract MarketOrder is OrderExecutor {
     OrderValidator public orderValidator;
     OrderHistory public orderHistory;
+    PriceFetcher public priceFetcher;
     GlobalState public globalState;
 
     constructor(
@@ -27,6 +30,7 @@ contract MarketOrder is OrderExecutor, PriceFetcher {
         address _positionVault,
         address _orderValidator,
         address _orderHistory,
+        address _priceFetcher,
         address _globalState,
         address _positionFee
     )
@@ -42,6 +46,7 @@ contract MarketOrder is OrderExecutor, PriceFetcher {
     {
         orderValidator = OrderValidator(_orderValidator);
         orderHistory = OrderHistory(_orderHistory);
+        priceFetcher = PriceFetcher(_priceFetcher);
         globalState = GlobalState(_globalState);
     }
 
@@ -57,12 +62,14 @@ contract MarketOrder is OrderExecutor, PriceFetcher {
         ec.marginAssetId = market.getMarketInfo(req.marketId).marginAssetId;
         // moc.isBuy = req.isLong == req.isIncrease;
 
-        ec.avgExecPrice = _getAvgExecPrice(
+        console.log(">>> chkpt 1");
+        ec.avgExecPrice = priceFetcher._getAvgExecPrice(
             req.marketId,
             ec.sizeAbs,
             // moc.isBuy
             req.isLong == req.isIncrease // isBuy
         );
+        console.log(">>> chkpt 2");
 
         ec.key = OrderUtils._getPositionKey(
             msg.sender,

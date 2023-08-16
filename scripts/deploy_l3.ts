@@ -14,6 +14,7 @@ export type L3Addresses = {
   GlobalState: string;
   L3Gateway: string;
   PriceManager: string;
+  PriceFetcher: string;
   Liquidation: string;
   Funding: string;
   PositionVault: string;
@@ -88,6 +89,11 @@ async function deployL3Contracts(): Promise<L3Addresses> {
   const priceManager = await deployContract("PriceManager", [
     globalState.address,
     tokenInfo.address,
+  ]);
+
+  // PriceFetcher
+  const priceFetcher = await deployContract("PriceFetcher", [
+    priceManager.address,
   ]);
 
   // Liquidation
@@ -169,6 +175,7 @@ async function deployL3Contracts(): Promise<L3Addresses> {
       positionVault.address,
       orderValidator.address,
       orderHistory.address,
+      priceFetcher.address,
       globalState.address,
       positionFee.address,
     ],
@@ -188,6 +195,7 @@ async function deployL3Contracts(): Promise<L3Addresses> {
       market.address,
       positionHistory.address,
       positionVault.address,
+      priceFetcher.address,
       positionFee.address,
     ],
     { MathUtils: mathUtils, OrderUtils: orderUtils, PnlUtils: pnlUtils }
@@ -216,6 +224,7 @@ async function deployL3Contracts(): Promise<L3Addresses> {
   console.log("GlobalState:", globalState.address);
   console.log("L3Gateway:", l3Gateway.address);
   console.log("PriceManager:", priceManager.address);
+  console.log("PriceFetcher:", priceFetcher.address);
   console.log("Liquidation:", liquidation.address);
   console.log("Funding:", funding.address);
   console.log("PositionVault:", positionVault.address);
@@ -238,6 +247,7 @@ async function deployL3Contracts(): Promise<L3Addresses> {
     GlobalState: globalState.address,
     L3Gateway: l3Gateway.address,
     PriceManager: priceManager.address,
+    PriceFetcher: priceFetcher.address,
     Liquidation: liquidation.address,
     Funding: funding.address,
     PositionVault: positionVault.address,
