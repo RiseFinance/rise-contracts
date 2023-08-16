@@ -13,7 +13,7 @@ import "../position/PositionHistory.sol";
 import "../position/PositionVault.sol";
 import "../order/OrderExecutor.sol";
 import "../order/OrderHistory.sol";
-import "../order/PriceUtils.sol";
+import "../order/PriceFetcher.sol";
 import "../order/OrderUtils.sol";
 import "../global/GlobalState.sol";
 import "../market/TokenInfo.sol";
@@ -21,14 +21,13 @@ import "./OrderBookBase.sol";
 
 import "hardhat/console.sol";
 
-contract OrderBook is OrderBookBase, OrderExecutor, PriceUtils, Modifiers {
+contract OrderBook is OrderBookBase, OrderExecutor, PriceFetcher, Modifiers {
     using MathUtils for int256;
     using SafeCast for uint256;
     using SafeCast for int256;
 
     OrderHistory public orderHistory;
     GlobalState public globalState;
-    PriceUtils public priceUtils;
     TokenInfo public tokenInfo;
 
     struct IterationContext {

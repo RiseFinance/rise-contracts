@@ -4,7 +4,7 @@ pragma solidity ^0.8.0;
 
 import "../oracle/PriceManager.sol";
 
-contract PriceUtils {
+contract PriceFetcher {
     PriceManager public priceManager;
 
     function _getAvgExecPrice(

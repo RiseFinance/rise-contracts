@@ -7,13 +7,13 @@ import "../common/structs.sol";
 import "../position/PositionHistory.sol";
 import "../position/PositionVault.sol";
 import "../order/OrderExecutor.sol";
-import "../order/PriceUtils.sol";
+import "../order/PriceFetcher.sol";
 import "../order/OrderUtils.sol";
 import "../global/GlobalState.sol";
 import "./OrderHistory.sol";
 import "./OrderValidator.sol";
 
-contract MarketOrder is OrderExecutor, PriceUtils {
+contract MarketOrder is OrderExecutor, PriceFetcher {
     OrderValidator public orderValidator;
     OrderHistory public orderHistory;
     GlobalState public globalState;

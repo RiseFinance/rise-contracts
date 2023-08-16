@@ -38,14 +38,17 @@ TraderVault=$(jq -r '.L3.TraderVault' $CONTRACT_PATH)
 Market=$(jq -r '.L3.Market' $CONTRACT_PATH)
 TokenInfo=$(jq -r '.L3.TokenInfo' $CONTRACT_PATH)
 RisePool=$(jq -r '.L3.RisePool' $CONTRACT_PATH)
+ListingManager=$(jq -r '.L3.ListingManager' $CONTRACT_PATH)
 GlobalState=$(jq -r '.L3.GlobalState' $CONTRACT_PATH)
 L3Gateway=$(jq -r '.L3.L3Gateway' $CONTRACT_PATH)
 PriceManager=$(jq -r '.L3.PriceManager' $CONTRACT_PATH)
+Liquidation=$(jq -r '.L3.Liquidation' $CONTRACT_PATH)
 Funding=$(jq -r '.L3.Funding' $CONTRACT_PATH)
 PositionVault=$(jq -r '.L3.PositionVault' $CONTRACT_PATH)
 OrderValidator=$(jq -r '.L3.OrderValidator' $CONTRACT_PATH)
 OrderHistory=$(jq -r '.L3.OrderHistory' $CONTRACT_PATH)
 PositionHistory=$(jq -r '.L3.PositionHistory' $CONTRACT_PATH)
+PositionManager=$(jq -r '.L3.PositionManager' $CONTRACT_PATH)
 MarketOrder=$(jq -r '.L3.MarketOrder' $CONTRACT_PATH)
 OrderBook=$(jq -r '.L3.OrderBook' $CONTRACT_PATH)
 OrderRouter=$(jq -r '.L3.OrderRouter' $CONTRACT_PATH)
@@ -55,14 +58,17 @@ npx hardhat verify --network $L3Network --contract contracts/account/TraderVault
 npx hardhat verify --network $L3Network --contract contracts/market/Market.sol:Market $Market
 npx hardhat verify --network $L3Network --contract contracts/market/TokenInfo.sol:TokenInfo $TokenInfo "$Market"
 npx hardhat verify --network $L3Network --contract contracts/risepool/RisePool.sol:RisePool $RisePool
+npx hardhat verify --network $L3Network --contract contracts/market/ListingManager.sol:ListingManager $ListingManager
 npx hardhat verify --network $L3Network --contract contracts/global/GlobalState.sol:GlobalState $GlobalState
 npx hardhat verify --network $L3Network --contract contracts/crosschain/L3Gateway.sol:L3Gateway $L3Gateway "$TraderVault" "$TokenInfo" "$RisePool" "$Market" "$L2MarginGateway" "$L2LiquidityGateway"
 npx hardhat verify --network $L3Network --contract contracts/oracle/PriceManager.sol:PriceManager $PriceManager "$GlobalState" "$TokenInfo"
+npx hardhat verify --network $L3Network --contract contracts/liquidation/Liquidation.sol:Liquidation $Liquidation "$PriceManager" "$TraderVault" "$TokenInfo" "$Market"
 npx hardhat verify --network $L3Network --contract contracts/fee/Funding.sol:Funding $Funding "$PriceManager" "$GlobalState" "$TokenInfo" "$Market"
 npx hardhat verify --network $L3Network --contract contracts/position/PositionVault.sol:PositionVault $PositionVault "$Funding"
 npx hardhat verify --network $L3Network --contract contracts/order/OrderValidator.sol:OrderValidator $OrderValidator "$PositionVault" "$GlobalState" "$RisePool"
 npx hardhat verify --network $L3Network --contract contracts/order/OrderHistory.sol:OrderHistory $OrderHistory "$TraderVault"
 npx hardhat verify --network $L3Network --contract contracts/position/PositionHistory.sol:PositionHistory $PositionHistory "$PositionVault" "$TraderVault"
+npx hardhat verify --network $L3Network --contract contracts/position/PositionManager.sol:PositionManager $PositionManager "$PositionVault" "$Market"
 npx hardhat verify --network $L3Network --contract contracts/order/MarketOrder.sol:MarketOrder $MarketOrder "$TraderVault" "$RisePool" "$Market" "$PositionHistory" "$PositionVault" "$OrderValidator" "$OrderHistory" "$GlobalState"
 npx hardhat verify --network $L3Network --contract contracts/orderbook/OrderBook.sol:OrderBook $OrderBook "$TraderVault" "$RisePool" "$Market" "$PositionHistory" "$PositionVault"
 npx hardhat verify --network $L3Network --contract contracts/order/OrderRouter.sol:OrderRouter $OrderRouter "$MarketOrder" "$OrderBook"

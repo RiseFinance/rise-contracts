@@ -32,9 +32,17 @@ async function main() {
 
 async function deployL3Contracts(): Promise<L3Addresses> {
   /// Libraries
+
+  // MathUtils
   const mathUtils = getLibraryAddress("MathUtils");
+
+  // PositionUtils
   const positionUtils = getLibraryAddress("PositionUtils");
+
+  // OrderUtils
   const orderUtils = getLibraryAddress("OrderUtils");
+
+  // PnlUtils
   const pnlUtils = getLibraryAddress("PnlUtils");
 
   const l2MarginGateway = getContractAddress("L2MarginGateway", Network.L2);
