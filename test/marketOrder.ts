@@ -3,7 +3,13 @@ import { expect } from "chai";
 import { ethers } from "hardhat";
 
 import { deployForTest } from "./test_deploy";
-import { formatStruct } from "../utils/formatter";
+import {
+  formatUSDC,
+  formatPosition,
+  formatOrderRecord,
+  formatPositionRecord,
+  formatGlobalPositionState,
+} from "../utils/formatter";
 
 const USDC_ID = 0;
 const ETH_ID = 1;
@@ -27,6 +33,9 @@ describe("Place and Execute Market Order", function () {
 
   async function getContext() {
     const ctx = await loadFixture(deployForTest);
+    console.log(
+      "\n-------------------- Contracts Deployed. --------------------\n"
+    );
     return ctx;
   }
 
@@ -95,34 +104,37 @@ describe("Place and Execute Market Order", function () {
     );
 
     const position = await ctx.positionVault.getPosition(key);
-    console.log(">>> position: ", formatStruct(position));
+    console.log(">>> position: ", formatPosition(position));
 
     const orderRecord = await ctx.orderHistory.orderRecords(
       ctx.trader.address,
       0
     ); // traderAddress, traderOrderRecordId
-    console.log(">>> orderRecord: ", formatStruct(orderRecord));
+    console.log(">>> orderRecord: ", formatOrderRecord(orderRecord));
 
     const globalPositionState =
       await ctx.globalState.getGlobalLongPositionState(ETH_USDC_MARKET_ID);
-    console.log(">>> globalPositionState: ", formatStruct(globalPositionState));
+    console.log(
+      ">>> globalPositionState: ",
+      formatGlobalPositionState(globalPositionState)
+    );
 
     const traderBalance = await ctx.traderVault.getTraderBalance(
       ctx.trader.address,
       USDC_ID
     );
-    console.log(">>> traderBalance: ", traderBalance);
+    console.log(">>> traderBalance: ", formatUSDC(traderBalance));
 
     const tokenReserveAmount = await ctx.risePool.getLongReserveAmount(
       ETH_USDC_MARKET_ID
     );
-    console.log(">>> tokenReserveAmount: ", tokenReserveAmount);
+    console.log(">>> tokenReserveAmount: ", formatUSDC(tokenReserveAmount));
 
     const positionRecord = await ctx.positionHistory.positionRecords(
       ctx.trader.address,
       0
     ); // traderAddress, traderPositionRecordId
-    console.log(">>> positionRecord: ", formatStruct(positionRecord));
+    console.log(">>> positionRecord: ", formatPositionRecord(positionRecord));
 
     // position 생성
     // order record 생성
