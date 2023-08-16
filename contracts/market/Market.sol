@@ -3,10 +3,23 @@
 pragma solidity ^0.8.0;
 
 import "../common/structs.sol";
+import "hardhat/console.sol";
 
 contract Market {
     mapping(uint256 => MarketInfo) public markets; // marketId => MarketInfo
     uint256 public globalMarketIdCounter = 0; // TODO: choose when to update - before / after the market is created
+
+    function registerMarket(
+        uint256 _marketId,
+        MarketInfo memory _marketInfo
+    ) external {
+        // TODO: validation (cannot register existing market, etc.)
+        require(
+            markets[_marketId].marketId == 0,
+            "MarketVault: market already registered"
+        );
+        markets[_marketId] = _marketInfo;
+    }
 
     function getMarketInfo(
         uint256 _marketId

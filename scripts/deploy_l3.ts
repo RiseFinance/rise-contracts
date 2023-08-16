@@ -65,7 +65,9 @@ async function deployL3Contracts(): Promise<L3Addresses> {
   const tokenInfo = await deployContract("TokenInfo", [market.address]);
 
   // ListingManager
-  const listingManager = await deployContract("ListingManager");
+  const listingManager = await deployContract("ListingManager", [
+    market.address,
+  ]);
 
   // RisePool
   const risePool = await deployContract("RisePool");

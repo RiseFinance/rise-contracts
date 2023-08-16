@@ -6,6 +6,7 @@ import "../common/structs.sol";
 
 import "../token/RM.sol";
 import "./Market.sol";
+import "hardhat/console.sol";
 
 // Deals with listing new markets and updating existing ones
 // * Listing new markets
@@ -14,6 +15,12 @@ import "./Market.sol";
 contract ListingManager {
     // TODO: create LP token contract for each market
     // TODO: register token if not registered
+
+    Market public market;
+
+    constructor(address _market) {
+        market = Market(_market);
+    }
 
     function createRisePerpsMarket(
         MarketInfo memory m
@@ -40,6 +47,8 @@ contract ListingManager {
             m.fundingRateMultiplier,
             address(rm)
         );
+
+        market.registerMarket(m.marketId, newMarket);
 
         return newMarket;
     }

@@ -34,7 +34,9 @@ export async function deployForTest() {
   const tokenInfo = await deployContract("TokenInfo", [market.address]);
 
   // ListingManager
-  const listingManager = await deployContract("ListingManager");
+  const listingManager = await deployContract("ListingManager", [
+    market.address,
+  ]);
 
   // RisePool
   const risePool = await deployContract("RisePool");

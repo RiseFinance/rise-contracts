@@ -21,6 +21,7 @@ contract OrderExecutor is PnlManager {
         OpenPosition openPosition;
         OrderExecType execType;
         bytes32 key;
+        uint256 marketId;
         uint256 marginAssetId;
         uint256 sizeAbs;
         uint256 marginAbs;
@@ -61,15 +62,15 @@ contract OrderExecutor is PnlManager {
         );
 
         req.isLong
-            ? risePool.increaseLongReserveAmount(ec.marginAssetId, ec.sizeAbs)
-            : risePool.increaseShortReserveAmount(ec.marginAssetId, ec.sizeAbs);
+            ? risePool.increaseLongReserveAmount(ec.marketId, ec.sizeAbs)
+            : risePool.increaseShortReserveAmount(ec.marketId, ec.sizeAbs);
 
         if (ec.execType == OrderExecType.OpenPosition) {
             /// @dev for OpenPosition: PositionRecord => OpenPosition
 
             ec.positionRecordId = positionHistory.openPositionRecord(
                 OpenPositionRecordParams(
-                    msg.sender,
+                    tx.origin,
                     req.marketId,
                     ec.sizeAbs,
                     ec.avgExecPrice,
@@ -82,7 +83,7 @@ contract OrderExecutor is PnlManager {
                     ec.execType,
                     ec.key,
                     true, // isOpening
-                    msg.sender,
+                    tx.origin,
                     req.isLong,
                     ec.positionRecordId,
                     req.marketId,
@@ -103,7 +104,7 @@ contract OrderExecutor is PnlManager {
                     ec.execType,
                     ec.key,
                     false, // isOpening
-                    msg.sender,
+                    tx.origin,
                     req.isLong,
                     ec.positionRecordId,
                     req.marketId,
@@ -117,7 +118,7 @@ contract OrderExecutor is PnlManager {
 
             positionHistory.updatePositionRecord(
                 UpdatePositionRecordParams(
-                    msg.sender,
+                    tx.origin,
                     ec.key,
                     ec.positionRecordId,
                     req.isIncrease,
@@ -159,7 +160,7 @@ contract OrderExecutor is PnlManager {
                     ec.execType,
                     ec.key,
                     false, // isOpening
-                    msg.sender,
+                    tx.origin,
                     req.isLong,
                     ec.positionRecordId,
                     req.marketId,
@@ -173,7 +174,7 @@ contract OrderExecutor is PnlManager {
 
             positionHistory.updatePositionRecord(
                 UpdatePositionRecordParams(
-                    msg.sender,
+                    tx.origin,
                     ec.key,
                     ec.openPosition.currentPositionRecordId,
                     req.isIncrease,
@@ -187,7 +188,7 @@ contract OrderExecutor is PnlManager {
 
             positionHistory.closePositionRecord(
                 ClosePositionRecordParams(
-                    msg.sender,
+                    tx.origin,
                     ec.openPosition.currentPositionRecordId,
                     ec.pnl,
                     ec.sizeAbs,

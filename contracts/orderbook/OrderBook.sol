@@ -339,6 +339,8 @@ contract OrderBook is OrderBookBase, OrderExecutor, Modifiers {
         FillLimitOrderContext memory flc;
         ExecutionContext memory ec;
 
+        ec.marketId = req.marketId;
+
         ec.marginAssetId = market.getMarketInfo(req.marketId).marginAssetId;
 
         flc.isPartial = req.sizeAbs > sizeCap;
@@ -405,7 +407,7 @@ contract OrderBook is OrderBookBase, OrderExecutor, Modifiers {
         // create order record
         orderHistory.createOrderRecord(
             CreateOrderRecordParams(
-                msg.sender,
+                tx.origin,
                 OrderType.Limit,
                 req.isLong,
                 req.isIncrease,

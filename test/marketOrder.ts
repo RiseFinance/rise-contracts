@@ -6,15 +6,19 @@ import { deployForTest } from "./test_deploy";
 
 const USDC_ID = 0;
 const ETH_ID = 1;
-const ETH_USDC_MARKET_ID = 0;
+const ETH_USDC_MARKET_ID = 1;
 
 const USD_DECIMALS = 20;
 const ETH_DECIMALS = 18;
 const PRICE_BUFFER_DECIMALS = 8;
 
 describe("Place and Execute Market Order", function () {
-  async function depositToTraderAccount(traderVault: any, trader: any) {
-    const depositAmount = ethers.utils.parseUnits("5000", USD_DECIMALS); // 5000 USD
+  async function depositToTraderAccount(
+    traderVault: any,
+    trader: any,
+    amount: string
+  ) {
+    const depositAmount = ethers.utils.parseUnits(amount, USD_DECIMALS); // 5000 USD
     await traderVault
       .connect(trader)
       .increaseTraderBalance(trader.address, USDC_ID, depositAmount);
@@ -27,7 +31,12 @@ describe("Place and Execute Market Order", function () {
 
   it("1. Execute market order", async function () {
     const ctx = await getContext();
-    await depositToTraderAccount(ctx.traderVault, ctx.trader);
+    await depositToTraderAccount(ctx.traderVault, ctx.trader, "500000");
+
+    const initialTraderBalance = await ctx.traderVault.getTraderBalance(
+      ctx.trader.address,
+      USDC_ID
+    );
 
     let m = {
       marketId: ETH_USDC_MARKET_ID,
@@ -42,9 +51,16 @@ describe("Place and Execute Market Order", function () {
     };
     await ctx.listingManager.createRisePerpsMarket(m);
 
-    // TODO: setup - register token & do market listing
+    await ctx.positionVault.setMaxLongCapacity(
+      ETH_USDC_MARKET_ID,
+      ethers.utils.parseUnits("15000000", ETH_DECIMALS)
+    );
+    await ctx.positionVault.setMaxShortCapacity(
+      ETH_USDC_MARKET_ID,
+      ethers.utils.parseUnits("15000000", ETH_DECIMALS)
+    );
 
-    // add liquidity
+    // add liquidity (Long reserve token)
 
     await ctx.risePool.addLiquidity(
       ETH_USDC_MARKET_ID,
@@ -63,41 +79,45 @@ describe("Place and Execute Market Order", function () {
       isLong: true,
       isIncrease: true,
       orderType: 0, // TODO: check solidity enum
-      marketId: 0,
+      marketId: ETH_USDC_MARKET_ID,
       sizeAbs: ethers.utils.parseUnits("20000", ETH_DECIMALS),
       marginAbs: ethers.utils.parseUnits("1000", USD_DECIMALS),
       limitPrice: 0,
     };
 
-    await ctx.orderRouter.placeMarketOrder(orderRequest);
+    await ctx.orderRouter.connect(ctx.trader).placeMarketOrder(orderRequest);
 
-    const key = ctx.orderUtils._getPositionKey(
+    const key = await ctx.orderUtils._getPositionKey(
       ctx.trader.address,
       true, // isLong
       ETH_USDC_MARKET_ID
     );
 
-    const position = ctx.positionVault.getPosition(key);
+    const position = await ctx.positionVault.getPosition(key);
     console.log(">>> position: ", position);
 
-    const orderRecord = ctx.orderHistory.orderRecords(ctx.trader.address, 0); // traderAddress, traderOrderRecordId
+    const orderRecord = await ctx.orderHistory.orderRecords(
+      ctx.trader.address,
+      0
+    ); // traderAddress, traderOrderRecordId
     console.log(">>> orderRecord: ", orderRecord);
 
     const globalPositionState =
-      ctx.globalState.getGlobalLongPositionState(ETH_USDC_MARKET_ID);
+      await ctx.globalState.getGlobalLongPositionState(ETH_USDC_MARKET_ID);
     console.log(">>> globalPositionState: ", globalPositionState);
 
-    const traderBalance = ctx.traderVault.getTraderBalance(
+    const traderBalance = await ctx.traderVault.getTraderBalance(
       ctx.trader.address,
       USDC_ID
     );
     console.log(">>> traderBalance: ", traderBalance);
 
-    const tokenReserveAmount =
-      ctx.risePool.getLongReserveAmount(ETH_USDC_MARKET_ID);
+    const tokenReserveAmount = await ctx.risePool.getLongReserveAmount(
+      ETH_USDC_MARKET_ID
+    );
     console.log(">>> tokenReserveAmount: ", tokenReserveAmount);
 
-    const positionRecord = ctx.positionHistory.positionRecords(
+    const positionRecord = await ctx.positionHistory.positionRecords(
       ctx.trader.address,
       0
     ); // traderAddress, traderPositionRecordId

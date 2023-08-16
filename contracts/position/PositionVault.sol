@@ -18,7 +18,7 @@ contract PositionVault {
     // TODO: open <> close 사이의 position을 하나로 연결하여 기록
     mapping(bytes32 => OpenPosition) public openPositions; // positionHash => Position
 
-    mapping(uint256 => uint256) public maxLongCapacity; // marketId => tokenCountq
+    mapping(uint256 => uint256) public maxLongCapacity; // marketId => tokenCount
     mapping(uint256 => uint256) public maxShortCapacity; // marketId => tokenCount // TODO: check - is it for stablecoins?
 
     constructor(address _funding) {
@@ -99,5 +99,21 @@ contract PositionVault {
 
     function deleteOpenPosition(bytes32 _key) external {
         delete openPositions[_key];
+    }
+
+    // TODO: onlyOperator
+    function setMaxLongCapacity(
+        uint256 _marketId,
+        uint256 _tokenCount
+    ) external {
+        maxLongCapacity[_marketId] = _tokenCount;
+    }
+
+    // TODO: onlyOperator
+    function setMaxShortCapacity(
+        uint256 _marketId,
+        uint256 _tokenCount
+    ) external {
+        maxShortCapacity[_marketId] = _tokenCount;
     }
 }

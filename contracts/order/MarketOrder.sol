@@ -56,23 +56,23 @@ contract MarketOrder is OrderExecutor {
         // MarketOrderContext memory moc;
         ExecutionContext memory ec;
 
+        ec.marketId = req.marketId;
+
         ec.sizeAbs = req.sizeAbs;
         ec.marginAbs = req.marginAbs;
 
         ec.marginAssetId = market.getMarketInfo(req.marketId).marginAssetId;
         // moc.isBuy = req.isLong == req.isIncrease;
 
-        console.log(">>> chkpt 1");
         ec.avgExecPrice = priceFetcher._getAvgExecPrice(
             req.marketId,
             ec.sizeAbs,
             // moc.isBuy
             req.isLong == req.isIncrease // isBuy
         );
-        console.log(">>> chkpt 2");
 
         ec.key = OrderUtils._getPositionKey(
-            msg.sender,
+            tx.origin,
             req.isLong,
             req.marketId
         );
@@ -123,7 +123,7 @@ contract MarketOrder is OrderExecutor {
         // create order record
         orderHistory.createOrderRecord(
             CreateOrderRecordParams(
-                msg.sender,
+                tx.origin,
                 OrderType.Market,
                 req.isLong,
                 req.isIncrease,
