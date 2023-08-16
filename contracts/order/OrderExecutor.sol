@@ -32,11 +32,12 @@ contract OrderExecutor is PnlManager {
     constructor(
         address _traderVault,
         address _risePool,
+        address _funding,
         address _market,
         address _positionHistory,
         address _positionVault,
         address _positionFee
-    ) PnlManager(_traderVault, _risePool, _market) {
+    ) PnlManager(_traderVault, _risePool, _funding, _market) {
         positionHistory = PositionHistory(_positionHistory);
         positionVault = PositionVault(_positionVault);
         positionFee = PositionFee(_positionFee);

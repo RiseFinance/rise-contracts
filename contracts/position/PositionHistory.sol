@@ -9,7 +9,7 @@ import "../position/PositionVault.sol";
 import "../position/PositionUtils.sol";
 import "../account/TraderVault.sol";
 
-contract PositionHistory is PositionUtils {
+contract PositionHistory {
     PositionVault public positionVault;
     TraderVault public traderVault;
 
@@ -136,7 +136,7 @@ contract PositionHistory is PositionUtils {
         uint256 _sizeDeltaAbs,
         uint256 _decreasingPrice
     ) private {
-        uint256 newAvgClosePrice = _getNextAvgPrice(
+        uint256 newAvgClosePrice = PositionUtils._getNextAvgPrice(
             false, // _isIncreaseInSize
             _positionRecord.cumulativeClosedSize, // _prevSize
             _positionRecord.avgClosePrice, // _prevAvgPrice

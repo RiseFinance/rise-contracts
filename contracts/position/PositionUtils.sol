@@ -4,7 +4,7 @@ pragma solidity ^0.8.0;
 
 import "../utils/MathUtils.sol";
 
-contract PositionUtils {
+library PositionUtils {
     /**
      * (new avg price) * (new size) = (old avg price) * (old size) + (mark price) * (size delta)
      * */

@@ -14,7 +14,7 @@ import "../market/TokenInfo.sol";
 import "../market/Market.sol";
 import "../utils/MathUtils.sol";
 
-contract Funding is OrderUtils {
+contract Funding {
     using SafeCast for int256;
     using SafeCast for uint256;
 
@@ -82,13 +82,15 @@ contract Funding is OrderUtils {
         uint256 marketId = _position.marketId;
         uint256 markPrice = priceManager.getMarkPrice(marketId);
 
-        int256 sizeInUsd = _tokenToUsd(
-            _position.size,
-            markPrice,
-            tokenInfo.getTokenDecimals(
-                market.getMarketInfo(marketId).baseAssetId
+        int256 sizeInUsd = OrderUtils
+            ._tokenToUsd(
+                _position.size,
+                markPrice,
+                tokenInfo.getTokenDecimals(
+                    market.getMarketInfo(marketId).baseAssetId
+                )
             )
-        ).toInt256();
+            .toInt256();
         int256 fundingFeeToPay = ((getFundingIndex(marketId) -
             _position.avgEntryFundingIndex) * sizeInUsd) /
             FUNDING_RATE_PRECISION;

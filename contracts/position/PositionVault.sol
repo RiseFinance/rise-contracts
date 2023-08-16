@@ -10,7 +10,7 @@ import "../fee/Funding.sol";
 
 import "./PositionUtils.sol";
 
-contract PositionVault is PositionUtils {
+contract PositionVault {
     using SafeCast for uint256;
 
     Funding public funding;
@@ -70,20 +70,21 @@ contract PositionVault is PositionUtils {
         }
 
         if (p._sizeDeltaAbs > 0 && p._isIncreaseInSize) {
-            _position.avgOpenPrice = _getNextAvgPrice(
+            _position.avgOpenPrice = PositionUtils._getNextAvgPrice(
                 p._isIncreaseInSize,
                 _position.size,
                 _position.avgOpenPrice,
                 p._sizeDeltaAbs,
                 p._executionPrice
             );
-            _position.avgEntryFundingIndex = _getNextAvgEntryFundingIndex(
-                p._isIncreaseInSize,
-                _position.size,
-                _position.avgEntryFundingIndex,
-                p._sizeDeltaAbs,
-                funding.getFundingIndex(p._marketId)
-            );
+            _position.avgEntryFundingIndex = PositionUtils
+                ._getNextAvgEntryFundingIndex(
+                    p._isIncreaseInSize,
+                    _position.size,
+                    _position.avgEntryFundingIndex,
+                    p._sizeDeltaAbs,
+                    funding.getFundingIndex(p._marketId)
+                );
         }
         _position.size = p._isIncreaseInSize
             ? _position.size + p._sizeDeltaAbs

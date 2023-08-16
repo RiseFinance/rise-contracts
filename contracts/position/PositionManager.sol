@@ -5,20 +5,18 @@ pragma solidity ^0.8.0;
 import "../order/OrderUtils.sol";
 import "../market/Market.sol";
 import "./PositionVault.sol";
-import "./PnlManager.sol";
+import "./PnlUtils.sol";
 
-contract PositionManager is OrderUtils {
+contract PositionManager {
     PositionVault public positionVault;
-    PnlManager public pnlManager;
     Market public market;
 
     // function iterateOpenPositions() public {}
 
     // iteration over the trader's open positions => (2 * listed market num) for each trader
 
-    constructor(address _positionVault, address _pnlManager, address _market) {
+    constructor(address _positionVault, address _market) {
         positionVault = PositionVault(_positionVault);
-        pnlManager = PnlManager(_pnlManager);
         market = Market(_market);
     }
 
@@ -35,10 +33,10 @@ contract PositionManager is OrderUtils {
         for (uint256 i = 0; i < marketNum; i++) {
             // iterate over long/short
             for (uint256 j = 0; j < 2; j++) {
-                bytes32 key = _getPositionKey(_trader, _isLong, i);
+                bytes32 key = OrderUtils._getPositionKey(_trader, _isLong, i);
                 OpenPosition memory position = positionVault.getPosition(key);
 
-                int256 _pnl = pnlManager._calculatePnL(
+                int256 _pnl = PnlUtils._calculatePnL(
                     position.size,
                     position.avgOpenPrice,
                     _markPrices[i],

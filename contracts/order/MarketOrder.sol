@@ -13,7 +13,7 @@ import "../global/GlobalState.sol";
 import "./OrderHistory.sol";
 import "./OrderValidator.sol";
 
-contract MarketOrder is OrderExecutor, OrderUtils, PriceUtils {
+contract MarketOrder is OrderExecutor, PriceUtils {
     OrderValidator public orderValidator;
     OrderHistory public orderHistory;
     GlobalState public globalState;
@@ -21,6 +21,7 @@ contract MarketOrder is OrderExecutor, OrderUtils, PriceUtils {
     constructor(
         address _traderVault,
         address _risePool,
+        address _funding,
         address _market,
         address _positionHistory,
         address _positionVault,
@@ -32,6 +33,7 @@ contract MarketOrder is OrderExecutor, OrderUtils, PriceUtils {
         OrderExecutor(
             _traderVault,
             _risePool,
+            _funding,
             _market,
             _positionHistory,
             _positionVault,
@@ -62,7 +64,11 @@ contract MarketOrder is OrderExecutor, OrderUtils, PriceUtils {
             req.isLong == req.isIncrease // isBuy
         );
 
-        ec.key = _getPositionKey(msg.sender, req.isLong, req.marketId);
+        ec.key = OrderUtils._getPositionKey(
+            msg.sender,
+            req.isLong,
+            req.marketId
+        );
 
         // validations
         req.isIncrease

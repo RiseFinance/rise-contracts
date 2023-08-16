@@ -21,13 +21,7 @@ import "./OrderBookBase.sol";
 
 import "hardhat/console.sol";
 
-contract OrderBook is
-    OrderBookBase,
-    OrderExecutor,
-    OrderUtils,
-    PriceUtils,
-    Modifiers
-{
+contract OrderBook is OrderBookBase, OrderExecutor, PriceUtils, Modifiers {
     using MathUtils for int256;
     using SafeCast for uint256;
     using SafeCast for int256;
@@ -62,6 +56,7 @@ contract OrderBook is
     constructor(
         address _traderVault,
         address _risePool,
+        address _funding,
         address _market,
         address _positionHistory,
         address _positionVault,
@@ -70,6 +65,7 @@ contract OrderBook is
         OrderExecutor(
             _traderVault,
             _risePool,
+            _funding,
             _market,
             _positionHistory,
             _positionVault,
@@ -357,7 +353,11 @@ contract OrderBook is
         ec.avgExecPrice = _avgExecPrice;
 
         // update position
-        ec.key = _getPositionKey(req.trader, req.isLong, req.marketId);
+        ec.key = OrderUtils._getPositionKey(
+            req.trader,
+            req.isLong,
+            req.marketId
+        );
 
         // TODO: validations
 

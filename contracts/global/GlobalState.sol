@@ -7,7 +7,7 @@ import "../common/params.sol";
 
 import "../position/PositionUtils.sol";
 
-contract GlobalState is PositionUtils {
+contract GlobalState {
     mapping(uint256 => GlobalPositionState) private globalLongPositionStates; // marketId => GlobalPositionState
     mapping(uint256 => GlobalPositionState) private globalShortPositionStates; // marketId => GlobalPositionState
 
@@ -37,13 +37,14 @@ contract GlobalState is PositionUtils {
     function updateGlobalLongPositionState(
         UpdateGlobalPositionStateParams memory p
     ) external {
-        globalLongPositionStates[p._marketId].avgPrice = _getNextAvgPrice(
-            p._isIncrease,
-            globalLongPositionStates[p._marketId].totalSize,
-            globalLongPositionStates[p._marketId].avgPrice,
-            p._sizeDeltaAbs,
-            p._markPrice
-        );
+        globalLongPositionStates[p._marketId].avgPrice = PositionUtils
+            ._getNextAvgPrice(
+                p._isIncrease,
+                globalLongPositionStates[p._marketId].totalSize,
+                globalLongPositionStates[p._marketId].avgPrice,
+                p._sizeDeltaAbs,
+                p._markPrice
+            );
 
         if (p._isIncrease) {
             globalLongPositionStates[p._marketId].totalSize += p._sizeDeltaAbs;
@@ -59,13 +60,14 @@ contract GlobalState is PositionUtils {
     function updateGlobalShortPositionState(
         UpdateGlobalPositionStateParams memory p
     ) external {
-        globalShortPositionStates[p._marketId].avgPrice = _getNextAvgPrice(
-            p._isIncrease,
-            globalShortPositionStates[p._marketId].totalSize,
-            globalShortPositionStates[p._marketId].avgPrice,
-            p._sizeDeltaAbs,
-            p._markPrice
-        );
+        globalShortPositionStates[p._marketId].avgPrice = PositionUtils
+            ._getNextAvgPrice(
+                p._isIncrease,
+                globalShortPositionStates[p._marketId].totalSize,
+                globalShortPositionStates[p._marketId].avgPrice,
+                p._sizeDeltaAbs,
+                p._markPrice
+            );
 
         if (p._isIncrease) {
             globalShortPositionStates[p._marketId].totalSize += p._sizeDeltaAbs;

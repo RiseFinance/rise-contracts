@@ -4,7 +4,7 @@ pragma solidity ^0.8.0;
 
 import {USD_PRECISION} from "../common/constants.sol";
 
-contract OrderUtils {
+library OrderUtils {
     function _usdToToken(
         uint256 _usdAmount,
         uint256 _tokenPrice,

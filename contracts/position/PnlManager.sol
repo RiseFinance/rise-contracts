@@ -4,9 +4,8 @@ pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts/utils/math/SafeCast.sol";
 
-import "../common/constants.sol";
+import "./PnlUtils.sol";
 import "../common/structs.sol";
-import "../common/params.sol";
 
 import "../account/TraderVault.sol";
 import "../risepool/RisePool.sol";
@@ -22,9 +21,15 @@ contract PnlManager {
     Funding public funding;
     Market public market;
 
-    constructor(address _traderVault, address _risePool, address _market) {
+    constructor(
+        address _traderVault,
+        address _risePool,
+        address _funding,
+        address _market
+    ) {
         traderVault = TraderVault(_traderVault);
         risePool = RisePool(_risePool);
+        funding = Funding(_funding);
         market = Market(_market);
     }
 
@@ -45,7 +50,7 @@ contract PnlManager {
         // );
 
         int256 fundingFeeToPay = funding.getFundingFeeToPay(_position);
-        int256 pnl = _calculatePnL(
+        int256 pnl = PnlUtils._calculatePnL(
             _sizeAbs,
             _position.avgOpenPrice,
             _executionPrice,
@@ -81,24 +86,5 @@ contract PnlManager {
             );
 
         return pnlAfterFundingFee;
-    }
-
-    function _calculatePnL(
-        uint256 _size,
-        uint256 _averagePrice,
-        uint256 _markPrice,
-        bool _isLong
-    ) public pure returns (int256) {
-        int256 pnl;
-        _isLong
-            ? pnl =
-                (_size.toInt256() *
-                    (_markPrice.toInt256() - _averagePrice.toInt256())) /
-                USD_PRECISION.toInt256()
-            : pnl =
-            (_size.toInt256() *
-                (_averagePrice.toInt256() - _markPrice.toInt256())) /
-            USD_PRECISION.toInt256();
-        return pnl;
     }
 }
