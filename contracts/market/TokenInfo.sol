@@ -50,10 +50,11 @@ contract TokenInfo {
         return getTokenData(_assetId).sizeToPriceBufferDeltaMultiplier;
     }
 
+    // TODO: PriceManager 등에서 호출하는 패턴 고려
     function setSizeToPriceBufferDeltaMultiplier(
         uint256 _assetId,
         uint256 _multiplier
-    ) public {
+    ) external {
         TokenData storage tokenData = assetIdToTokenData[_assetId];
         tokenData.sizeToPriceBufferDeltaMultiplier = _multiplier;
     }

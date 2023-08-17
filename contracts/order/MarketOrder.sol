@@ -65,15 +65,17 @@ contract MarketOrder is OrderExecutor {
         // moc.isBuy = req.isLong == req.isIncrease;
 
         // FIXME:: 주석해제
-        // ec.avgExecPrice = priceFetcher._getAvgExecPrice(
-        //     req.marketId,
-        //     ec.sizeAbs,
-        //     // moc.isBuy
-        //     req.isLong == req.isIncrease // isBuy
-        // );
+        ec.avgExecPrice = priceFetcher._getAvgExecPrice(
+            req.marketId,
+            ec.sizeAbs,
+            // moc.isBuy
+            req.isLong == req.isIncrease // isBuy
+        );
+
+        console.log("+++++ ec.avgExecPrice: %s", ec.avgExecPrice);
 
         // FIXME: 삭제
-        ec.avgExecPrice = priceFetcher._getIndexPrice(req.marketId);
+        // ec.avgExecPrice = priceFetcher._getIndexPrice(req.marketId);
 
         ec.key = OrderUtils._getPositionKey(
             tx.origin,

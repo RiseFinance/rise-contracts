@@ -19,16 +19,16 @@ contract PriceManager {
     TokenInfo public tokenInfo;
 
     mapping(uint256 => uint256) public indexPrices;
-    mapping(uint256 => uint256) public priceBufferUpdatedTime;
     mapping(uint256 => int256) public lastPriceBuffer;
 
-    event Execution(uint256 marketId, int256 price);
+    // mapping(uint256 => uint256) public priceBufferUpdatedTimes;
 
     constructor(address _globalState, address _tokenInfo) {
         globalState = GlobalState(_globalState);
         tokenInfo = TokenInfo(_tokenInfo);
     }
 
+    // TODO: onlyPriceKeeper
     function setPrice(
         uint256 _marketId,
         uint256 _price // new index price from the data source
@@ -38,28 +38,29 @@ contract PriceManager {
         indexPrices[_marketId] = _price;
     }
 
-    function getPriceBuffer(uint256 _marketId) public view returns (int256) {
-        return
-            tokenInfo
-                .getBaseTokenSizeToPriceBufferDeltaMultiplier(_marketId)
-                .toInt256() * (globalState.getLongShortOIDiff(_marketId));
-    }
-
     function getIndexPrice(uint256 _marketId) public view returns (uint256) {
         return indexPrices[_marketId];
     }
 
+    function getPriceBuffer(uint256 _marketId) public view returns (int256) {
+        return
+            _calculatePriceBuffer(
+                _marketId,
+                globalState.getLongShortOIDiff(_marketId)
+            );
+    }
+
+    // TODO: check - 현재 구현으로는 이번 주문에 의해 변경되는 Long/Short OI는 반영되지 않음
+    // 아래 getAvgExecPrice에서 구현함 (이번 주문에 의한 변화: priceBufferChange)
+
     function getMarkPrice(uint256 _marketId) public view returns (uint256) {
         int256 newPriceBuffer = getPriceBuffer(_marketId);
-        console.log("******* newPriceBuffer:", newPriceBuffer.toUint256());
-        int256 newPriceBufferInUsd = ((indexPrices[_marketId]).toInt256() *
-            newPriceBuffer) / (PRICE_BUFFER_PRECISION).toInt256();
-        console.log(
-            "******* newPriceBufferInUsd:",
-            newPriceBufferInUsd.toUint256()
-        );
+
+        int256 newPriceBufferSizeInUsd = ((indexPrices[_marketId]).toInt256() *
+            newPriceBuffer) / PRICE_BUFFER_PRECISION.toInt256();
+
         return
-            ((indexPrices[_marketId]).toInt256() + newPriceBufferInUsd)
+            ((indexPrices[_marketId]).toInt256() + newPriceBufferSizeInUsd)
                 .toUint256();
     }
 
@@ -69,25 +70,77 @@ contract PriceManager {
         bool _isBuy
     ) public view returns (uint256) {
         uint256 _indexPrice = getIndexPrice(_marketId);
-        // require first bit of _size is 0
-        uint256 tokenDecimals = tokenInfo.getBaseTokenDecimals(_marketId);
-        uint256 sizeInUsd = (_size * getIndexPrice(_marketId)) /
-            10 ** tokenDecimals;
-
         require(_indexPrice > 0, "PriceManager: price not set");
-        int256 intSize = _isBuy
-            ? (sizeInUsd).toInt256()
-            : -(sizeInUsd).toInt256();
-        int256 priceBufferChange = (intSize *
-            (tokenInfo.getBaseTokenSizeToPriceBufferDeltaMultiplier(_marketId))
-                .toInt256()) / (SIZE_TO_PRICE_BUFFER_PRECISION).toInt256();
-        int256 averagePriceBuffer = (getPriceBuffer(_marketId) +
-            priceBufferChange) / 2;
-        int256 averageExecutedPrice = (_indexPrice).toInt256() +
-            ((_indexPrice).toInt256() * averagePriceBuffer) /
-            (PRICE_BUFFER_PRECISION).toInt256();
-        // emit Execution(_marketId, averageExecutedPrice);
+        console.log("&&&&& _indexPrice: %s", _indexPrice);
 
-        return (averageExecutedPrice).toUint256();
+        // require first bit of _size is 0
+        // uint256 tokenDecimals = tokenInfo.getBaseTokenDecimals(_marketId);
+
+        // uint256 _sizeInUsdc = (_size * getIndexPrice(_marketId)) /
+        //     10 ** tokenDecimals;
+        // console.log("&&&&& _sizeInUsdc: %s", _sizeInUsdc);
+
+        // int256 sizeInUsdc = _isBuy // TODO: check - isBuy인지 isIncrease인지 확인 필요 => buy가 맞는듯
+        //     ? (_sizeInUsdc).toInt256()
+        //     : -(_sizeInUsdc).toInt256();
+
+        // if (sizeInUsdc < 0) {
+        //     console.log("&&&&& sizeInUsdc: %s", (-1 * sizeInUsdc).toUint256());
+        // }
+
+        // // old ver.
+        // int256 priceBufferChange = (sizeInUsdc *
+        //     (tokenInfo.getBaseTokenSizeToPriceBufferDeltaMultiplier(_marketId))
+        //         .toInt256()) / (SIZE_TO_PRICE_BUFFER_PRECISION).toInt256();
+
+        // (Long OI - Short OI 대신 _size (delta))
+        int256 openInterestDelta = _isBuy
+            ? (_size).toInt256()
+            : -(_size).toInt256();
+
+        int256 priceBufferChange = _calculatePriceBuffer(
+            _marketId,
+            openInterestDelta
+        );
+
+        if (priceBufferChange < 0) {
+            console.log(
+                "&&&&& priceBufferChange: %s",
+                (-1 * priceBufferChange).toUint256()
+            );
+        }
+
+        int256 avgPriceBuffer = (getPriceBuffer(_marketId) +
+            priceBufferChange) / 2;
+
+        if (avgPriceBuffer < 0) {
+            console.log(
+                "&&&&& avgPriceBuffer: %s",
+                (-1 * avgPriceBuffer).toUint256()
+            );
+        }
+
+        int256 avgExecPrice = (_indexPrice).toInt256() +
+            ((_indexPrice).toInt256() * avgPriceBuffer) /
+            (PRICE_BUFFER_PRECISION).toInt256();
+
+        require(avgExecPrice > 0, "PriceManager: avgExecPrice <= 0");
+
+        return (avgExecPrice).toUint256();
+    }
+
+    function _calculatePriceBuffer(
+        uint256 _marketId,
+        int256 _openInterestDifference
+    ) internal view returns (int256) {
+        return
+            (((
+                tokenInfo.getBaseTokenSizeToPriceBufferDeltaMultiplier(
+                    _marketId
+                )
+            ).toInt256() * _openInterestDifference) *
+                PRICE_BUFFER_PRECISION.toInt256()) /
+            (TOKEN_SIZE_PRECISION.toInt256() *
+                PRICE_BUFFER_DELTA_MULTIPLIER_PRECISION.toInt256());
     }
 }

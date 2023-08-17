@@ -18,6 +18,7 @@ const ETH_USDC_MARKET_ID = 1;
 const USDC_DECIMALS = 20;
 const ETH_DECIMALS = 18;
 const PRICE_BUFFER_DECIMALS = 8;
+const PRICE_BUFFER_DELTA_MULTIPLIER_DECIMALS = 10;
 
 describe("Place and Execute Market Order", function () {
   async function depositToTraderAccount(
@@ -49,7 +50,10 @@ describe("Place and Execute Market Order", function () {
       ctx.testUSDC
     );
     console.log(">>> testUSDCAssetId: ", testUSDCAssetId);
-    await ctx.tokenInfo.setSizeToPriceBufferDeltaMultiplier(testUSDCAssetId, 1);
+    await ctx.tokenInfo.setSizeToPriceBufferDeltaMultiplier(
+      testUSDCAssetId,
+      ethers.utils.parseUnits("1", PRICE_BUFFER_DELTA_MULTIPLIER_DECIMALS) // TODO: set
+    );
 
     // set token data (ETH)
 
@@ -58,7 +62,10 @@ describe("Place and Execute Market Order", function () {
       ctx.weth
     );
     console.log(">>> wethAssetId: ", wethAssetId);
-    await ctx.tokenInfo.setSizeToPriceBufferDeltaMultiplier(wethAssetId, 1);
+    await ctx.tokenInfo.setSizeToPriceBufferDeltaMultiplier(
+      wethAssetId,
+      ethers.utils.parseUnits("0.0001", PRICE_BUFFER_DELTA_MULTIPLIER_DECIMALS) // TODO: set
+    );
 
     // listing a perps market
 
@@ -124,6 +131,13 @@ describe("Place and Execute Market Order", function () {
       limitPrice: 0,
     };
 
+    // (temp) get Mark Price
+    const markPrice1 = await ctx.priceManager.getMarkPrice(ETH_USDC_MARKET_ID);
+    console.log(
+      ">>> mark price 1:",
+      ethers.utils.formatUnits(markPrice1, USDC_DECIMALS)
+    );
+
     await ctx.orderRouter.connect(ctx.trader).placeMarketOrder(orderRequest1);
     // position 생성
     // order record 생성
@@ -132,6 +146,14 @@ describe("Place and Execute Market Order", function () {
     // trader balance 차감
     // token reserve amount 증가
     // position record 생성
+
+    // (temp) get Mark Price
+    const markPrice2 = await ctx.priceManager.getMarkPrice(ETH_USDC_MARKET_ID);
+    console.log(
+      ">>> mark price 2:",
+      ethers.utils.formatUnits(markPrice2, USDC_DECIMALS)
+    );
+
     const key1 = await ctx.orderUtils._getPositionKey(
       ctx.trader.address,
       true, // isLong

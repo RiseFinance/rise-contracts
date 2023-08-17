@@ -72,6 +72,7 @@ struct MarketInfo {
     int256 fundingRateMultiplier;
     address marketMakerToken;
 }
+
 struct TokenData {
     uint256 decimals;
     uint256 sizeToPriceBufferDeltaMultiplier;
