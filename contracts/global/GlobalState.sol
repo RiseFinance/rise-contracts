@@ -11,15 +11,27 @@ contract GlobalState {
     mapping(uint256 => GlobalPositionState) private globalLongPositionStates; // marketId => GlobalPositionState
     mapping(uint256 => GlobalPositionState) private globalShortPositionStates; // marketId => GlobalPositionState
 
-    function getOpenInterest(
-        uint256 _marketId,
-        bool _isLong
+    // Global Long OI
+    function getLongOpenInterest(
+        uint256 _marketId
     ) public view returns (uint256) {
-        if (_isLong) {
-            return globalLongPositionStates[_marketId].totalSize;
-        } else {
-            return globalShortPositionStates[_marketId].totalSize;
-        }
+        return globalLongPositionStates[_marketId].totalSize;
+    }
+
+    // Global Short OI
+    function getShortOpenInterest(
+        uint256 _marketId
+    ) public view returns (uint256) {
+        return globalShortPositionStates[_marketId].totalSize;
+    }
+
+    // (Long OI - Short OI)
+    function getLongShortOIDiff(
+        uint256 _marketId
+    ) public view returns (int256) {
+        return
+            int256(globalLongPositionStates[_marketId].totalSize) -
+            int256(globalShortPositionStates[_marketId].totalSize);
     }
 
     function getGlobalLongPositionState(

@@ -29,11 +29,6 @@ contract PriceManager {
         tokenInfo = TokenInfo(_tokenInfo);
     }
 
-    // function initialize(address _orderBook) external {
-    //     require(_orderBook == address(0), "PriceManager: already initialized");
-    //     orderBook = OrderBook(_orderBook);
-    // }
-
     function setPrice(
         uint256 _marketId,
         uint256 _price // new index price from the data source
@@ -41,64 +36,13 @@ contract PriceManager {
         require(_price > 0, "PriceManager: price has to be positive");
 
         indexPrices[_marketId] = _price;
-        // int256 currentPriceBuffer = getPriceBuffer(_marketId[i]); // % of price shift
-
-        // int256 currentPriceBufferInUsd = ((_price[i]).toInt256() *
-        //     currentPriceBuffer) / (PRICE_BUFFER_PRECISION).toInt256();
-
-        // // int prevMarkPrice = indexPrice[_marketId[i]] +
-        // //     currentPriceBufferInUsd;
-        // uint256 currentMarkPrice = ((_price[i]).toInt256() +
-        //     currentPriceBufferInUsd).toUint256();
-
-        // uint256 markPriceWithLimitOrderPriceImpact;
-
-        // console.log(
-        //     "PriceManager: markPriceWithLimitOrderPriceImpact: ",
-        //     markPriceWithLimitOrderPriceImpact
-        // );
-        /*
-            // TODO: set price with markPriceWithLimitOrderPriceImpact
-            int256 newPriceBuffer = (((markPriceWithLimitOrderPriceImpact)
-                .toInt256() - (_price[i]).toInt256()) *
-                (PRICE_BUFFER_PRECISION).toInt256()) / (_price[i]).toInt256();
-
-            setPriceBuffer(_marketId[i], newPriceBuffer);
-            console.log(
-                "PriceManager: newPriceBuffer: ",
-                (newPriceBuffer).toUint256()
-            );
-            console.log("PriceManager: _price[i]: ", _price[i]);
-            console.log("\n");
-            */
     }
 
-    /* 
-    Old version (With decay)
-    function getPriceBuffer(uint256 _marketId) public view returns (int256) {
-        int256 elapsedTime = (block.timestamp -
-            priceBufferUpdatedTime[_marketId]).toInt256();
-        int256 decayedAmount = elapsedTime * (DECAY_CONSTANT).toInt256();
-        int256 absLastPriceBuffer = lastPriceBuffer[_marketId] >= 0
-            ? lastPriceBuffer[_marketId]
-            : -lastPriceBuffer[_marketId];
-        if (decayedAmount >= absLastPriceBuffer) {
-            return 0;
-        }
-        if (lastPriceBuffer[_marketId] >= 0) {
-            return lastPriceBuffer[_marketId] - decayedAmount;
-        } else {
-            return lastPriceBuffer[_marketId] + decayedAmount;
-        }
-    }
-    */
     function getPriceBuffer(uint256 _marketId) public view returns (int256) {
         return
             tokenInfo
                 .getBaseTokenSizeToPriceBufferDeltaMultiplier(_marketId)
-                .toInt256() *
-            (globalState.getOpenInterest(_marketId, true).toInt256() -
-                globalState.getOpenInterest(_marketId, false).toInt256());
+                .toInt256() * (globalState.getLongShortOIDiff(_marketId));
     }
 
     function getIndexPrice(uint256 _marketId) public view returns (uint256) {
@@ -146,28 +90,4 @@ contract PriceManager {
 
         return (averageExecutedPrice).toUint256();
     }
-    /*
-    function getAvgExecPriceAndUpdatePriceBuffer(
-        uint256 _marketId,
-        uint256 _size,
-        bool _isBuy
-    ) external returns (uint256) {
-        uint256 avgExecPrice = getAvgExecPrice(_marketId, _size, _isBuy);
-        uint256 tokenDecimals = tokenInfo.getBaseTokenDecimals(_marketId);
-        uint256 sizeInUsd = (_size * getIndexPrice(_marketId)) /
-            10 ** tokenDecimals;
-        int256 intSize = _isBuy
-            ? (sizeInUsd).toInt256()
-            : -(sizeInUsd).toInt256();
-        int256 priceBufferChange = (intSize *
-            (tokenInfo.getBaseTokenSizeToPriceBufferMultiplier(_marketId))
-                .toInt256()) /
-            (TOKEN_PRICE_BUFFER_CONSTANT_PRECISION).toInt256();
-        setPriceBuffer(
-            _marketId,
-            getPriceBuffer(_marketId) + priceBufferChange
-        );
-        return avgExecPrice;
-    }
-    */
 }
