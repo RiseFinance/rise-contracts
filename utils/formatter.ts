@@ -18,7 +18,7 @@ export function formatStruct(struct: any) {
 
 const ETH_DECIMAL = 18;
 const USD_DECIMAL = 20;
-const USDC_DECIMAL = 18;
+const USDC_DECIMAL = 20; // FIXME:
 const PRICE_BUFFER_DECIMAL = 20;
 const FUNDING_RATE_DECIMAL = 26;
 

@@ -37,14 +37,14 @@ contract GlobalState {
     function updateGlobalLongPositionState(
         UpdateGlobalPositionStateParams memory p
     ) external {
-        globalLongPositionStates[p._marketId].avgPrice = PositionUtils
-            ._getNextAvgPrice(
-                p._isIncrease,
-                globalLongPositionStates[p._marketId].totalSize,
-                globalLongPositionStates[p._marketId].avgPrice,
-                p._sizeDeltaAbs,
-                p._markPrice
-            );
+        // globalLongPositionStates[p._marketId].avgPrice = PositionUtils
+        //     ._getNextAvgPrice(
+        //         p._isIncrease,
+        //         globalLongPositionStates[p._marketId].totalSize,
+        //         globalLongPositionStates[p._marketId].avgPrice,
+        //         p._sizeDeltaAbs,
+        //         p._markPrice
+        //     ); // FIXME: 주석해제
 
         if (p._isIncrease) {
             globalLongPositionStates[p._marketId].totalSize += p._sizeDeltaAbs;

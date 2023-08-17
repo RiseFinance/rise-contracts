@@ -49,7 +49,9 @@ contract PnlManager {
         //     tokenInfo.getTokenDecimals(market.getMarketInfo(_marketId).baseAssetId)
         // );
 
-        int256 fundingFeeToPay = funding.getFundingFeeToPay(_position);
+        // int256 fundingFeeToPay = funding.getFundingFeeToPay(_position); // FIXME: 주석해제
+        int256 fundingFeeToPay = 0;
+
         int256 pnl = PnlUtils._calculatePnL(
             _sizeAbs,
             _position.avgOpenPrice,

@@ -21,11 +21,11 @@ library PnlUtils {
             ? pnl =
                 (_size.toInt256() *
                     (_markPrice.toInt256() - _averagePrice.toInt256())) /
-                USD_PRECISION.toInt256()
+                TOKEN_SIZE_PRECISION.toInt256()
             : pnl =
             (_size.toInt256() *
                 (_averagePrice.toInt256() - _markPrice.toInt256())) /
-            USD_PRECISION.toInt256();
+            TOKEN_SIZE_PRECISION.toInt256();
         return pnl;
     }
 }

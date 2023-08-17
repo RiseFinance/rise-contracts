@@ -5,9 +5,5 @@ export function getPresetAddress(name: string) {
   const addressesPath = path.join(`scripts/input/presetAddresses.json`);
   const addressesObject = JSON.parse(fs.readFileSync(addressesPath).toString());
 
-  let contractAddress;
-
-  // check Library first then L2 then L3
-
   return addressesObject[name];
 }

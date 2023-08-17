@@ -20,6 +20,7 @@ contract PriceFetcher {
          * // TODO: impl
          * @dev Jae Yoon
          */
+
         return priceManager.getAvgExecPrice(_marketId, _size, _isLong);
     }
 

@@ -39,7 +39,7 @@ contract PositionFee {
         uint256 _feeAssetId,
         OrderType _orderType
     ) external {
-        uint256 sizeAbsInUsd = (_sizeAbs * _avgExecPrice) / USD_PRECISION;
+        uint256 sizeAbsInUsd = (_sizeAbs * _avgExecPrice) / USDC_PRECISION;
         uint256 fee = getPositionFee(sizeAbsInUsd, _orderType);
         traderVault.decreaseTraderBalance(_trader, _feeAssetId, fee);
         collectedPositionFees += fee;

@@ -263,9 +263,6 @@ contract OrderBook is OrderBookBase, OrderExecutor, Modifiers {
                 ? buyLastIndex[_marketId][ic.limitPriceIterator]
                 : sellLastIndex[_marketId][ic.limitPriceIterator];
 
-            // console.log("^^^^^ ptc.firstIdx: ", ptc.firstIdx); // FIXME:
-            // console.log("^^^^^ ptc.lastIdx: ", ptc.lastIdx);
-
             for (uint256 i = ptc.firstIdx; i <= ptc.lastIdx; i++) {
                 // console.log(">>> chkpt 3");
                 // console.log(">>> i: ", i);

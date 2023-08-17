@@ -12,7 +12,12 @@ import "../account/TraderVault.sol";
 import "../risepool/RisePool.sol";
 import "../fee/PositionFee.sol";
 
+import "hardhat/console.sol";
+
 contract OrderExecutor is PnlManager {
+    // FIXME: delete
+    using SafeCast for int256;
+
     PositionHistory public positionHistory;
     PositionVault public positionVault;
     PositionFee public positionFee;
@@ -150,8 +155,9 @@ contract OrderExecutor is PnlManager {
             ec.avgExecPrice,
             req.marketId,
             ec.sizeAbs,
-            ec.marginAbs
+            ec.marginAbs // changing Leverage
         );
+
         ec.positionRecordId = ec.openPosition.currentPositionRecordId;
 
         if (ec.execType == OrderExecType.DecreasePosition) {

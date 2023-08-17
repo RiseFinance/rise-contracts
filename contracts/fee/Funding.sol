@@ -14,6 +14,8 @@ import "../market/TokenInfo.sol";
 import "../market/Market.sol";
 import "../utils/MathUtils.sol";
 
+import "hardhat/console.sol";
+
 contract Funding {
     using SafeCast for int256;
     using SafeCast for uint256;
@@ -81,6 +83,20 @@ contract Funding {
     ) public view returns (int256) {
         uint256 marketId = _position.marketId;
         uint256 markPrice = priceManager.getMarkPrice(marketId);
+        console.log(
+            ">>>>> baseAssetId: ",
+            market.getMarketInfo(marketId).baseAssetId
+        );
+
+        console.log(
+            ">>>>> tokenDecimals: ",
+            tokenInfo.getTokenDecimals(
+                market.getMarketInfo(marketId).baseAssetId
+            )
+        );
+
+        console.log("***** position.size:", _position.size);
+        console.log("***** markPrice:", markPrice);
 
         int256 sizeInUsd = OrderUtils
             ._tokenToUsd(
@@ -91,6 +107,22 @@ contract Funding {
                 )
             )
             .toInt256();
+
+        console.log(
+            "***** fundingIndex:",
+            getFundingIndex(marketId).toUint256()
+        );
+        console.log(
+            "***** avgEntryFundingIndex:",
+            _position.avgEntryFundingIndex.toUint256()
+        );
+        console.log(
+            "***** tokenDecimals:",
+            tokenInfo.getTokenDecimals(
+                market.getMarketInfo(marketId).baseAssetId
+            )
+        );
+        console.log("***** sizeInUsd:", sizeInUsd.toUint256());
         int256 fundingFeeToPay = ((getFundingIndex(marketId) -
             _position.avgEntryFundingIndex) * sizeInUsd) /
             FUNDING_RATE_PRECISION;

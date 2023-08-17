@@ -2,7 +2,7 @@
 
 pragma solidity ^0.8.0;
 
-import {USD_PRECISION} from "../common/constants.sol";
+import {USDC_PRECISION} from "../common/constants.sol";
 
 library OrderUtils {
     function _usdToToken(
@@ -11,7 +11,8 @@ library OrderUtils {
         uint256 _tokenDecimals
     ) public pure returns (uint256) {
         return
-            ((_usdAmount * 10 ** _tokenDecimals) / USD_PRECISION) / _tokenPrice;
+            ((_usdAmount * 10 ** _tokenDecimals) / USDC_PRECISION) /
+            _tokenPrice;
     }
 
     function _tokenToUsd(
@@ -20,7 +21,7 @@ library OrderUtils {
         uint256 _tokenDecimals
     ) public pure returns (uint256) {
         return
-            ((_tokenAmount * _tokenPrice) * USD_PRECISION) /
+            ((_tokenAmount * _tokenPrice) * USDC_PRECISION) /
             10 ** _tokenDecimals;
     }
 

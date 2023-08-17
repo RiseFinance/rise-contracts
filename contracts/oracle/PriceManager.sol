@@ -107,8 +107,13 @@ contract PriceManager {
 
     function getMarkPrice(uint256 _marketId) public view returns (uint256) {
         int256 newPriceBuffer = getPriceBuffer(_marketId);
+        console.log("******* newPriceBuffer:", newPriceBuffer.toUint256());
         int256 newPriceBufferInUsd = ((indexPrices[_marketId]).toInt256() *
             newPriceBuffer) / (PRICE_BUFFER_PRECISION).toInt256();
+        console.log(
+            "******* newPriceBufferInUsd:",
+            newPriceBufferInUsd.toUint256()
+        );
         return
             ((indexPrices[_marketId]).toInt256() + newPriceBufferInUsd)
                 .toUint256();
@@ -124,6 +129,7 @@ contract PriceManager {
         uint256 tokenDecimals = tokenInfo.getBaseTokenDecimals(_marketId);
         uint256 sizeInUsd = (_size * getIndexPrice(_marketId)) /
             10 ** tokenDecimals;
+
         require(_indexPrice > 0, "PriceManager: price not set");
         int256 intSize = _isBuy
             ? (sizeInUsd).toInt256()
@@ -137,6 +143,7 @@ contract PriceManager {
             ((_indexPrice).toInt256() * averagePriceBuffer) /
             (PRICE_BUFFER_PRECISION).toInt256();
         // emit Execution(_marketId, averageExecutedPrice);
+
         return (averageExecutedPrice).toUint256();
     }
     /*

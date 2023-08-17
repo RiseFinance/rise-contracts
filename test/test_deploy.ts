@@ -9,6 +9,8 @@ import { getPresetAddress } from "../utils/getPresetAddress";
 export async function deployForTest() {
   const [deployer, keeper, trader] = await ethers.getSigners();
 
+  const weth = getPresetAddress("WETH");
+  const testUSDC = getContractAddress("TestUSDC", Network.L2);
   const l2MarginGateway = getContractAddress("L2MarginGateway", Network.L2);
   const l2LiquidityGateway = getContractAddress(
     "L2LiquidityGateway",
@@ -16,7 +18,6 @@ export async function deployForTest() {
   );
 
   // L3 libraries
-
   const mathUtils = await deployContract("MathUtils");
   const orderUtils = await deployContract("OrderUtils");
   const positionUtils = await deployContract("PositionUtils", [], {
@@ -200,8 +201,10 @@ export async function deployForTest() {
     positionUtils,
     orderUtils,
     pnlUtils,
+    weth,
     l2MarginGateway,
     l2LiquidityGateway,
+    testUSDC,
     traderVault,
     market,
     tokenInfo,
