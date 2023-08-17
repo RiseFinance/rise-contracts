@@ -2,7 +2,7 @@
 
 pragma solidity ^0.8.0;
 
-import "../oracle/PriceManager.sol";
+import "../price/PriceManager.sol";
 
 contract PriceFetcher {
     PriceManager public priceManager;

@@ -8,7 +8,7 @@ import "../common/constants.sol";
 import "../utils/MathUtils.sol";
 
 import "../account/TraderVault.sol";
-import "../oracle/PriceManager.sol";
+import "../price/PriceManager.sol";
 import "../market/TokenInfo.sol";
 import "../market/Market.sol";
 
