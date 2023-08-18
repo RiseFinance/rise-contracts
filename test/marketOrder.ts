@@ -20,6 +20,29 @@ const ETH_DECIMALS = 18;
 const PRICE_BUFFER_DECIMALS = 8;
 const PRICE_BUFFER_DELTA_MULTIPLIER_DECIMALS = 10;
 
+// TODO: check if we need multiplier for USDC
+const USDC_MULTIPLIER = ethers.utils.parseUnits(
+  "1",
+  PRICE_BUFFER_DELTA_MULTIPLIER_DECIMALS
+);
+const ETH_MULTIPLIER = ethers.utils.parseUnits(
+  "0.0001",
+  PRICE_BUFFER_DELTA_MULTIPLIER_DECIMALS
+);
+const ETH_USDC_MARKET_TICK_SIZE = 1e8;
+const ETH_USDC_MARKET_FUNDING_RATE_MULTIPLIER = 0;
+
+const DEPOSIT_AMOUNT = ethers.utils.parseUnits("500000", USDC_DECIMALS);
+
+const LONG_LIQUIDITY_AMOUNT = ethers.utils.parseUnits("20000", ETH_DECIMALS);
+const SHORT_LIQUIDITY_AMOUNT = ethers.utils.parseUnits(
+  "40000000",
+  USDC_DECIMALS
+);
+
+const MAX_LONG_CAPACITY = ethers.utils.parseUnits("15000", ETH_DECIMALS);
+const MAX_SHORT_CAPACITY = ethers.utils.parseUnits("15000", ETH_DECIMALS);
+
 describe("Place and Execute Market Order", function () {
   async function getContext() {
     const ctx = await loadFixture(deployForTest);
@@ -37,7 +60,7 @@ describe("Place and Execute Market Order", function () {
     );
     await ctx.tokenInfo.setSizeToPriceBufferDeltaMultiplier(
       testUSDCAssetId,
-      ethers.utils.parseUnits("1", PRICE_BUFFER_DELTA_MULTIPLIER_DECIMALS) // TODO: set -> need multiplier for USDC?
+      USDC_MULTIPLIER
     );
 
     // register & set token data (ETH)
@@ -47,7 +70,7 @@ describe("Place and Execute Market Order", function () {
     );
     await ctx.tokenInfo.setSizeToPriceBufferDeltaMultiplier(
       wethAssetId,
-      ethers.utils.parseUnits("0.0001", PRICE_BUFFER_DELTA_MULTIPLIER_DECIMALS) // TODO: set
+      ETH_MULTIPLIER
     );
   }
 
@@ -55,13 +78,13 @@ describe("Place and Execute Market Order", function () {
   async function _listPerpMarket(ctx: any) {
     let m = {
       marketId: ETH_USDC_MARKET_ID,
-      priceTickSize: 10 ** 8,
+      priceTickSize: ETH_USDC_MARKET_TICK_SIZE,
       baseAssetId: ETH_ID,
       quoteAssetId: USDC_ID,
       longReserveAssetId: ETH_ID,
       shortReserveAssetId: USDC_ID,
       marginAssetId: USDC_ID,
-      fundingRateMultiplier: 0,
+      fundingRateMultiplier: ETH_USDC_MARKET_FUNDING_RATE_MULTIPLIER,
     };
 
     await ctx.listingManager.createRisePerpsMarket(m);
@@ -72,38 +95,31 @@ describe("Place and Execute Market Order", function () {
     await ctx.risePool.addLiquidity(
       ETH_USDC_MARKET_ID,
       true,
-      ethers.utils.parseUnits("20000", ETH_DECIMALS)
+      LONG_LIQUIDITY_AMOUNT
     );
     await ctx.risePool.addLiquidity(
       ETH_USDC_MARKET_ID,
       false,
-      ethers.utils.parseUnits("40000000", USDC_DECIMALS)
+      SHORT_LIQUIDITY_AMOUNT
     );
   }
 
   // deposit to trader account
-  async function _depositMargin(ctx: any) {
-    await _depositToTraderAccount(ctx.traderVault, ctx.trader, "500000");
-  }
-  async function _depositToTraderAccount(
-    traderVault: any,
-    trader: any,
-    amount: string
-  ) {
-    const depositAmount = ethers.utils.parseUnits(amount, USDC_DECIMALS); // 5000 USD
-    await traderVault
-      .connect(trader)
-      .increaseTraderBalance(trader.address, USDC_ID, depositAmount);
+
+  async function _depositMargin(ctx: any, amount: any) {
+    await ctx.traderVault
+      .connect(ctx.trader)
+      .increaseTraderBalance(ctx.trader.address, USDC_ID, amount);
   }
 
   async function _setMarketMaxCapacities(ctx: any) {
     await ctx.positionVault.setMaxLongCapacity(
       ETH_USDC_MARKET_ID,
-      ethers.utils.parseUnits("15000", ETH_DECIMALS)
+      MAX_LONG_CAPACITY
     );
     await ctx.positionVault.setMaxShortCapacity(
       ETH_USDC_MARKET_ID,
-      ethers.utils.parseUnits("15000", ETH_DECIMALS)
+      MAX_SHORT_CAPACITY
     );
   }
 
@@ -111,7 +127,7 @@ describe("Place and Execute Market Order", function () {
     await _registerTokens(ctx);
     await _listPerpMarket(ctx);
     await _addLiquidities(ctx);
-    await _depositMargin(ctx);
+    await _depositMargin(ctx, DEPOSIT_AMOUNT);
     await _setMarketMaxCapacities(ctx);
   }
 
@@ -137,14 +153,10 @@ describe("Place and Execute Market Order", function () {
 
     expect(testUSDCAssetId).to.equal(USDC_ID);
     expect(testUSDCDecimal).to.equal(USDC_DECIMALS);
-    expect(testUSDCPriceBufferDeltaMultiplier).to.equal(
-      ethers.utils.parseUnits("1", PRICE_BUFFER_DELTA_MULTIPLIER_DECIMALS)
-    );
+    expect(testUSDCPriceBufferDeltaMultiplier).to.equal(USDC_MULTIPLIER);
     expect(wethAssetId).to.equal(ETH_ID);
     expect(wethDecimal).to.equal(ETH_DECIMALS);
-    expect(wethPriceBufferDeltaMultiplier).to.equal(
-      ethers.utils.parseUnits("0.0001", PRICE_BUFFER_DELTA_MULTIPLIER_DECIMALS)
-    );
+    expect(wethPriceBufferDeltaMultiplier).to.equal(ETH_MULTIPLIER);
 
     // perps market info
     const marketInfo = await ctx.market.getMarketInfo(ETH_USDC_MARKET_ID);
@@ -164,21 +176,15 @@ describe("Place and Execute Market Order", function () {
     const ethUsdcShortPoolAmount = await ctx.risePool.getShortPoolAmount(
       ETH_USDC_MARKET_ID
     );
-    expect(ethUsdcLongPoolAmount).to.equal(
-      ethers.utils.parseUnits("20000", ETH_DECIMALS)
-    );
-    expect(ethUsdcShortPoolAmount).to.equal(
-      ethers.utils.parseUnits("40000000", USDC_DECIMALS)
-    );
+    expect(ethUsdcLongPoolAmount).to.equal(LONG_LIQUIDITY_AMOUNT);
+    expect(ethUsdcShortPoolAmount).to.equal(SHORT_LIQUIDITY_AMOUNT);
 
     // trader margin balance
     const traderBalance = await ctx.traderVault.getTraderBalance(
       ctx.trader.address,
       USDC_ID
     );
-    expect(traderBalance).to.equal(
-      ethers.utils.parseUnits("500000", USDC_DECIMALS)
-    );
+    expect(traderBalance).to.equal(DEPOSIT_AMOUNT);
 
     // market max cap
     const maxLongCapacity = await ctx.positionVault.maxLongCapacity(
@@ -187,12 +193,8 @@ describe("Place and Execute Market Order", function () {
     const maxShortCapacity = await ctx.positionVault.maxShortCapacity(
       ETH_USDC_MARKET_ID
     );
-    expect(maxLongCapacity).to.equal(
-      ethers.utils.parseUnits("15000", ETH_DECIMALS)
-    );
-    expect(maxShortCapacity).to.equal(
-      ethers.utils.parseUnits("15000", ETH_DECIMALS)
-    );
+    expect(maxLongCapacity).to.equal(MAX_LONG_CAPACITY);
+    expect(maxShortCapacity).to.equal(MAX_SHORT_CAPACITY);
   });
 
   it("1. Execute market order", async function () {
@@ -204,6 +206,9 @@ describe("Place and Execute Market Order", function () {
       USDC_ID
     );
     console.log(">>> traderBalance: ", formatUSDC(traderBalance0));
+    expect(traderBalance0).to.equal(
+      ethers.utils.parseUnits("500000", USDC_DECIMALS)
+    );
 
     // set price
     await ctx.priceManager.setPrice(
