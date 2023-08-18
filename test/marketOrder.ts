@@ -301,8 +301,13 @@ describe("Place and Execute Market Order", function () {
       USDC_ID
     );
 
+    // position fee rate = 0.05%
+    // size = 100 ETH, execPrice = 1959.75
+    // cumulative position fee = 100 * 1959.75 * 0.0005 = 97.9875
     expect(traderBalance1).to.be.equal(
-      DEPOSIT_AMOUNT.sub(ethers.utils.parseUnits("10000", USDC_DECIMALS))
+      DEPOSIT_AMOUNT.sub(ethers.utils.parseUnits("10000", USDC_DECIMALS)).sub(
+        ethers.utils.parseUnits("97.9875", USDC_DECIMALS)
+      )
     );
 
     const tokenReserveAmount1 = await ctx.risePool.getLongReserveAmount(
@@ -457,6 +462,10 @@ describe("Place and Execute Market Order", function () {
       ethers.utils.parseUnits("508.125", USDC_DECIMALS)
     );
 
+    // position fee rate = 0.05%
+    // size = 50 ETH, execPrice = 1969.9125
+    // position fee = 50 * 1969.9125 * 0.0005 = 49.2478125
+    // cumulative position fee = 97.9875 + 49.2478125 = 147.2353125
     const traderBalance2 = await ctx.traderVault.getTraderBalance(
       ctx.trader.address,
       USDC_ID
@@ -464,8 +473,13 @@ describe("Place and Execute Market Order", function () {
     console.log("traderBalance:", formatUSDC(traderBalance2), "USDC");
 
     // trader balance = 500000 - 10000 + 508.125 = 490508.125
+    // position fee = 49.2478125
+    // cumulative position fee = 97.9875 + 49.2478125 = 147.2353125
+
     expect(traderBalance2).to.be.equal(
-      ethers.utils.parseUnits("490508.125", USDC_DECIMALS)
+      ethers.utils
+        .parseUnits("490508.125", USDC_DECIMALS)
+        .sub(ethers.utils.parseUnits("147.2353125", USDC_DECIMALS))
     );
 
     console.log(
@@ -546,6 +560,9 @@ describe("Place and Execute Market Order", function () {
       ethers.utils.parseUnits("1020.625", USDC_DECIMALS)
     );
 
+    // position fee rate = 0.05%
+    // size = 50 ETH, execPrice = 1970
+    // position fee = 50 * 1970 * 0.0005 = 49.25
     const traderBalance3 = await ctx.traderVault.getTraderBalance(
       ctx.trader.address,
       USDC_ID
@@ -553,8 +570,11 @@ describe("Place and Execute Market Order", function () {
     console.log("traderBalance:", formatUSDC(traderBalance3), "USDC");
 
     // trader balance = 500000 - 10000 + 508.125 + 512.5 + 100000 (margin) = 501020.625
+    // cumulative position fee = 147.2353125 + 49.25 = 196.4853125
     expect(traderBalance3).to.be.equal(
-      ethers.utils.parseUnits("501020.625", USDC_DECIMALS)
+      ethers.utils
+        .parseUnits("501020.625", USDC_DECIMALS)
+        .sub(ethers.utils.parseUnits("196.4853125", USDC_DECIMALS))
     );
   });
 });

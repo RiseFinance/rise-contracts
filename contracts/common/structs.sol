@@ -42,6 +42,7 @@ struct OrderRecord {
 }
 
 // decrease, close position에서 호출 필요
+// TODO: cumulativePositionFee, cumulativeFundingFee, etc.
 struct PositionRecord {
     bool isClosed;
     int256 cumulativeRealizedPnl; // cumulative realized PnL => this value to be closingPnl for closed positions

@@ -10,8 +10,8 @@ import "../account/TraderVault.sol";
 contract PositionFee {
     TraderVault public traderVault;
 
-    uint256 public constant MARKET_POSITION_FEE_MULTIPLIER = 5;
-    uint256 public constant LIMIT_POSITION_FEE_MULTIPLIER = 5;
+    uint256 public constant MARKET_POSITION_FEE_MULTIPLIER = 5; // 0.05%
+    uint256 public constant LIMIT_POSITION_FEE_MULTIPLIER = 5; // 0.05%
     uint256 public constant POSITION_FEE_PRECISION = 1e4;
     uint256 public collectedPositionFees = 0;
 
@@ -40,9 +40,18 @@ contract PositionFee {
         OrderType _orderType
     ) external {
         // FIXME: 주석해제
-        // uint256 sizeAbsInUsd = (_sizeAbs * _avgExecPrice) / USDC_PRECISION;
-        // uint256 fee = getPositionFee(sizeAbsInUsd, _orderType);
-        // traderVault.decreaseTraderBalance(_trader, _feeAssetId, fee);
-        // collectedPositionFees += fee;
+        uint256 sizeAbsInUsd = (_sizeAbs * _avgExecPrice) /
+            TOKEN_SIZE_PRECISION;
+        uint256 fee = getPositionFee(sizeAbsInUsd, _orderType);
+        uint256 traderMarginBalance = traderVault.getTraderBalance(
+            _trader,
+            _feeAssetId
+        );
+        require(
+            traderMarginBalance > fee,
+            "PositionFee: insufficient margin balance"
+        ); // TODO: add condition checks for maintenance margin
+        traderVault.decreaseTraderBalance(_trader, _feeAssetId, fee);
+        collectedPositionFees += fee; // TODO: collecting fee from L2Vault (and distributing to $RM, $RISE holders)
     }
 }
