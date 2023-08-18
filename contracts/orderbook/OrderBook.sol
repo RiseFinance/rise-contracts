@@ -152,7 +152,6 @@ contract OrderBook is OrderBookBase, OrderExecutor, Modifiers {
 
         ic.interimMarkPrice = priceFetcher._getMarkPrice(_marketId); // initialize
         // uint256 _limitPriceIterator = maxBidPrice[_marketId]; // intialize
-        console.log("hi");
         ic.limitPriceIterator = _isBuy
             ? maxBidPrice[_marketId]
             : minAskPrice[_marketId]; // intialize

@@ -9,8 +9,6 @@ import "../common/constants.sol";
 import "../market/TokenInfo.sol";
 import "../global/GlobalState.sol";
 
-import "hardhat/console.sol";
-
 contract PriceManager {
     using SafeCast for int256;
     using SafeCast for uint256;
@@ -53,6 +51,8 @@ contract PriceManager {
     // TODO: check - 현재 구현으로는 이번 주문에 의해 변경되는 Long/Short OI는 반영되지 않음
     // 아래 getAvgExecPrice에서 구현함 (이번 주문에 의한 변화: priceBufferChange)
 
+    // Mark Price used for calculation of unrealized PnL, liquidation conditions
+    // funding fee and limit order execution prices
     function getMarkPrice(uint256 _marketId) public view returns (uint256) {
         int256 newPriceBuffer = getPriceBuffer(_marketId);
 
@@ -71,29 +71,8 @@ contract PriceManager {
     ) public view returns (uint256) {
         uint256 _indexPrice = getIndexPrice(_marketId);
         require(_indexPrice > 0, "PriceManager: price not set");
-        console.log("&&&&& PriceManager: _indexPrice: %s", _indexPrice);
 
-        // require first bit of _size is 0
-        // uint256 tokenDecimals = tokenInfo.getBaseTokenDecimals(_marketId);
-
-        // uint256 _sizeInUsdc = (_size * getIndexPrice(_marketId)) /
-        //     10 ** tokenDecimals;
-        // console.log("&&&&& _sizeInUsdc: %s", _sizeInUsdc);
-
-        // int256 sizeInUsdc = _isBuy // TODO: check - isBuy인지 isIncrease인지 확인 필요 => buy가 맞는듯
-        //     ? (_sizeInUsdc).toInt256()
-        //     : -(_sizeInUsdc).toInt256();
-
-        // if (sizeInUsdc < 0) {
-        //     console.log("&&&&& sizeInUsdc: %s", (-1 * sizeInUsdc).toUint256());
-        // }
-
-        // // old ver.
-        // int256 priceBufferChange = (sizeInUsdc *
-        //     (tokenInfo.getBaseTokenSizeToPriceBufferDeltaMultiplier(_marketId))
-        //         .toInt256()) / (SIZE_TO_PRICE_BUFFER_PRECISION).toInt256();
-
-        // (Long OI - Short OI 대신 _size (delta))
+        // size as OpenInterestDiff change
         int256 openInterestDelta = _isBuy
             ? (_size).toInt256()
             : -(_size).toInt256();
@@ -103,22 +82,8 @@ contract PriceManager {
             openInterestDelta
         );
 
-        if (priceBufferChange < 0) {
-            console.log(
-                "&&&&& PriceManager: priceBufferChange: %s",
-                (-1 * priceBufferChange).toUint256()
-            );
-        }
-
         int256 avgPriceBuffer = (getPriceBuffer(_marketId) +
             priceBufferChange) / 2;
-
-        if (avgPriceBuffer < 0) {
-            console.log(
-                "&&&&& PriceManager: avgPriceBuffer: %s",
-                (-1 * avgPriceBuffer).toUint256()
-            );
-        }
 
         int256 avgExecPrice = (_indexPrice).toInt256() +
             ((_indexPrice).toInt256() * avgPriceBuffer) /

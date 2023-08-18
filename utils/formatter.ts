@@ -156,3 +156,7 @@ export function formatGlobalPositionState(struct: any) {
 export function formatUSDC(value: any) {
   return ethers.utils.formatUnits(value, USDC_DECIMAL);
 }
+
+export function formatETH(value: any) {
+  return ethers.utils.formatUnits(value, ETH_DECIMAL);
+}
