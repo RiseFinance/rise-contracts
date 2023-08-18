@@ -72,7 +72,7 @@ contract MarketOrder is OrderExecutor {
             req.isLong == req.isIncrease // isBuy
         );
 
-        console.log("+++++ ec.avgExecPrice: %s", ec.avgExecPrice);
+        console.log("+++++ MarketOrder: ec.avgExecPrice: %s", ec.avgExecPrice);
 
         // FIXME: 삭제
         // ec.avgExecPrice = priceFetcher._getIndexPrice(req.marketId);

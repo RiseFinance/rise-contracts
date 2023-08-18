@@ -3,6 +3,7 @@
 pragma solidity ^0.8.0;
 
 import "../common/structs.sol";
+import "../common/params.sol";
 
 import "../token/RM.sol";
 import "./Market.sol";
@@ -23,7 +24,7 @@ contract ListingManager {
     }
 
     function createRisePerpsMarket(
-        MarketInfo memory m
+        CreateRisePerpsMarketParams memory m
     ) public returns (MarketInfo memory) {
         bytes32 salt = keccak256(
             abi.encode(

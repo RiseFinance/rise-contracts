@@ -71,7 +71,7 @@ contract PriceManager {
     ) public view returns (uint256) {
         uint256 _indexPrice = getIndexPrice(_marketId);
         require(_indexPrice > 0, "PriceManager: price not set");
-        console.log("&&&&& _indexPrice: %s", _indexPrice);
+        console.log("&&&&& PriceManager: _indexPrice: %s", _indexPrice);
 
         // require first bit of _size is 0
         // uint256 tokenDecimals = tokenInfo.getBaseTokenDecimals(_marketId);
@@ -105,7 +105,7 @@ contract PriceManager {
 
         if (priceBufferChange < 0) {
             console.log(
-                "&&&&& priceBufferChange: %s",
+                "&&&&& PriceManager: priceBufferChange: %s",
                 (-1 * priceBufferChange).toUint256()
             );
         }
@@ -115,7 +115,7 @@ contract PriceManager {
 
         if (avgPriceBuffer < 0) {
             console.log(
-                "&&&&& avgPriceBuffer: %s",
+                "&&&&& PriceManager: avgPriceBuffer: %s",
                 (-1 * avgPriceBuffer).toUint256()
             );
         }

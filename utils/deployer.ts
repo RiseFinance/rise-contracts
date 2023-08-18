@@ -10,7 +10,8 @@ export type libraryAddresses = {
 export async function deployContract(
   contractName: string,
   contructorArgs: any[] | undefined = [],
-  libraryAddresses?: libraryAddresses
+  libraryAddresses?: libraryAddresses,
+  isForTest?: boolean
 ) {
   let contractFactory;
 
@@ -24,6 +25,8 @@ export async function deployContract(
 
   const contract = await contractFactory.deploy(...contructorArgs);
   await contract.deployed();
-  console.log(`>>> ${contractName} Deployed.`);
+  if (!isForTest) {
+    console.log(`>>> ${contractName} Deployed.`);
+  }
   return contract;
 }
