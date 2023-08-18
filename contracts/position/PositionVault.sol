@@ -71,7 +71,6 @@ contract PositionVault {
 
         if (p._sizeDeltaAbs > 0 && p._isIncreaseInSize) {
             _position.avgOpenPrice = PositionUtils._getNextAvgPrice(
-                p._isIncreaseInSize,
                 _position.size,
                 _position.avgOpenPrice,
                 p._sizeDeltaAbs,
@@ -79,7 +78,6 @@ contract PositionVault {
             );
             _position.avgEntryFundingIndex = PositionUtils
                 ._getNextAvgEntryFundingIndex(
-                    p._isIncreaseInSize,
                     _position.size,
                     _position.avgEntryFundingIndex,
                     p._sizeDeltaAbs,

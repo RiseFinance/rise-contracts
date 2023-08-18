@@ -322,8 +322,17 @@ describe("Place and Execute Market Order", function () {
 
     console.log("\npositionRecord:", formatPositionRecord(positionRecord1));
 
+    // check avgOpenPrice
+    expect(positionRecord1.avgOpenPrice).to.be.equal(
+      ethers.utils.parseUnits("1959.75", USDC_DECIMALS)
+    );
+    // check avgClose Price
+    expect(positionRecord1.avgClosePrice).to.be.equal(
+      ethers.utils.parseUnits("0", USDC_DECIMALS)
+    );
+
     console.log(
-      "\n--------------------- Decrease Long Position ---------------------\n"
+      "\n---------------------- Decrease Long Position ----------------------\n"
     );
 
     // priceBuffer not changed at this point
@@ -396,7 +405,7 @@ describe("Place and Execute Market Order", function () {
     // last price buffer = 0.01
     // price buffer change = -0.005
     // average price buffer = (0.01 - 0.005) / 2 = 0.0025
-    // avgExecPrice = 1965 * (1 + 0.0025) = 1979.7375
+    // avgExecPrice = 1965 * (1 + 0.0025) = 1969.9125
     expect(orderRecord2.executionPrice).to.be.equal(
       ethers.utils.parseUnits("1969.9125", USDC_DECIMALS)
     );
@@ -415,10 +424,10 @@ describe("Place and Execute Market Order", function () {
       ethers.utils.parseUnits("10000", USDC_DECIMALS)
     );
 
-    // FIXME:check if this is correct
-    // expect(globalPositionState2.avgPrice).to.be.equal(
-    //   ethers.utils.parseUnits("1959.75", USDC_DECIMALS)
-    // );
+    // GlobalPositionState avgPrice doesn't change for decreasing positions
+    expect(globalPositionState2.avgPrice).to.be.equal(
+      ethers.utils.parseUnits("1959.75", USDC_DECIMALS)
+    );
 
     const tokenReserveAmount2 = await ctx.risePool.getLongReserveAmount(
       ETH_USDC_MARKET_ID
@@ -431,8 +440,18 @@ describe("Place and Execute Market Order", function () {
     ); // traderAddress, traderPositionRecordId
     console.log("\npositionRecord:", formatPositionRecord(positionRecord2));
 
+    // check avgOpenPrice
+    expect(positionRecord2.avgOpenPrice).to.be.equal(
+      ethers.utils.parseUnits("1959.75", USDC_DECIMALS)
+    );
+    // check avgClose Price
+    expect(positionRecord2.avgClosePrice).to.be.equal(
+      ethers.utils.parseUnits("1969.9125", USDC_DECIMALS)
+    );
+
     // check pnl
-    // pnl = (Execution Price - Last Avg Execution Price) * (Closed Size) for Long position
+    // TODO: FIXME: check if (Execution Price - Avg Open Price) is correct
+    // pnl = (Execution Price - Avg Open Price) * (Closed Size) for Long position
     // = (1969.9125 - 1959.75) * 50 = + 508.125 (USDC)
     expect(positionRecord2.cumulativeRealizedPnl).to.be.equal(
       ethers.utils.parseUnits("508.125", USDC_DECIMALS)
@@ -447,6 +466,95 @@ describe("Place and Execute Market Order", function () {
     // trader balance = 500000 - 10000 + 508.125 = 490508.125
     expect(traderBalance2).to.be.equal(
       ethers.utils.parseUnits("490508.125", USDC_DECIMALS)
+    );
+
+    console.log(
+      "\n--------------------- Close Long Position ---------------------\n"
+    );
+
+    // set price
+    await ctx.priceManager.setPrice(
+      ETH_USDC_MARKET_ID,
+      ethers.utils.parseUnits("1970", USDC_DECIMALS)
+    ); // 1950 USD per ETH
+
+    // FIXME: TODO: `Close` order type ?
+    const orderRequest3 = {
+      trader: ctx.trader.address,
+      isLong: true,
+      isIncrease: false,
+      orderType: 0,
+      marketId: ETH_USDC_MARKET_ID,
+      sizeAbs: ethers.utils.parseUnits("50", ETH_DECIMALS),
+      marginAbs: ethers.utils.parseUnits("10000", USDC_DECIMALS), // TODO:check:need to set marginAbs for decreasing position?
+      limitPrice: 0,
+    };
+
+    await ctx.orderRouter.connect(ctx.trader).placeMarketOrder(orderRequest3);
+
+    // (Long OI - Short OI) = 0
+    // price buffer = 0 (after the order)
+    const priceBuffer4 = await ctx.priceManager.getPriceBuffer(
+      ETH_USDC_MARKET_ID
+    );
+    expect(priceBuffer4).to.equal(0);
+
+    const key3 = await ctx.orderUtils._getPositionKey(
+      ctx.trader.address,
+      true, // isLong
+      ETH_USDC_MARKET_ID
+    );
+
+    const position3 = await ctx.positionVault.getPosition(key3);
+    console.log("\nposition:", formatPosition(position3));
+
+    const orderRecord3 = await ctx.orderHistory.orderRecords(
+      ctx.trader.address,
+      2
+    ); // traderAddress, traderOrderRecordId
+    console.log("\norderRecord:", formatOrderRecord(orderRecord3));
+
+    // last price buffer = 0.05 (롱 50)
+    // price buffer change = -0.05 (롱 50 제거)
+    // average price buffer = (0.005 - 0.005) / 2 = 0
+    // avgExecPrice = 1970 * (1 + 0) = 1970
+    expect(orderRecord3.executionPrice).to.be.equal(
+      ethers.utils.parseUnits("1970", USDC_DECIMALS)
+    );
+    const positionRecord3 = await ctx.positionHistory.positionRecords(
+      ctx.trader.address,
+      0
+    ); // traderAddress, traderPositionRecordId
+    console.log("\npositionRecord:", formatPositionRecord(positionRecord3));
+
+    // check avgOpenPrice
+    expect(positionRecord3.avgOpenPrice).to.be.equal(
+      ethers.utils.parseUnits("1959.75", USDC_DECIMALS)
+    );
+    // check avgClose Price
+    // 1. closed 50 ETH in price 1969.9125
+    // 2. closed 50 ETH in price 1970
+    expect(positionRecord3.avgClosePrice).to.be.equal(
+      ethers.utils.parseUnits("1969.95625", USDC_DECIMALS)
+    );
+
+    // check pnl
+    // pnl = (Execution Price - Avg Open Price) * (Closed Size) for Long position
+    // = (1970 - 1959.75) * 50 = + 512.5 (USDC)
+    // cumulativePnl = 508.125 + 512.5 = 1020.625
+    expect(positionRecord3.cumulativeRealizedPnl).to.be.equal(
+      ethers.utils.parseUnits("1020.625", USDC_DECIMALS)
+    );
+
+    const traderBalance3 = await ctx.traderVault.getTraderBalance(
+      ctx.trader.address,
+      USDC_ID
+    );
+    console.log("traderBalance:", formatUSDC(traderBalance3), "USDC");
+
+    // trader balance = 500000 - 10000 + 508.125 + 512.5 + 100000 (margin) = 501020.625
+    expect(traderBalance3).to.be.equal(
+      ethers.utils.parseUnits("501020.625", USDC_DECIMALS)
     );
   });
 });

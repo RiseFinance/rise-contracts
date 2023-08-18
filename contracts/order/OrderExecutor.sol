@@ -15,9 +15,6 @@ import "../fee/PositionFee.sol";
 import "hardhat/console.sol";
 
 contract OrderExecutor is PnlManager {
-    // FIXME: delete
-    using SafeCast for int256;
-
     PositionHistory public positionHistory;
     PositionVault public positionVault;
     PositionFee public positionFee;
@@ -78,8 +75,7 @@ contract OrderExecutor is PnlManager {
                     tx.origin,
                     req.marketId,
                     ec.sizeAbs,
-                    ec.avgExecPrice,
-                    0
+                    ec.avgExecPrice
                 )
             );
 
@@ -172,9 +168,9 @@ contract OrderExecutor is PnlManager {
                     req.marketId,
                     ec.avgExecPrice,
                     ec.sizeAbs,
-                    req.marginAbs,
+                    ec.marginAbs,
                     req.isIncrease, // isIncreaseInSize
-                    req.isIncrease // isIncreaseInMargin
+                    req.isIncrease // isIncreaseInMargin // FIXME: not correct now
                 )
             );
 
@@ -190,6 +186,8 @@ contract OrderExecutor is PnlManager {
                 )
             );
         } else if (ec.execType == OrderExecType.ClosePosition) {
+            // TODO: pay out margin if not requested as order request param
+
             positionVault.deleteOpenPosition(ec.key);
 
             positionHistory.closePositionRecord(

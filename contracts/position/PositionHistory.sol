@@ -9,6 +9,8 @@ import "../position/PositionVault.sol";
 import "../position/PositionUtils.sol";
 import "../account/TraderVault.sol";
 
+import "hardhat/console.sol";
+
 contract PositionHistory {
     PositionVault public positionVault;
     TraderVault public traderVault;
@@ -47,7 +49,7 @@ contract PositionHistory {
             p._marketId,
             p._maxSize,
             p._avgOpenPrice,
-            p._avgClosePrice,
+            0, // avgClosePrice
             block.timestamp,
             0 // closeTimestamp
         );
@@ -84,11 +86,11 @@ contract PositionHistory {
         if (p._isIncrease) {
             positionRecord.avgOpenPrice = openPosition.avgOpenPrice;
         } else {
-            // update cumulativeClosedSize
-            _updateCumulativeClosedSize(positionRecord, p._sizeAbs);
-
             // update avgClosePrice
             _updateAvgClosePrice(positionRecord, p._sizeAbs, p._avgExecPrice);
+
+            // update cumulativeClosedSize
+            _updateCumulativeClosedSize(positionRecord, p._sizeAbs);
 
             // update cumulativeRealizedPnl
             _updateCumulativeRealizedPnl(positionRecord, p._pnl);
@@ -101,11 +103,11 @@ contract PositionHistory {
             p._positionRecordId
         ];
 
-        // update cumulativeClosedSize
-        _updateCumulativeClosedSize(positionRecord, p._sizeAbs);
-
         // update avgClosePrice
         _updateAvgClosePrice(positionRecord, p._sizeAbs, p._avgExecPrice);
+
+        // update cumulativeClosedSize
+        _updateCumulativeClosedSize(positionRecord, p._sizeAbs);
 
         // update final cumulativeRealizedPnl (closingPnl)
         _updateCumulativeRealizedPnl(positionRecord, p._pnl);
@@ -137,7 +139,6 @@ contract PositionHistory {
         uint256 _decreasingPrice
     ) private {
         uint256 newAvgClosePrice = PositionUtils._getNextAvgPrice(
-            false, // _isIncreaseInSize
             _positionRecord.cumulativeClosedSize, // _prevSize
             _positionRecord.avgClosePrice, // _prevAvgPrice
             _sizeDeltaAbs, // _sizeDeltaAbs

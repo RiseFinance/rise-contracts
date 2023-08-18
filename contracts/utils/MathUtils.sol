@@ -22,37 +22,25 @@ library MathUtils {
     }
 
     function _weightedAverage(
-        uint256 x,
-        uint256 y,
+        uint256 w_a,
+        uint256 w_b,
         uint256 a,
-        uint256 b,
-        bool isIncrease
+        uint256 b
     ) public pure returns (uint256) {
-        if (isIncrease) {
-            if (a + b == 0) return 0;
-            return (x * a + y * b) / (a + b);
-        } else {
-            if (a - b == 0) return 0;
-            return (x * a - y * b) / (a - b);
-        }
+        if (a + b == 0) return 0;
+        return (w_a * a + w_b * b) / (a + b);
     }
 
     function _weightedAverage(
-        int256 x,
-        int256 y,
+        int256 w_a,
+        int256 w_b,
         uint256 a,
-        uint256 b,
-        bool isIncrease
+        uint256 b
     ) public pure returns (int256) {
         int256 _a = a.toInt256();
         int256 _b = b.toInt256();
-        if (isIncrease) {
-            if (_a + _b == 0) return 0;
-            return (x * _a + y * _b) / (_a + _b);
-        } else {
-            if (a - b == 0) return 0;
-            return (x * _a - y * _b) / (_a - _b);
-        }
+        if (_a + _b == 0) return 0;
+        return (w_a * _a + w_b * _b) / (_a + _b);
     }
 
     function mulDiv(

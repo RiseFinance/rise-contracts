@@ -58,6 +58,7 @@ contract PnlManager {
             _executionPrice,
             _isLong
         );
+        console.log("+++++ marginAbs: ", _marginAbs);
 
         traderVault.increaseTraderBalance(
             _position.trader,

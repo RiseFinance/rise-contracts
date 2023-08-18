@@ -33,7 +33,6 @@ struct OpenPositionRecordParams {
     uint256 _marketId;
     uint256 _maxSize;
     uint256 _avgOpenPrice;
-    uint256 _avgClosePrice;
 }
 
 struct UpdatePositionRecordParams {

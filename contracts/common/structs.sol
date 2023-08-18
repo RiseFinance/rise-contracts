@@ -10,7 +10,7 @@ struct OrderRequest {
     bool isIncrease;
     OrderType orderType;
     uint256 marketId;
-    uint256 sizeAbs;
+    uint256 sizeAbs; // TODO: change to `sizeDeltaAbs`
     uint256 marginAbs;
     uint256 limitPrice; // empty for market orders
 }
