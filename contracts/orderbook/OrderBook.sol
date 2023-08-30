@@ -40,7 +40,7 @@ contract OrderBook is OrderBookBase, OrderExecutor, Modifiers {
     struct PriceTickIterationContext {
         bool isPartialForThePriceTick;
         uint256 sizeCap;
-        uint256 sizeCapInUsd;
+        uint256 sizeCapInUsd; /// not used
         uint256 fillAmount;
         uint256 priceImpactInUsd;
         uint256 avgExecutionPrice;
@@ -90,7 +90,6 @@ contract OrderBook is OrderBookBase, OrderExecutor, Modifiers {
     }
 
     function placeLimitOrder(OrderRequest calldata req) external {
-        // FIXME: orderSizeForPriceTick 업데이트
         // TODO: max cap 등 validation?
         // FIXME: TODO: Limit Order place or fill 할 때 traderBalance, poolAmount, reserveAmount 업데이트 필요
 
@@ -220,7 +219,8 @@ contract OrderBook is OrderBookBase, OrderExecutor, Modifiers {
                 tokenInfo.getBaseTokenSizeToPriceBufferDeltaMultiplier(
                     _marketId
                 ) /
-                priceFetcher._getIndexPrice(_marketId));
+                ic.interimMarkPrice); // index price는 업데이트 안되는데 왜 indexprice 기준으로 계산하노
+                //priceFetcher._getIndexPrice(_marketId));
 
             console.log("Price: ", ic.limitPriceIterator / 1e20, "USD\n");
 
@@ -251,7 +251,7 @@ contract OrderBook is OrderBookBase, OrderExecutor, Modifiers {
             // _orderRequest[i].sizeAbs > sizeCap => isPartial = true
 
             mapping(uint256 => OrderRequest) storage _orderRequests = _isBuy
-                ? buyOrderBook[_marketId][ic.limitPriceIterator]
+                ? buyOrderBook[_marketId][ic.limitPriceIterator]    //queue index->order request
                 : sellOrderBook[_marketId][ic.limitPriceIterator];
 
             ptc.firstIdx = _isBuy
