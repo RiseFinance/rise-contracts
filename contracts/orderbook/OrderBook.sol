@@ -18,6 +18,7 @@ import "../order/OrderUtils.sol";
 import "../global/GlobalState.sol";
 import "../market/TokenInfo.sol";
 import "./OrderBookBase.sol";
+import "../order/MarketOrder.sol";
 
 import "hardhat/console.sol";
 
@@ -30,6 +31,7 @@ contract OrderBook is OrderBookBase, OrderExecutor, Modifiers {
     OrderHistory public orderHistory;
     GlobalState public globalState;
     TokenInfo public tokenInfo;
+    MarketOrder public marketOrder;
 
     struct IterationContext {
         bool loopCondition;
@@ -61,7 +63,8 @@ contract OrderBook is OrderBookBase, OrderExecutor, Modifiers {
         address _positionHistory,
         address _positionVault,
         address _priceFetcher,
-        address _positionFee
+        address _positionFee,
+        address _marketOrder
     )
         OrderExecutor(
             _traderVault,
@@ -74,6 +77,7 @@ contract OrderBook is OrderBookBase, OrderExecutor, Modifiers {
         )
     {
         priceFetcher = PriceFetcher(_priceFetcher);
+        marketOrder = MarketOrder(_marketOrder);
     }
 
     function getOrderRequest(
@@ -110,6 +114,20 @@ contract OrderBook is OrderBookBase, OrderExecutor, Modifiers {
         traderOrderRequestCounts[tx.origin]++;
 
         bool _isBuy = req.isLong == req.isIncrease;
+        uint256 _markprice = priceFetcher._getMarkPrice(req.marketId);
+        if (_isBuy) {
+            // market order
+            if(req.limitPrice> _markprice){
+                marketOrder.executeMarketOrder(orderRequest);
+                return;
+            }
+        } else {
+            if(req.limitPrice< _markprice){
+                marketOrder.executeMarketOrder(orderRequest);
+                return;
+            }
+        }
+        /// MarkPrice 보다 비싸게 사거나 싸게 팔려고 하는 경우 market order로 처리 -- Cheolmin 08/30
 
         if (_isBuy) {
             // TODO: do not update if outlier
