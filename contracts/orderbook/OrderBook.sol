@@ -141,6 +141,15 @@ contract OrderBook is OrderBookBase, OrderExecutor, Modifiers {
      * if the order is partially filled, the order is updated with the remaining size
      *
      */
+
+
+
+
+
+    /// limit order는 discrete, limit order execution은 continuous average price에 settle
+    /// market order execution도 average price에 settle
+    /// mark price 보다 싸게 팔거나 비싸게 사는 주문이 있으면, isbuy 로 나누는 execution이 말 안됨 
+    /// 
     function executeLimitOrders(
         bool _isBuy,
         uint256 _marketId
@@ -241,12 +250,17 @@ contract OrderBook is OrderBookBase, OrderExecutor, Modifiers {
             //     (100000 * 100 * 1e20);
 
             // console.log(">>> ptc.priceImpactInUsd: ", ptc.priceImpactInUsd);
-
+            /*
             ptc.avgExecutionPrice = priceFetcher._getAvgExecPrice(
                 _marketId,
                 ptc.fillAmount,
                 _isBuy
             );
+            */
+            ptc.avgExecutionPrice = ic.limitPriceIterator; 
+            /// For equity // OI is only dependent on size so does not affect price buffer 
+
+
 
             // _orderRequest[i].sizeAbs > sizeCap => isPartial = true
 
@@ -271,12 +285,15 @@ contract OrderBook is OrderBookBase, OrderExecutor, Modifiers {
 
                 OrderRequest memory request = _orderRequests[i];
 
-                executeLimitOrder(
+                ptc.sizeCap = executeLimitOrder(
                     request,
                     ptc.avgExecutionPrice,
                     ptc.sizeCap,
                     _isBuy
                 );
+                /// executeLimitOrder 안에 sizeCap이 ptc.sizeCap으로 업데이트 안되고 있어서 추가함
+                /// executeLimitorder가 sizecap 리턴하도록 함
+                /// executeLimitOrder에서 partial인 경우에 sizeCap이 그 한 주문 사이즈보다 작아야함
 
                 if (ptc.sizeCap == 0) {
                     break;
@@ -331,7 +348,7 @@ contract OrderBook is OrderBookBase, OrderExecutor, Modifiers {
         uint256 _avgExecPrice,
         uint256 sizeCap,
         bool _isBuy // bool isPartial
-    ) private {
+    ) private returns (uint256){
         FillLimitOrderContext memory flc;
         ExecutionContext memory ec;
 
@@ -446,5 +463,6 @@ contract OrderBook is OrderBookBase, OrderExecutor, Modifiers {
         } else {
             dequeueOrderBook(req, _isBuy); // TODO: check - if the target order is the first one in the queue
         }
+        return sizeCap;
     }
 }

@@ -82,8 +82,8 @@ contract PriceManager {
             openInterestDelta
         );
 
-        int256 avgPriceBuffer = (getPriceBuffer(_marketId) +
-            priceBufferChange) / 2;
+        int256 avgPriceBuffer = getPriceBuffer(_marketId) +
+            (priceBufferChange) / 2; //price bufferchange의 절반만큼 더해야지 pricebufferchage는 최종상태가 아님 
 
         int256 avgExecPrice = (_indexPrice).toInt256() +
             ((_indexPrice).toInt256() * avgPriceBuffer) /
@@ -93,6 +93,9 @@ contract PriceManager {
 
         return (avgExecPrice).toUint256();
     }
+
+    //It means execution is always based on mark price
+    
 
     function _calculatePriceBuffer(
         uint256 _marketId,
