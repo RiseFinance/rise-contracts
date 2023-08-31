@@ -27,6 +27,7 @@ struct OpenPosition {
     uint256 avgOpenPrice; // TODO: check - should be coupled w/ positions link logic
     uint256 lastUpdatedTime; // Currently not used for any validation
     int256 avgEntryFundingIndex;
+    uint256 liquidationPrice;
 }
 
 struct OrderRecord {

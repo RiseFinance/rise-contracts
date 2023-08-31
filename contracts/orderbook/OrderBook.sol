@@ -246,8 +246,7 @@ contract OrderBook is OrderBookBase, OrderExecutor, Modifiers {
                 tokenInfo.getBaseTokenSizeToPriceBufferDeltaMultiplier(
                     _marketId
                 ) /
-                ic.interimMarkPrice); // index price는 업데이트 안되는데 왜 indexprice 기준으로 계산하노
-                //priceFetcher._getIndexPrice(_marketId));
+                priceFetcher._getIndexPrice(_marketId));
 
             console.log("Price: ", ic.limitPriceIterator / 1e20, "USD\n");
 
