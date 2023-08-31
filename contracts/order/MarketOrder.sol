@@ -18,7 +18,7 @@ import "hardhat/console.sol";
 contract MarketOrder is OrderExecutor {
     OrderValidator public orderValidator;
     OrderHistory public orderHistory;
-    PriceFetcher public priceFetcher;
+    // PriceFetcher public priceFetcher;
     GlobalState public globalState;
     OrderBook public orderBook;
 
@@ -43,12 +43,13 @@ contract MarketOrder is OrderExecutor {
             _market,
             _positionHistory,
             _positionVault,
-            _positionFee
+            _positionFee,
+            _priceFetcher
         )
     {
         orderValidator = OrderValidator(_orderValidator);
         orderHistory = OrderHistory(_orderHistory);
-        priceFetcher = PriceFetcher(_priceFetcher);
+        // priceFetcher = PriceFetcher(_priceFetcher);
         globalState = GlobalState(_globalState);
         orderBook = OrderBook(_orderBook);
     }
