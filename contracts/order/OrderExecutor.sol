@@ -207,7 +207,7 @@ contract OrderExecutor is PnlManager {
             revert("Invalid execution type");
         }
     }
-    function ExecuteCloseOrder( OpenPosition calldata position ) public {
+    function ExecuteCloseOrder( OpenPosition memory position ) public {
         OrderRequest memory req;
         ExecutionContext memory ec;
         ec.openPosition = position;

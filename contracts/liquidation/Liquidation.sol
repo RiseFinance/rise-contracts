@@ -12,7 +12,7 @@ import "../price/PriceManager.sol";
 import "../market/TokenInfo.sol";
 import "../market/Market.sol";
 import "../order/OrderExecutor.sol";
-
+import "../order/OrderUtils.sol";
 
 contract Liquidation {
     PriceManager public priceManager;
@@ -53,17 +53,15 @@ contract Liquidation {
         }
     }
 
-    function liquidatePosition(OpenPosition calldata _position) internal {
-        //if (!_isPositionLiquidationValid(_position)) return;
-        // TODO: liquidate Position
-        // TODO: @0xjunha
-        // market order로 close, 남은 돈은 LP pool로 보내기
+    function liquidatePosition(OpenPosition memory _position) internal {
         orderExecutor.ExecuteCloseOrder(_position);
     }
 
-    function liquidateTrader(address _trader) internal view {
-        if (!_isTraderLiquidationValid(_trader)) return;
-        // TODO: liquidate all positions of trader
+    function liquidateTrader(address _trader) internal {
+        (OpenPosition[] memory p, uint256 c) =traderVault.getTraderHotOpenPosition(_trader);
+        for (uint256 i = 0; i < c; i++) {
+            liquidatePosition(p[i]);
+        }
     }
 
     function _isPositionLiquidationValid(
