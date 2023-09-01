@@ -16,7 +16,11 @@ contract PriceFetcher {
         uint256 _size,
         bool _isLong
     ) external view returns (uint256) {
-      
+        /**
+         * // TODO: impl
+         * @dev Jae Yoon
+         */
+
         return priceManager.getAvgExecPrice(_marketId, _size, _isLong);
     }
 

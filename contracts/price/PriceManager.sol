@@ -82,8 +82,8 @@ contract PriceManager {
             openInterestDelta
         );
 
-        int256 avgPriceBuffer = getPriceBuffer(_marketId) +
-            (priceBufferChange) / 2; //price bufferchange의 절반만큼 더해야지 pricebufferchage는 최종상태가 아님 
+        int256 avgPriceBuffer = (getPriceBuffer(_marketId) +
+            priceBufferChange) / 2;
 
         int256 avgExecPrice = (_indexPrice).toInt256() +
             ((_indexPrice).toInt256() * avgPriceBuffer) /
@@ -93,22 +93,6 @@ contract PriceManager {
 
         return (avgExecPrice).toUint256();
     }
-        //It means execution is always based on mark price
-    
-    function getLiquidationPrice(
-        uint256 _marketId,
-        uint256 _avgEntryPrice,
-        uint256 _margin,
-        uint256 _size, 
-        bool _isLong
-    ) public view returns (uint256) {
-        uint256 avgliqpricedelta = _avgEntryPrice * _margin / _size;
-        uint256 avgliqprice = _isLong ? _avgEntryPrice - avgliqpricedelta : _avgEntryPrice + avgliqpricedelta;
-        uint256 actualliqprice = _isLong ? avgliqprice + (_calculatePriceBuffer(_marketId, _size.toInt256())).toUint256()*getIndexPrice(_marketId)/PRICE_BUFFER_PRECISION/2
-        : avgliqprice - (_calculatePriceBuffer(_marketId, _size.toInt256())).toUint256()*getIndexPrice(_marketId)/PRICE_BUFFER_PRECISION/2;
-        return actualliqprice;
-    }
-
 
     function _calculatePriceBuffer(
         uint256 _marketId,
