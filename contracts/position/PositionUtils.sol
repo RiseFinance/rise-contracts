@@ -37,5 +37,4 @@ library PositionUtils {
                 _sizeDeltaAbs
             );
     }
-    
 }

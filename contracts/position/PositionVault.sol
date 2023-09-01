@@ -7,14 +7,13 @@ import "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import "../common/structs.sol";
 import "../common/params.sol";
 import "../fee/Funding.sol";
-import "../price/PriceManager.sol";
+
 import "./PositionUtils.sol";
 
 contract PositionVault {
     using SafeCast for uint256;
 
     Funding public funding;
-    PriceManager public priceManager;
 
     // TODO: open <> close 사이의 position을 하나로 연결하여 기록
     mapping(bytes32 => OpenPosition) public openPositions; // positionHash => Position
@@ -22,9 +21,8 @@ contract PositionVault {
     mapping(uint256 => uint256) public maxLongCapacity; // marketId => tokenCount
     mapping(uint256 => uint256) public maxShortCapacity; // marketId => tokenCount // TODO: check - is it for stablecoins?
 
-    constructor(address _funding, address _priceManager) {
+    constructor(address _funding) {
         funding = Funding(_funding);
-        priceManager = PriceManager(_priceManager);
     }
 
     function getPosition(
@@ -70,7 +68,6 @@ contract PositionVault {
                 p._marketId
             );
         }
-        //이러면 positions 매핑에 들어감?
 
         if (p._sizeDeltaAbs > 0 && p._isIncreaseInSize) {
             _position.avgOpenPrice = PositionUtils._getNextAvgPrice(
@@ -96,20 +93,6 @@ contract PositionVault {
             : _position.margin - p._marginDeltaAbs;
 
         _position.lastUpdatedTime = block.timestamp;
-
-        //uint256 avgliqpricedelta = _position.avgOpenPrice * _position.margin / _position.size;
-        //uint avgliqprice = _position.isLong ? _position.avgOpenPrice - avgliqpricedelta : _position.avgOpenPrice + avgliqpricedelta;
-        _position.liquidationPrice = priceManager.getLiquidationPrice(
-            _position.marketId,
-            _position.avgOpenPrice,
-            _position.margin,
-            _position.size,
-            _position.isLong
-        );
-       
-       
-        openPositions[p._key] = _position;
-
     }
 
     function deleteOpenPosition(bytes32 _key) external {
