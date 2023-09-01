@@ -27,7 +27,7 @@ contract OrderBook is OrderBookBase, OrderExecutor, Modifiers {
     using SafeCast for uint256;
     using SafeCast for int256;
 
-    PriceFetcher public priceFetcher;
+    //PriceFetcher public priceFetcher;
     OrderHistory public orderHistory;
     GlobalState public globalState;
     TokenInfo public tokenInfo;
@@ -73,10 +73,12 @@ contract OrderBook is OrderBookBase, OrderExecutor, Modifiers {
             _market,
             _positionHistory,
             _positionVault,
-            _positionFee
+            _positionFee,
+            _priceFetcher
+
         )
     {
-        priceFetcher = PriceFetcher(_priceFetcher);
+        //priceFetcher = PriceFetcher(_priceFetcher);
         marketOrder = MarketOrder(_marketOrder);
     }
 
