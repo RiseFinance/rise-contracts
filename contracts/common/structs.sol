@@ -10,7 +10,7 @@ struct OrderRequest {
     bool isIncrease;
     OrderType orderType;
     uint256 marketId;
-    uint256 sizeAbs; // TODO: change to `sizeDeltaAbs`
+    uint256 sizeAbs; // 단위가 뭐냐?
     uint256 marginAbs;
     uint256 limitPrice; // empty for market orders
 }
@@ -27,6 +27,7 @@ struct OpenPosition {
     uint256 avgOpenPrice; // TODO: check - should be coupled w/ positions link logic
     uint256 lastUpdatedTime; // Currently not used for any validation
     int256 avgEntryFundingIndex;
+    uint256 liquidationPrice;
 }
 
 struct OrderRecord {

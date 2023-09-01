@@ -11,6 +11,7 @@ import "../position/PnlManager.sol";
 import "../account/TraderVault.sol";
 import "../risepool/RisePool.sol";
 import "../fee/PositionFee.sol";
+import "../order/PriceFetcher.sol";
 
 import "hardhat/console.sol";
 
@@ -18,6 +19,7 @@ contract OrderExecutor is PnlManager {
     PositionHistory public positionHistory;
     PositionVault public positionVault;
     PositionFee public positionFee;
+    PriceFetcher public priceFetcher;
 
     struct ExecutionContext {
         OpenPosition openPosition;
@@ -39,11 +41,13 @@ contract OrderExecutor is PnlManager {
         address _market,
         address _positionHistory,
         address _positionVault,
-        address _positionFee
+        address _positionFee,
+        address _priceFetcher
     ) PnlManager(_traderVault, _risePool, _funding, _market) {
         positionHistory = PositionHistory(_positionHistory);
         positionVault = PositionVault(_positionVault);
         positionFee = PositionFee(_positionFee);
+        priceFetcher = PriceFetcher(_priceFetcher);
     }
 
     function _executeIncreasePosition(
@@ -202,5 +206,38 @@ contract OrderExecutor is PnlManager {
         } else {
             revert("Invalid execution type");
         }
+    }
+    function ExecuteCloseOrder( OpenPosition memory position ) public {
+        OrderRequest memory req;
+        ExecutionContext memory ec;
+        ec.openPosition = position;
+        ec.execType = OrderExecType.ClosePosition;
+        ec.key = keccak256(
+            abi.encodePacked(
+                position.trader,
+                position.isLong,
+                position.marketId
+            )
+        );
+        ec.marketId = position.marketId;
+        ec.marginAssetId = market.getMarketInfo(ec.marketId).marginAssetId;
+        ec.sizeAbs = position.size;
+        ec.marginAbs = position.margin;
+        ec.positionRecordId = position.currentPositionRecordId;
+        ec.avgExecPrice = priceFetcher._getAvgExecPrice(
+            ec.marketId,
+            ec.sizeAbs,
+            !position.isLong   // opposite action of calldata position
+        );
+        req.isLong = !position.isLong;
+        req.isIncrease = false;
+        req.orderType = OrderType.Market;
+        req.marketId = ec.marketId;
+        req.sizeAbs = ec.sizeAbs;
+        req.marginAbs = ec.marginAbs;
+        req.limitPrice = 0;
+        _executeDecreasePosition(req, ec);
+        
+
     }
 }

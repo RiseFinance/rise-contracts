@@ -12,14 +12,15 @@ import "../order/OrderUtils.sol";
 import "../global/GlobalState.sol";
 import "./OrderValidator.sol";
 import "./OrderHistory.sol";
-
+import "../orderbook/OrderBook.sol";
 import "hardhat/console.sol";
 
 contract MarketOrder is OrderExecutor {
     OrderValidator public orderValidator;
     OrderHistory public orderHistory;
-    PriceFetcher public priceFetcher;
+    // PriceFetcher public priceFetcher;
     GlobalState public globalState;
+    OrderBook public orderBook;
 
     constructor(
         address _traderVault,
@@ -32,7 +33,8 @@ contract MarketOrder is OrderExecutor {
         address _orderHistory,
         address _priceFetcher,
         address _globalState,
-        address _positionFee
+        address _positionFee,
+        address _orderBook
     )
         OrderExecutor(
             _traderVault,
@@ -41,13 +43,15 @@ contract MarketOrder is OrderExecutor {
             _market,
             _positionHistory,
             _positionVault,
-            _positionFee
+            _positionFee,
+            _priceFetcher
         )
     {
         orderValidator = OrderValidator(_orderValidator);
         orderHistory = OrderHistory(_orderHistory);
-        priceFetcher = PriceFetcher(_priceFetcher);
+        // priceFetcher = PriceFetcher(_priceFetcher);
         globalState = GlobalState(_globalState);
+        orderBook = OrderBook(_orderBook);
     }
 
     function executeMarketOrder(
@@ -159,6 +163,14 @@ contract MarketOrder is OrderExecutor {
             );
         }
 
+        // execute limitorders
+        orderBook.executeLimitOrders(!req.isLong, req.marketId);
+
         return ec.key;
     }
 }
+
+/// market order 전부 처리하고 최종 price buffer를 가지고 executelimitoders 하는거랑
+/// market order를 조금씩 처리하면서 executelimitorders 하는거랑 똑같나? 실제 오더북은 limit이랑 market이랑
+//매칭이 되야되는데
+// 일단 똑같을거 같긴 함

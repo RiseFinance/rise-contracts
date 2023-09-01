@@ -11,12 +11,15 @@ import "../account/TraderVault.sol";
 import "../price/PriceManager.sol";
 import "../market/TokenInfo.sol";
 import "../market/Market.sol";
+import "../order/OrderExecutor.sol";
+import "../order/OrderUtils.sol";
 
 contract Liquidation {
     PriceManager public priceManager;
     TraderVault public traderVault;
     TokenInfo public tokenInfo;
     Market public market;
+    OrderExecutor public orderExecutor;
 
     using MathUtils for uint256;
 
@@ -28,18 +31,20 @@ contract Liquidation {
         address _priceManager,
         address _traderVault,
         address _tokenInfo,
-        address _market
+        address _market,
+        address _orderExecutor
     ) {
         priceManager = PriceManager(_priceManager);
         traderVault = TraderVault(_traderVault);
         tokenInfo = TokenInfo(_tokenInfo);
         market = Market(_market);
+        orderExecutor = OrderExecutor(_orderExecutor);
     }
 
     function executeLiquidations(
         OpenPosition[] calldata _positions,
         address[] calldata _traders
-    ) external view {
+    ) external {
         for (uint256 i = 0; i < _positions.length; i++) {
             liquidatePosition(_positions[i]);
         }
@@ -48,16 +53,15 @@ contract Liquidation {
         }
     }
 
-    function liquidatePosition(OpenPosition calldata _position) internal view {
-        if (!_isPositionLiquidationValid(_position)) return;
-        // TODO: liquidate Position
-        // TODO: @0xjunha
-        // market order로 close, 남은 돈은 LP pool로 보내기
+    function liquidatePosition(OpenPosition memory _position) internal {
+        orderExecutor.ExecuteCloseOrder(_position);
     }
 
-    function liquidateTrader(address _trader) internal view {
-        if (!_isTraderLiquidationValid(_trader)) return;
-        // TODO: liquidate all positions of trader
+    function liquidateTrader(address _trader) internal {
+        (OpenPosition[] memory p, uint256 c) =traderVault.getTraderHotOpenPosition(_trader);
+        for (uint256 i = 0; i < c; i++) {
+            liquidatePosition(p[i]);
+        }
     }
 
     function _isPositionLiquidationValid(
@@ -66,7 +70,7 @@ contract Liquidation {
         uint256 baseAssetId = market
             .getMarketInfo(_position.marketId)
             .baseAssetId;
-        uint256 tokenPrecision = 10 ** tokenInfo.getTokenDecimals(baseAssetId);
+        //uint256 tokenPrecision = 10 ** tokenInfo.getTokenDecimals(baseAssetId);
         (uint256 lefthandSide, uint256 righthandSide) = _calculateFormula(
             _position
         );
@@ -127,7 +131,10 @@ contract Liquidation {
                 ) /
             2;
         return (lefthandSide, righthandSide);
+
+        //liquidation price validation based on maintenance margin -> No longer used - 08/30 Cheolmin
     }
+    // _calculation model with maintenance margin: Not using anymore - 08/30 Cheolmin
 
     // function _executeLiquidation() internal {
     //     // Close all positions
