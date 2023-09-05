@@ -67,6 +67,9 @@ contract OrderExecutor is PnlManager {
             ec.marginAbs
         );
 
+
+        //TODO : reserve 없는 pair에 대한 처리
+
         req.isLong
             ? risePool.increaseLongReserveAmount(ec.marketId, ec.sizeAbs)
             : risePool.increaseShortReserveAmount(ec.marketId, ec.sizeAbs);

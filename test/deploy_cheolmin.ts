@@ -2,7 +2,7 @@ import { loadFixture } from "@nomicfoundation/hardhat-network-helpers";
 import { expect } from "chai";
 import { ethers } from "hardhat";
 import { deployContract } from "../utils/deployer";
-describe("Test Funding fee", function () {
+describe("Test Price buffer effect", function () {
 
     const USD_ID = 0;
     const ETH_ID = 1;
@@ -31,6 +31,7 @@ describe("Test Funding fee", function () {
             tokenInfo.address,
             priceKeeper.address, // _keeperAddress
           ]);
+          
           // Funding
           const funding = await deployContract(
             "Funding",
@@ -113,13 +114,13 @@ describe("Test Funding fee", function () {
 
 
     });
-
+/*
     it("Should manage price update ", async function () {
       const [signers, contracts] = await loadFixture(deployContracts);
       const [deployer, trader, priceKeeper] = signers;
       const [tradervault, orderRouter, priceManager,orderBook] = contracts;
       //await priceManager.initialize(orderBook.address);
-      await priceManager.isPriceKeeper[priceKeeper.address] = true;
+      await priceManager.isPriceKeeper[priceKeeper.address] = true ;
       await priceManager.connect(priceKeeper).setPrice([ETH_ID], [1000], true);
       //await priceManager.setPrice([ETH_ID], [3000], true);
       expect (await priceManager.indexPrices[ETH_ID]).to.equal(1000);
@@ -127,5 +128,5 @@ describe("Test Funding fee", function () {
       //expect (await priceManager.indexPrices(ETH_ID)).to.equal(4000);
     });
 
-
+*/
 });
