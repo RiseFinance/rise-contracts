@@ -13,6 +13,7 @@ import "../market/TokenInfo.sol";
 import "../market/Market.sol";
 import "../order/OrderExecutor.sol";
 import "../order/OrderUtils.sol";
+import "../orderbook/OrderBook.sol";
 
 contract Liquidation {
     PriceManager public priceManager;
@@ -20,6 +21,7 @@ contract Liquidation {
     TokenInfo public tokenInfo;
     Market public market;
     OrderExecutor public orderExecutor;
+    OrderBook public orderBook;
 
     using MathUtils for uint256;
 
@@ -32,13 +34,15 @@ contract Liquidation {
         address _traderVault,
         address _tokenInfo,
         address _market,
-        address _orderExecutor
+        address _orderExecutor,
+        address _orderBook  
     ) {
         priceManager = PriceManager(_priceManager);
         traderVault = TraderVault(_traderVault);
         tokenInfo = TokenInfo(_tokenInfo);
         market = Market(_market);
         orderExecutor = OrderExecutor(_orderExecutor);
+        orderBook = OrderBook(_orderBook);
     }
 
     function executeLiquidations(
@@ -55,6 +59,8 @@ contract Liquidation {
 
     function liquidatePosition(OpenPosition memory _position) internal {
         orderExecutor.ExecuteCloseOrder(_position);
+        orderBook.executeLimitOrders(_position.isLong, _position.marketId);
+        //Long position liq -> price buffer downwards -> execute long limit orders
     }
 
     function liquidateTrader(address _trader) internal {
