@@ -227,11 +227,20 @@ contract OrderExecutor is PnlManager {
         ec.sizeAbs = position.size;
         ec.marginAbs = position.margin;
         ec.positionRecordId = position.currentPositionRecordId;
+        /*
         ec.avgExecPrice = priceFetcher._getAvgExecPrice(
             ec.marketId,
             ec.sizeAbs,
             !position.isLong   // opposite action of calldata position
         );
+        */
+        ec.avgExecPrice = priceFetcher._getAvgExecPrice(
+            ec.marketId,
+            ec.sizeAbs,
+            !position.isLong,
+            true,
+            position.liquidationPrice   // opposite action of calldata position
+        ); // liquidation executed at exact price just like limit order 
         req.isLong = !position.isLong;
         req.isIncrease = false;
         req.orderType = OrderType.Market;
@@ -243,4 +252,5 @@ contract OrderExecutor is PnlManager {
         
 
     }
-}
+}//Hard to open, hard to close?
+// liquidation만 갑자기 사라지면 어떡하냐 
