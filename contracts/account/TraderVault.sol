@@ -28,7 +28,7 @@ contract TraderVault is PositionVault{
     }
 
     // from DA server (or from EVM storage)
-    function getTraderHotOpenPosition(address user) public returns (OpenPosition[] memory, uint256) {
+    function getTraderHotOpenPosition(address user) public view returns (OpenPosition[] memory, uint256) {
         uint256 _positionCount = market.globalMarketIdCounter();
         OpenPosition[] memory _userpositions = new OpenPosition[](_positionCount * 2);
         uint256 _userpositionCount = 0;
