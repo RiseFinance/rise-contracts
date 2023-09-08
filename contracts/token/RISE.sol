@@ -47,6 +47,16 @@ contract RISE is ERC20 {
         _burn(_from, _amount);
     }
 
+    function balanceOfStakedRISE(address _staker) external view returns (uint256) {
+        return stakedRISE[_staker];
+    }
+
+    function gettotalStakedRISE() external view returns (uint256) {
+        return totalStakedRISE;
+    } 
+
+
+
     function stakeRISE(uint256 _amount) external {
         _burn(msg.sender, _amount);
         if(stakedRISE[msg.sender] == 0){
@@ -71,20 +81,27 @@ contract RISE is ERC20 {
         totalStakedRISE += _amount;
     }
     //distribution
-    function balanceOfStakedRISE(address _staker) external view returns (uint256) {
-        return stakedRISE[_staker];
+
+    function retrieveRISE(uint256 _amount) external{
+        require(stakedRISE[msg.sender] >= _amount, "Not enough RISE to retrieve");
+        require(block.timestamp - lastDistributionTime > 600000, "Distribution is about to happen");
+        _mint(msg.sender, _amount);
+
     }
 
-    function gettotalStakedRISE() external view returns (uint256) {
-        return totalStakedRISE;
-    } 
+    function retrieveRISE(address _to, uint256 _amount) external onlyRiseManager{
+        require(stakedRISE[_to] >= _amount, "Not enough RISE to retrieve");
+        require(block.timestamp - lastDistributionTime > 600000, "Distribution is about to happen");
+        _mint(_to, _amount);
+
+    }
 
 
     function startDistribution() external onlyRiseManager {
         //uint256 startTime = block.timestamp;
-        //uint256 duration = 31536000; //1year 
+        //uint256 duration = 31536000; //1year   604800; //1week
 
-        require ( block.timestamp - lastDistributionTime > 31536000, "Distribution is not available yet");
+        require ( block.timestamp - lastDistributionTime > 604800, "Distribution is not available yet");
         uint256 total = positionFee.getcollectedPositionFees();
         require (total > 0, "No fee to distribute");
         positionFee.deductfeeFromcollectedPositionFees(total);
