@@ -9,6 +9,7 @@ import "../fee/PositionFee.sol";
 import "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import "@openzeppelin/contracts/utils/math/Math.sol";
 import "../utils/MathUtils.sol";
+import "../account/TraderVault.sol";
 
 contract RISE is ERC20 {
     using SafeCast for uint256;
@@ -16,13 +17,16 @@ contract RISE is ERC20 {
 
     //RISE has same precision as USDC and margin(also USDC)
     address risemanager;
+    TraderVault traderVault;
     PositionFee public positionFee;
     uint256 lastDistributionTime;
     
     constructor(
-        address _positionFee
+        address _positionFee,
+        address _traderVault
     ) ERC20("Rise Finance Token", "RISE") {
         positionFee = PositionFee(_positionFee);
+        traderVault = TraderVault(_traderVault);
         risemanager = msg.sender;    
         lastDistributionTime = block.timestamp;
     }
@@ -109,8 +113,8 @@ contract RISE is ERC20 {
             uint256 amount = stakedRISE[stakerlist[i]];
             
             uint256 a = MathUtils.mulDiv(amount, total, totalStakedRISE);
-
-            //traderBalances[stakerlist[i]] += a;
+            traderVault.increaseTraderBalance(stakerlist[i], 0, a);
+            //make position record? some track
             stakedRISE[stakerlist[i]] = 0;
             stakerlist[i] = address(0);
             
