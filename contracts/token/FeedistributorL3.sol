@@ -9,12 +9,17 @@ import {ArbSys} from "../crosschain/interfaces/l3/ArbSys.sol";
 
 contract FeedistributorL3 {
     PositionFee public positionFee;
+    address public feedistributorL2;
 
     uint256 feeratio = 100;
     uint256 constant feeratioPrecision = 100;
 
-    constructor(address _positionFee) {
+    constructor(
+        address _positionFee,
+        address _feedistributorL2
+    ) {
         positionFee = PositionFee(_positionFee);
+        feedistributorL2 = _feedistributorL2;
     }
 
     function setfeeration(uint256 _feeratio) external {
@@ -35,7 +40,8 @@ contract FeedistributorL3 {
             selector,
             total
         );
-        ArbSys(address(100)).sendTxToL1(address(this), data);
+        ArbSys(address(100)).sendTxToL1(feedistributorL2, data); //what is 100?
+        
 
         positionFee.deductfeeFromcollectedPositionFees(total);
         

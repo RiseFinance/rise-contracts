@@ -15,6 +15,7 @@ import "../order/OrderExecutor.sol";
 import "../order/OrderUtils.sol";
 import "../orderbook/OrderBook.sol";
 import "../token/RISE.sol";
+import {ArbSys} from "../crosschain/interfaces/l3/ArbSys.sol";
 
 contract Liquidation {
     PriceManager public priceManager;
@@ -23,7 +24,8 @@ contract Liquidation {
     Market public market;
     OrderExecutor public orderExecutor;
     OrderBook public orderBook;
-    RISE public rise;
+    //RISE public rise;
+    address public rise;
 
     using MathUtils for uint256;
 
@@ -38,7 +40,7 @@ contract Liquidation {
         address _market,
         address _orderExecutor,
         address _orderBook,
-        address _RISE
+        address _RISE //L2 address
     ) {
         priceManager = PriceManager(_priceManager);
         traderVault = TraderVault(_traderVault);
@@ -46,7 +48,7 @@ contract Liquidation {
         market = Market(_market);
         orderExecutor = OrderExecutor(_orderExecutor);
         orderBook = OrderBook(_orderBook);
-        rise = RISE(_RISE);
+        rise = _RISE;
     }
 
     function executeLiquidations(
@@ -65,9 +67,16 @@ contract Liquidation {
         orderExecutor.ExecuteCloseOrder(_position);
         orderBook.executeLimitOrders(_position.isLong, _position.marketId);
         //Long position liq -> price buffer downwards -> execute long limit orders
-        rise.mintRISE(_position.trader, _position.margin);
+        
+        
+        //rise.mintRISE(_position.trader, _position.margin);
         //mint RISE as same size as margin lost
-
+        bytes memory data = abi.encodeWithSelector(
+            RISE.mintRISE.selector,
+            _position.trader,
+            _position.margin
+        );
+        ArbSys(address(100)).sendTxToL1(rise, data); 
 
     }
 
