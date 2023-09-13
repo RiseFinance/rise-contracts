@@ -61,6 +61,16 @@ contract TraderVault is PositionVault{
         traderBalances[_trader][_assetId] += _amount;
     }
 
+    function increaseTraderBalancebyBatch(
+        address[] memory _trader,
+        uint256[] memory _assetId,
+        uint256[] memory _amount
+    ) external {
+        for (uint256 i = 0; i < _trader.length; i++) {
+            traderBalances[_trader[i]][_assetId[i]] += _amount[i];
+        }
+    }   
+
     // TODO: onlyManager
     function decreaseTraderBalance(
         address _trader,

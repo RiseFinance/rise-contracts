@@ -36,8 +36,8 @@ contract RISE is ERC20 {
         _;
     }
     
-    mapping(address => uint256) private stakedRISE;
-    mapping(uint256 => address) private stakerlist;
+    mapping(address => uint256) public stakedRISE;
+    mapping(uint256 => address) public stakerlist;
     uint256 private totalStakedRISE;
     uint256 private totalstakercount;
 
@@ -59,7 +59,17 @@ contract RISE is ERC20 {
         return totalStakedRISE;
     } 
 
+    function gettotalstakercount() external view returns (uint256) {
+        return totalstakercount;
+    }
 
+    function getstakerlist(uint256 _index) external view returns (address) {
+        return stakerlist[_index];
+    }
+
+    function getstakedRISE(address _staker) external view returns (uint256) {
+        return stakedRISE[_staker];
+    }
 
     function stakeRISE(uint256 _amount) external {
         _burn(msg.sender, _amount);
@@ -100,7 +110,17 @@ contract RISE is ERC20 {
 
     }
 
+    function afterDistribution() external onlyRiseManager{
+        for (uint256 i = 0; i < totalstakercount; i++) {
+            stakedRISE[stakerlist[i]] = 0;
+            stakerlist[i] = address(0);
+        }
+        totalStakedRISE = 0;
+        totalstakercount = 0;
+        lastDistributionTime = block.timestamp;
+    }
 
+    /*
     function startDistribution() external onlyRiseManager {
         //uint256 startTime = block.timestamp;
         //uint256 duration = 31536000; //1year   604800; //1week
@@ -124,7 +144,7 @@ contract RISE is ERC20 {
         totalstakercount = 0;
         lastDistributionTime = block.timestamp;
     }
-
+*/
 
 }
 
