@@ -28,7 +28,7 @@ contract TraderVault is PositionVault{
     }
 
     // from DA server (or from EVM storage)
-    function getTraderHotOpenPosition(address user) public returns (OpenPosition[] memory, uint256) {
+    function getTraderHotOpenPosition(address user) public view returns (OpenPosition[] memory, uint256) {
         uint256 _positionCount = market.globalMarketIdCounter();
         OpenPosition[] memory _userpositions = new OpenPosition[](_positionCount * 2);
         uint256 _userpositionCount = 0;
@@ -60,6 +60,16 @@ contract TraderVault is PositionVault{
     ) external {
         traderBalances[_trader][_assetId] += _amount;
     }
+
+    function increaseTraderBalancebyBatch(
+        address[] memory _trader,
+        uint256[] memory _assetId,
+        uint256[] memory _amount
+    ) external {
+        for (uint256 i = 0; i < _trader.length; i++) {
+            traderBalances[_trader[i]][_assetId[i]] += _amount[i];
+        }
+    }   
 
     // TODO: onlyManager
     function decreaseTraderBalance(

@@ -13,7 +13,7 @@ contract PositionFee {
     uint256 public constant MARKET_POSITION_FEE_MULTIPLIER = 5; // 0.05%
     uint256 public constant LIMIT_POSITION_FEE_MULTIPLIER = 5; // 0.05%
     uint256 public constant POSITION_FEE_PRECISION = 1e4;
-    uint256 public collectedPositionFees = 0;
+    uint256 public collectedPositionFees ;
 
     // TODO : POSITION_FEE_CONSTANT , POSITION_FEE_PRECISION 값 확인 필요
 
@@ -53,5 +53,21 @@ contract PositionFee {
         ); // TODO: add condition checks for maintenance margin
         traderVault.decreaseTraderBalance(_trader, _feeAssetId, fee);
         collectedPositionFees += fee; // TODO: collecting fee from L2Vault (and distributing to $RM, $RISE holders)
+    }
+
+    function getcollectedPositionFees() external view returns (uint256) {
+        return collectedPositionFees;
+    }
+
+    function deductfeeFromcollectedPositionFees(uint256 _fee)
+        external
+        
+    {
+        require(
+            collectedPositionFees >= _fee,
+            "PositionFee: insufficient collectedPositionFees"
+        );
+        collectedPositionFees -= _fee;
+        //return collectedPositionFees;
     }
 }

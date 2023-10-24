@@ -19,6 +19,18 @@ contract PriceFetcher {
       
         return priceManager.getAvgExecPrice(_marketId, _size, _isLong);
     }
+    function _getAvgExecPrice(
+        uint256 _marketId,
+        uint256 _size,
+        bool _isLong,
+        bool _isliquidation,
+        uint256 _liqprice
+    ) external view returns (uint256) {
+        if (_isliquidation) {
+            return _liqprice - priceManager.getIndexPrice(_marketId) + priceManager.getAvgExecPrice(_marketId, _size, _isLong);
+        }
+        else return priceManager.getAvgExecPrice(_marketId, _size, _isLong);
+    }
 
     function _getMarkPrice(uint256 _marketId) external view returns (uint256) {
         return priceManager.getMarkPrice(_marketId);
